@@ -30,7 +30,13 @@
 if(APPLE)
   # pybind11 (installed via homebrew) does not set include directories properly.
   # This is necessary to find Python.h.
-  find_package(PythonLibs 3)
+  execute_process(COMMAND "${PYTHON_EXECUTABLE}" "-c"
+      "from distutils import sysconfig as s;print(s.get_python_inc(plat_specific=True));"
+    RESULT_VARIABLE _PYTHON_SUCCESS
+    OUTPUT_VARIABLE _PYTHON_VALUES
+    ERROR_VARIABLE _PYTHON_ERROR_VALUE)
+  list(GET _PYTHON_VALUES 0 PYTHON_INCLUDE_DIR)
+  include_directories(${PYTHON_INCLUDE_DIR})
 endif()
 
 set (PY_BINDING_SRCS
