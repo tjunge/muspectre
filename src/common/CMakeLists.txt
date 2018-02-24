@@ -33,7 +33,33 @@ set (common_SRC
   ${CMAKE_CURRENT_SOURCE_DIR}/voigt_conversion.cc
   )
 
+set (common_HDR
+  ${CMAKE_CURRENT_SOURCE_DIR}/T4_map_proxy.hh
+  ${CMAKE_CURRENT_SOURCE_DIR}/ccoord_operations.hh
+  ${CMAKE_CURRENT_SOURCE_DIR}/common.hh
+  ${CMAKE_CURRENT_SOURCE_DIR}/field_collection.hh
+  ${CMAKE_CURRENT_SOURCE_DIR}/field_collection_base.hh
+  ${CMAKE_CURRENT_SOURCE_DIR}/field_collection_global.hh
+  ${CMAKE_CURRENT_SOURCE_DIR}/field_collection_local.hh
+  ${CMAKE_CURRENT_SOURCE_DIR}/field_map.hh
+  ${CMAKE_CURRENT_SOURCE_DIR}/field_map_base.hh
+  ${CMAKE_CURRENT_SOURCE_DIR}/field_map_scalar.hh
+  ${CMAKE_CURRENT_SOURCE_DIR}/field_map_tensor.hh
+  ${CMAKE_CURRENT_SOURCE_DIR}/iterators.hh
+  ${CMAKE_CURRENT_SOURCE_DIR}/tensor_algebra.hh
+  ${CMAKE_CURRENT_SOURCE_DIR}/utilities.hh
+  ${CMAKE_CURRENT_SOURCE_DIR}/voigt_conversion.hh
+  ${CMAKE_CURRENT_SOURCE_DIR}/eigen_tools.hh
+  ${CMAKE_CURRENT_SOURCE_DIR}/field_map_matrixlike.hh
+  ${CMAKE_CURRENT_SOURCE_DIR}/field.hh
+  )
+
 set (muSpectre_SRC
   ${muSpectre_SRC}
   ${common_SRC}
+  PARENT_SCOPE)
+
+set (muSpectre_HDR
+  ${muSpectre_HDR}
+  ${common_HDR}
   PARENT_SCOPE)

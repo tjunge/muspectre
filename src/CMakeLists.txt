@@ -35,6 +35,8 @@ include_directories(
 
 set (muSpectre_SRC
   )
+set (muSpectre_HDR
+  )
 add_subdirectory(common)
 add_subdirectory(materials)
 add_subdirectory(fft)
@@ -59,6 +61,6 @@ if( NOT HAS_STD_OPTIONAL)
 endif()
 
 
-add_library(muSpectre ${muSpectre_SRC})
+add_library(muSpectre ${muSpectre_SRC} ${muSpectre_HDR})
 target_link_libraries(muSpectre Eigen3::Eigen ${FFTW_LIBRARIES})
 

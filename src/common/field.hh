@@ -91,9 +91,15 @@ namespace muSpectre {
 
     /* ---------------------------------------------------------------------- */
     /**
-     * Virtual base class for all fields. Used for type and size
-     * checking at runtime and for storage of polymorphic pointers to
-     * fully typed and sized fields
+     * Virtual base class for all fields. A field represents the per-voxel
+     * storage for a scalar, vector or tensor quantity. It is used for type and
+     * size checking at runtime and for storage of polymorphic pointers to
+     * fully typed and sized fields. FieldBase (and its children) are
+     * templated with a specific FieldCollection. A FieldCollection stores
+     * multiple fields that all apply to the same set of voxels. Allocating
+     * and managing the data for all voxels is handled by the FieldCollection.
+     * Note that FieldBase does not know anything about the data type of the
+     * field.
      */
     template <class FieldCollection>
     class FieldBase
@@ -164,8 +170,10 @@ namespace muSpectre {
 
 
     /**
-     * dummy intermediate class to provide a run-time polymorphic
-     * typed field. Mainly for binding python
+     * Dummy intermediate class to provide a run-time polymorphic
+     * typed field. Mainly for binding python. TypedFieldBase specifies methods
+     * that return typed Eigen maps and vectors in addition to pointers to the
+     * raw data.
      */
     template <class FieldCollection, typename T>
     class TypedFieldBase: public FieldBase<FieldCollection>

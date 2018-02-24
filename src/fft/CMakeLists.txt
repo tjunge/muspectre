@@ -38,7 +38,23 @@ set (fft_engine_SRC
   ${CMAKE_CURRENT_SOURCE_DIR}/projection_finite_strain_fast.cc
   )
 
+set (fft_engine_HDR
+  ${CMAKE_CURRENT_SOURCE_DIR}/fft_engine_base.hh
+  ${CMAKE_CURRENT_SOURCE_DIR}/fft_utils.hh
+  ${CMAKE_CURRENT_SOURCE_DIR}/fftw_engine.hh
+  ${CMAKE_CURRENT_SOURCE_DIR}/projection_base.hh
+  ${CMAKE_CURRENT_SOURCE_DIR}/projection_default.hh
+  ${CMAKE_CURRENT_SOURCE_DIR}/projection_finite_strain.hh
+  ${CMAKE_CURRENT_SOURCE_DIR}/projection_finite_strain_fast.hh
+  ${CMAKE_CURRENT_SOURCE_DIR}/projection_small_strain.hh
+  )
+
 set (muSpectre_SRC
   ${muSpectre_SRC}
   ${fft_engine_SRC}
+  PARENT_SCOPE)
+
+set (muSpectre_HDR
+  ${muSpectre_HDR}
+  ${fft_engine_HDR}
   PARENT_SCOPE)
