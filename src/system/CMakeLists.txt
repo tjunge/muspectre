@@ -31,7 +31,18 @@ set (systems_SRC
   ${CMAKE_CURRENT_SOURCE_DIR}/system_base.cc
   )
 
+set (systems_HDR
+  ${CMAKE_CURRENT_SOURCE_DIR}/system_base.hh
+  ${CMAKE_CURRENT_SOURCE_DIR}/system_factory.hh
+  ${CMAKE_CURRENT_SOURCE_DIR}/system_traits.hh
+  )
+
 set (muSpectre_SRC
   ${muSpectre_SRC}
   ${systems_SRC}
+  PARENT_SCOPE)
+
+set (muSpectre_HDR
+  ${muSpectre_HDR}
+  ${systems_HDR}
   PARENT_SCOPE)

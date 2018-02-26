@@ -72,6 +72,10 @@ include_directories(
   ${CMAKE_SOURCE_DIR}
   )
 
+if(APPLE)
+  include_directories(${CMAKE_INSTALL_PREFIX}/include)
+endif()
+
 #find_package(MPI REQUIRED)
 find_package(FFTW REQUIRED)
 #find_package(FFTWMPI REQUIRED)
@@ -79,8 +83,9 @@ find_package(FFTW REQUIRED)
 
 #build tests
 file( GLOB TEST_SRCS "${CMAKE_SOURCE_DIR}/tests/test_*.cc")
+file( GLOB TEST_HDRS "${CMAKE_SOURCE_DIR}/tests/*.hh")
 
-add_executable(main_test_suite tests/main_test_suite.cc ${TEST_SRCS})
+add_executable(main_test_suite tests/main_test_suite.cc ${TEST_SRCS} ${TEST_HDRS})
 target_link_libraries(main_test_suite ${Boost_LIBRARIES} muSpectre)
 add_test(main_test_suite main_test_suite --report_level=detailed --build_info=TRUE)
 

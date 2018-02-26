@@ -34,7 +34,20 @@ set (solvers_SRC
   ${CMAKE_CURRENT_SOURCE_DIR}/solvers.cc
   )
 
+set (solvers_HDR
+  ${CMAKE_CURRENT_SOURCE_DIR}/solver_base.hh
+  ${CMAKE_CURRENT_SOURCE_DIR}/solver_cg.hh
+  ${CMAKE_CURRENT_SOURCE_DIR}/solver_cg_eigen.hh
+  ${CMAKE_CURRENT_SOURCE_DIR}/solver_error.hh
+  ${CMAKE_CURRENT_SOURCE_DIR}/solvers.hh
+  )
+
 set (muSpectre_SRC
   ${muSpectre_SRC}
   ${solvers_SRC}
+  PARENT_SCOPE)
+
+set (muSpectre_HDR
+  ${muSpectre_HDR}
+  ${solvers_HDR}
   PARENT_SCOPE)

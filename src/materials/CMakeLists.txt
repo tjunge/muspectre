@@ -34,9 +34,21 @@ set (materials_SRC
   ${CMAKE_CURRENT_SOURCE_DIR}/material_linear_elastic3.cc
   )
 
+set (materials_HDR
+  ${CMAKE_CURRENT_SOURCE_DIR}/material_base.hh
+  ${CMAKE_CURRENT_SOURCE_DIR}/material_linear_elastic1.hh
+  ${CMAKE_CURRENT_SOURCE_DIR}/material_linear_elastic2.hh
+  ${CMAKE_CURRENT_SOURCE_DIR}/material_linear_elastic3.hh
+  ${CMAKE_CURRENT_SOURCE_DIR}/material_muSpectre_base.hh
+  ${CMAKE_CURRENT_SOURCE_DIR}/materials_toolbox.hh
+  )
+
 set (muSpectre_SRC
   ${muSpectre_SRC}
   ${materials_SRC}
   PARENT_SCOPE)
 
-
+set (muSpectre_HDR
+  ${muSpectre_HDR}
+  ${materials_HDR}
+  PARENT_SCOPE)
