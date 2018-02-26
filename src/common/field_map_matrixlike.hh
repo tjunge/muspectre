@@ -81,13 +81,15 @@ namespace muSpectre {
 
     /* ---------------------------------------------------------------------- */
     /*!
-     * base class for maps of matrices, arrays and fourth-order
-     * tensors mapped onty matrices
+     * A `MatrixLikeFieldMap` is the base class for maps of matrices, arrays and
+     * fourth-order tensors mapped onto matrices.
      *
      * It should never be necessary to call directly any of the
-     * constructors if this class, but rather use the template aliases
-     * `muSpectre::ArrayFieldMap`, `muSpectre::MatrixFieldMap`, and
-     * `muSpectre::T4MatrixFieldMap`
+     * constructors if this class, but rather use the template aliases:
+     * - `ArrayFieldMap`: iterate in the form of `Eigen::Array<...>`.
+     * - `MatrixFieldMap`: iterate in the form of
+     * `Eigen::Matrix<...>`.
+     * - `T4MatrixFieldMap`: iterate in the form of `T4MatMap`.
      */
     template <class FieldCollection, class EigenArray, class EigenConstArray,
               class EigenPlain, Map_t map_type, bool ConstField>
@@ -369,9 +371,7 @@ namespace muSpectre {
             bool ConstField=false>
   using MatrixFieldMap = internal::MatrixLikeFieldMap
     <FieldCollection,
-     std::conditional_t<ConstField,
-                        Eigen::Map<const Eigen::Matrix<T, NbRows, NbCols>>,
-                        Eigen::Map<Eigen::Matrix<T, NbRows, NbCols>>>,
+     Eigen::Map<Eigen::Matrix<T, NbRows, NbCols>>,
      Eigen::Map<const Eigen::Matrix<T, NbRows, NbCols>>,
      Eigen::Matrix<T, NbRows, NbCols>,
      internal::Map_t::Matrix, ConstField>;
@@ -382,7 +382,7 @@ namespace muSpectre {
             bool MapConst=false>
   using T4MatrixFieldMap = internal::MatrixLikeFieldMap
     <FieldCollection,
-     T4MatMap<T, Dim, MapConst>,
+     T4MatMap<T, Dim, false>,
      T4MatMap<T, Dim, true>,
      T4Mat<T, Dim>,
      internal::Map_t::T4Matrix, MapConst>;
@@ -393,9 +393,7 @@ namespace muSpectre {
             bool ConstField=false>
   using ArrayFieldMap = internal::MatrixLikeFieldMap
     <FieldCollection,
-     std::conditional_t<ConstField,
-                        Eigen::Map<const Eigen::Array<T, NbRows, NbCols>>,
-                        Eigen::Map<Eigen::Array<T, NbRows, NbCols>>>,
+     Eigen::Map<Eigen::Array<T, NbRows, NbCols>>,
      Eigen::Map<const Eigen::Array<T, NbRows, NbCols>>,
      Eigen::Array<T, NbRows, NbCols>,
      internal::Map_t::Array, ConstField>;
