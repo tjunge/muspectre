@@ -41,6 +41,36 @@ namespace muSpectre {
                   "spatial dimensions are incompatible");
     static_assert((DimM == FFT_Engine::mdim),
                   "material dimensions are incompatible");
+
+    /*
+      throw an ProjectionError if one grid dimension is even, i.e.
+      this->fft_engine->get_resolutions() % 2 == 0
+
+      Problem: with test_till_random_material.py the programm crashes with
+      'Segmentation fault (core dumped)'
+      I think the problem is that I try to call
+      this->fft_engine->get_resolutions()[i]
+      before it is assigned!
+      Solution: either check if resolutions is not empty
+                or move ProjectionError to a place where resolution is always assigned.
+    */
+
+    for (auto res: this->fft_engine->get_resolutions()) {
+      if (res % 2 == 0) {
+      	throw ProjectionError
+	  ("Only an odd number of gridpoints in each direction is supported");
+      }
+    }
+
+    /*
+
+    for(int i = 0; i < DimS; i++) {
+      if ((this->fft_engine->get_resolutions()[i] % 2) == 0) {
+	throw ProjectionError
+	  ("Only an odd number of gridpoints in each direction is supported");
+      }
+    }
+    */
   }
 
   /* ---------------------------------------------------------------------- */
