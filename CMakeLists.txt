@@ -73,7 +73,7 @@ include_directories(
   )
 
 if(APPLE)
-  include_directories(${CMAKE_INSTALL_PREFIX}/include)
+  include_directories(${CMAKE_INSTALL_PREFIX}/include ${Boost_INCLUDE_DIRS})
 endif()
 
 #find_package(MPI REQUIRED)
