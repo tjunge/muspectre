@@ -55,12 +55,14 @@ namespace muSpectre {
                 or move ProjectionError to a place where resolution is always assigned.
     */
 
+    /*
     for (auto res: this->fft_engine->get_resolutions()) {
       if (res % 2 == 0) {
       	throw ProjectionError
 	  ("Only an odd number of gridpoints in each direction is supported");
       }
     }
+    */
 
     /*
 
