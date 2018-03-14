@@ -37,9 +37,15 @@ set(BUILD_SHARED_LIBS ON)
 
 add_compile_options(-Wall -Wextra -Weffc++)
 
-enable_testing()
-
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${CMAKE_SOURCE_DIR}/cmake)
+set(MAKE_DOC_TARGET "OFF" CACHE BOOL "If on, a target dev_doc (which builds the documentation) is added")
+set(MAKE_TEST_TARGETS "ON" CACHE BOOL "If on, several ctest targets will be built automatically")
+
+if(${MAKE_TEST_TARGETS})
+  enable_testing()
+  find_package(Boost COMPONENTS unit_test_framework REQUIRED)
+endif()
+
 include(muspectreTools)
 
 if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang" OR "${CMAKE_CXX_COMPILER_ID}" STREQUAL "AppleClang")
@@ -61,13 +67,12 @@ elseif ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "MSVC")
   # using Visual Studio C++
 endif()
 
-find_package(Boost COMPONENTS unit_test_framework REQUIRED)
 
 add_external_package(Eigen3 VERSION 3.3 CONFIG)
 add_external_package(pybind11 VERSION 2.2 CONFIG)
 
 include_directories(
-  ${CMAKE_SOURCE_DIR}/tests
+  #${CMAKE_SOURCE_DIR}/tests
   ${CMAKE_SOURCE_DIR}/src
   ${CMAKE_SOURCE_DIR}
   )
@@ -77,13 +82,27 @@ find_package(FFTW REQUIRED)
 #find_package(FFTWMPI REQUIRED)
 
 
-#build tests
-file( GLOB TEST_SRCS "${CMAKE_SOURCE_DIR}/tests/test_*.cc")
+#build tests (these are before we add -Werror to the compile options)
+if (${MAKE_TEST_TARGETS})
+  file( GLOB TEST_SRCS "${CMAKE_SOURCE_DIR}/tests/test_*.cc")
 
-add_executable(main_test_suite tests/main_test_suite.cc ${TEST_SRCS})
-target_link_libraries(main_test_suite ${Boost_LIBRARIES} muSpectre)
-add_test(main_test_suite main_test_suite --report_level=detailed --build_info=TRUE)
+  add_executable(main_test_suite tests/main_test_suite.cc ${TEST_SRCS})
+  target_link_libraries(main_test_suite ${Boost_LIBRARIES} muSpectre)
+  add_test(main_test_suite main_test_suite --report_level=detailed --build_info=TRUE)
 
+  # copy python test
+  #build tests
+  file( GLOB PY_TEST_SRCS "${CMAKE_SOURCE_DIR}/tests/python_*.py")
+
+  foreach(pytest ${PY_TEST_SRCS})
+    get_filename_component(pytest_name ${pytest} NAME)
+    configure_file(
+      ${pytest}
+      "${CMAKE_BINARY_DIR}/${pytest_name}"
+      COPYONLY)
+  endforeach(pytest ${PY_TEST_SRCS})
+  add_test(python_binding_test python_binding_tests.py)
+endif()
 
 
 # compile the library
@@ -95,9 +114,11 @@ add_subdirectory(
   ${CMAKE_SOURCE_DIR}/language_bindings/
   )
 
-add_subdirectory(
-  ${CMAKE_SOURCE_DIR}/doc/
-  )
+if (${MAKE_DOC_TARGET}) 
+  add_subdirectory(
+    ${CMAKE_SOURCE_DIR}/doc/
+    )
+endif()
 
 
 #compile executables
@@ -128,16 +149,3 @@ foreach(benchmark ${benchmarks})
   target_link_libraries(${benchmark_name} ${BOOST_LIBRARIES} muSpectre)
 endforeach(benchmark ${benchmark})
 
-
-# copy python test
-#build tests
-file( GLOB PY_TEST_SRCS "${CMAKE_SOURCE_DIR}/tests/python_*.py")
-
-foreach(pytest ${PY_TEST_SRCS})
-  get_filename_component(pytest_name ${pytest} NAME)
-  configure_file(
-    ${pytest}
-    "${CMAKE_BINARY_DIR}/${pytest_name}"
-    COPYONLY)
-endforeach(pytest ${PY_TEST_SRCS})
-add_test(python_binding_test python_binding_tests.py)
