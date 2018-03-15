@@ -41,6 +41,7 @@ namespace muSpectre {
                   "spatial dimensions are incompatible");
     static_assert((DimM == FFTEngine::mdim),
                   "material dimensions are incompatible");
+
   }
 
   /* ---------------------------------------------------------------------- */

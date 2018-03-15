@@ -107,6 +107,7 @@ namespace muSpectre {
     //! Move assignment operator
     CellBase& operator=(CellBase &&other) = default;
 
+
     /**
      * Materials can only be moved. This is to assure exclusive
      * ownership of any material by this cell

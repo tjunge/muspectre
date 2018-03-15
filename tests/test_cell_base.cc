@@ -90,7 +90,7 @@ namespace muSpectre {
     Formulation form{Formulation::finite_strain};
     auto fft_ptr{std::make_unique<FFTWEngine<dim, dim>>(resolutions, lengths)};
     auto proj_ptr{std::make_unique<ProjectionFiniteStrainFast<dim, dim>>(std::move(fft_ptr))};
-    CellBase<dim, dim> sys{std::move(proj_ptr)};
+       CellBase<dim, dim> sys{std::move(proj_ptr)};
 
     auto sys2{make_cell<dim, dim>(resolutions, lengths, form)};
     auto sys2b{std::move(sys2)};
