@@ -62,12 +62,15 @@ void add_cell_factory_helper(py::module & mod) {
 #ifdef WITH_MPI
   mod.def
     ("ParallelCellFactory",
-     [](Ccoord res, Rcoord lens, Form form) {
-       return make_cell(std::move(res), std::move(lens), std::move(form));
+     [](Ccoord res, Rcoord lens, Form form, size_t comm) {
+       return make_parallel_cell(std::move(res), std::move(lens),
+                                 std::move(form),
+                                 std::move(Communicator(MPI_Comm(comm))));
      },
      "resolutions"_a,
      "lengths"_a=CcoordOps::get_cube<dim>(1.),
-     "formulation"_a=Formulation::finite_strain);
+     "formulation"_a=Formulation::finite_strain,
+     "communicator"_a=size_t(MPI_COMM_NULL));
 #endif
 }
 
