@@ -53,7 +53,9 @@ namespace muSpectre {
       auto & xi = std::get<1>(tup);
       xi = fft_freqs.get_unit_xi(ccoord);
     }
-    this->xis[0].setZero();
+    if (this->get_locations() == Ccoord{}) {
+      this->xis[0].setZero();
+    }
   }
 
 
