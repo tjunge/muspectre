@@ -60,6 +60,20 @@ namespace muSpectre {
     this->fourier_resolutions[0] = res_y;
     this->fourier_locations[0] = loc_y;
 
+    for (auto & n: this->resolutions) {
+      if (n == 0) {
+        throw std::runtime_error("FFTW MPI planning returned zero resolution. "
+                                 "You may need to run on fewer processes.");
+      }
+    }
+    for (auto & n: this->fourier_resolutions) {
+      if (n == 0) {
+        throw std::runtime_error("FFTW MPI planning returned zero Fourier "
+                                 "resolution. You may need to run on fewer "
+                                 "processes.");
+      }
+    }
+
     for (auto && pixel: CcoordOps::Pixels<DimS, true>(this->fourier_resolutions,
                                                       this->fourier_locations)) {
            this->work_space_container.add_pixel(pixel);
