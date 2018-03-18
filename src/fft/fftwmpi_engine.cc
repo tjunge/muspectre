@@ -60,10 +60,6 @@ namespace muSpectre {
     this->fourier_resolutions[0] = res_y;
     this->fourier_locations[0] = loc_y;
 
-    std::cout << "workspace_size = " << this->workspace_size << std::endl;
-    std::cout << "resolutions = " << this->resolutions << std::endl;
-    std::cout << "fourier_resolutions = " << this->fourier_resolutions << std::endl;
-
     for (auto && pixel: CcoordOps::Pixels<DimS, true>(this->fourier_resolutions,
                                                       this->fourier_locations)) {
            this->work_space_container.add_pixel(pixel);
