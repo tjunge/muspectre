@@ -27,6 +27,9 @@ find_package(PkgConfig)
 #Determine from PKG
 if( PKG_CONFIG_FOUND AND NOT PFFT_ROOT )
   pkg_check_modules( PKG_PFFT QUIET "PFFT" )
+  if (PKG_PFFT_FOUND)
+    set(PFFT_ROOT ${PKG_PFFT_PREFIX})
+  endif()
 endif()
 
 #Check whether to search static or dynamic libs
