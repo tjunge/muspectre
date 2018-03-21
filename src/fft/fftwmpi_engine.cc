@@ -36,7 +36,7 @@ namespace muSpectre {
   template <Dim_t DimS, Dim_t DimM>
   FFTWMPIEngine<DimS, DimM>::FFTWMPIEngine(Ccoord resolutions, Rcoord lengths,
                                            Communicator comm)
-    :Parent{resolutions, lengths, comm}, real_workspace{nullptr}
+    :Parent{resolutions, lengths, comm}
   {
     if (!this->nb_engines) fftw_mpi_init();
     this->nb_engines++;
@@ -132,8 +132,6 @@ namespace muSpectre {
     if (this->plan_fft == nullptr) {
       throw std::runtime_error("r2c plan failed");
     }
-
-    fftw_mpi_execute_dft_r2c(this->plan_fft, in, out);
 
     fftw_complex * i_in = reinterpret_cast<fftw_complex*>(this->work.data());
     Real * i_out = this->real_workspace;
