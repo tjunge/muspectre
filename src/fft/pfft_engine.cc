@@ -57,9 +57,6 @@ namespace muSpectre {
     std::copy(fres, fres+DimS, this->fourier_resolutions.begin());
     std::copy(floc, floc+DimS, this->fourier_locations.begin());
 
-    std::cout << "Real space: " << this->locations << " " << this->resolutions << std::endl;
-    std::cout << "Fourier space: " << this->fourier_locations << " " << this->fourier_resolutions << std::endl;
-
     for (auto & n: this->resolutions) {
       if (n == 0) {
         throw std::runtime_error("PFFT planning returned zero resolution. "
@@ -74,8 +71,8 @@ namespace muSpectre {
       }
     }
 
-    for (auto && pixel: CcoordOps::Pixels<DimS>(this->fourier_resolutions,
-                                                this->fourier_locations)) {
+    for (auto && pixel: CcoordOps::Pixels<DimS, true>(this->fourier_resolutions,
+                                                      this->fourier_locations)) {
       this->work_space_container.add_pixel(pixel);
     }
   }
@@ -131,7 +128,6 @@ namespace muSpectre {
                                             PFFT_DEFAULT_BLOCKS,
                                             in, out, this->comm.get_mpi_comm(),
                                             PFFT_FORWARD,
-                                            PFFT_PRESERVE_INPUT |
                                             PFFT_TRANSPOSED_OUT | flags);
     if (this->plan_fft == nullptr) {
       throw std::runtime_error("r2c plan failed");
@@ -148,7 +144,6 @@ namespace muSpectre {
                                              i_in, i_out,
                                              this->comm.get_mpi_comm(),
                                              PFFT_BACKWARD,
-                                             PFFT_PRESERVE_INPUT |
                                              PFFT_TRANSPOSED_IN | flags);
     if (this->plan_ifft == nullptr) {
       throw std::runtime_error("c2r plan failed");
@@ -173,8 +168,15 @@ namespace muSpectre {
     if (!this->plan_fft) {
         throw std::runtime_error("fft plan not allocated");
     }
+    if (field.size() != CcoordOps::get_size(this->resolutions)) {
+      throw std::runtime_error("size mismatch");
+    }
+    // Copy field data to workspace buffer. This is necessary because workspace
+    // buffer is larger than field buffer.
+    std::copy(field.data(), field.data()+Field_t::nb_components*field.size(),
+              this->real_workspace);
     pfft_execute_dft_r2c(
-      this->plan_fft, field.data(),
+      this->plan_fft, this->real_workspace,
       reinterpret_cast<pfft_complex*>(this->work.data()));
     return this->work;
   }
@@ -191,7 +193,10 @@ namespace muSpectre {
     }
     pfft_execute_dft_c2r(
       this->plan_ifft, reinterpret_cast<pfft_complex*>(this->work.data()),
-      field.data());
+      this->real_workspace);
+    std::copy(this->real_workspace,
+              this->real_workspace+Field_t::nb_components*field.size(),
+              field.data());
   }
 
   template class PFFTEngine<twoD, twoD>;
