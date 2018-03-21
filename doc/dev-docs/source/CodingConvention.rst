@@ -75,13 +75,13 @@ The goals of this style guide are:
 
 
 Style rules should pull their weight
-    The benefit of a style rule must be large enough to justify asking all of our engineers to remember it. The benefit is measured relative to the codebase we would get without the rule, so a rule against a very harmful practice may still have a small benefit if people are unlikely to do it anyway. This principle mostly explains the rules we don’t have, rather than the rules we do: for example, goto contravenes many of the following principles, but is already vanishingly rare, so the Style Guide doesn’t discuss it.
+    The benefit of a style rule must be large enough to justify asking all of our engineers to remember it. The benefit is measured relative to the code base we would get without the rule, so a rule against a very harmful practice may still have a small benefit if people are unlikely to do it anyway. This principle mostly explains the rules we don’t have, rather than the rules we do: for example, goto contravenes many of the following principles, but is already vanishingly rare, so the Style Guide doesn’t discuss it.
 
 Optimise for the reader, not the writer
-    Our core library (and most individual components submitted to it) is expected to continue for quite some time, and we will hopefully attract more external contributors. As a result, more time will be spent reading most of our code than writing it. We explicitly choose to optimise for the experience of our average contributor reading, maintaining, and debugging code in our codebase rather than ease when writing said code. "Leave a trace for the reader" is a particularly common sub-point of this principle: When something surprising or unusual is happening in a snippet of code (for example, use of raw pointers in the ``FFTEngine`` classes), leaving textual hints for the reader at the point of use is valuable. Use explicit traces of ownership of objects on the heap using smart pointers such as  ``std::unique_ptr`` and ``std::shared_ptr``.
+    Our core library (and most individual components submitted to it) is expected to continue for quite some time, and we will hopefully attract more external contributors. As a result, more time will be spent reading most of our code than writing it. We explicitly choose to optimise for the experience of our average contributor reading, maintaining, and debugging code in our code base rather than ease when writing said code. "Leave a trace for the reader" is a particularly common sub-point of this principle: When something surprising or unusual is happening in a snippet of code (for example, use of raw pointers in the ``FFTEngine`` classes), leaving textual hints for the reader at the point of use is valuable. Use explicit traces of ownership of objects on the heap using smart pointers such as  ``std::unique_ptr`` and ``std::shared_ptr``.
 
 Be consistent with existing code
-    Using one style consistently through our codebase lets us focus on other (more important) issues. Consistency also allows for automation: tools that format your code or adjust your ``#includes`` only work properly when your code is consistent with the expectations of the tooling. In many cases, rules that are attributed to "Be Consistent" boil down to "Just pick one and stop worrying about it"; the potential value of allowing flexibility on these points is outweighed by the cost of having people argue over them.
+    Using one style consistently through our code base lets us focus on other (more important) issues. Consistency also allows for automation: tools that format your code or adjust your ``#includes`` only work properly when your code is consistent with the expectations of the tooling. In many cases, rules that are attributed to "Be Consistent" boil down to "Just pick one and stop worrying about it"; the potential value of allowing flexibility on these points is outweighed by the cost of having people argue over them.
 
 Be consistent with the broader C++ community when appropriate
     Consistency with the way other organisations use C++ has value for the same reasons as consistency within our code base. If a feature in the C++ standard solves a problem, or if some idiom is widely known and accepted, that's an argument for using it. However, sometimes standard features and idioms are flawed, or were just designed without our efficiency needs in mind. In those cases (as described below) it's appropriate to constrain or ban standard features.
@@ -155,6 +155,8 @@ Cons:
     - Forward declaring multiple symbols from a header can be more verbose than simply ``#include``\ing the header.
 
     Try to avoid forward declarations of entities defined in another project.
+
+.. _`inline functions`:
 
 Inline Functions
 ----------------
@@ -509,7 +511,7 @@ Pros:
 
 Cons:
    - Accessing a ``thread_local`` variable may trigger execution of an unpredictable and uncontrollable amount of other code.
-    ``thread_local`` variables are effectively global variables, and have all the drawbacks of global variables other than lack of thread-safety.
+   - ``thread_local`` variables are effectively global variables, and have all the drawbacks of global variables other than lack of thread-safety.
    - The memory consumed by a ``thread_local`` variable scales with the number of running threads (in the worst case), which can be quite large in a program.
    - An ordinary class member cannot be ``thread_local``.
    - ``thread_local`` may not be as efficient as certain compiler intrinsics.
@@ -543,240 +545,407 @@ Doing Work in Constructors
 
 Avoid virtual method calls in constructors, and avoid initialisation that can fail if you can't signal an error.
 
-It is possible to perform arbitrary initialisation in the body of the constructor.
+Definition:
+  It is possible to perform arbitrary initialisation in the body of the constructor.
 
-    No need to worry about whether the class has been initialised or not.
-    Objects that are fully initialised by constructor call can be const and may also be easier to use with standard containers or algorithms.
+Pros:
+  -  No need to worry about whether the class has been initialised or not.
+  -  Objects that are fully initialised by constructor call can be const and may also be easier to use with standard containers or algorithms.
+Cons:
+   - If the work calls virtual functions, these calls will not get dispatched to the subclass implementations. Future modification to your class can quietly introduce this problem even if your class is not currently subclassed, causing much confusion.
+   - There is no easy way for constructors to signal errors, short of crashing the program (not always appropriate) or using exceptions.
+   - If the work fails, we now have an object whose initialisation code failed, so it may be an unusual state requiring a ``bool is_valid()`` state checking mechanism (or similar) which is easy to forget to call.
+   - You cannot take the address of a constructor, so whatever work is done in the constructor cannot easily be handed off to, for example, another thread.
 
-    If the work calls virtual functions, these calls will not get dispatched to the subclass implementations. Future modification to your class can quietly introduce this problem even if your class is not currently subclassed, causing much confusion.
-    There is no easy way for constructors to signal errors, short of crashing the program (not always appropriate) or using exceptions (which are forbidden).
-    If the work fails, we now have an object whose initialisation code failed, so it may be an unusual state requiring a bool IsValid() state checking mechanism (or similar) which is easy to forget to call.
-    You cannot take the address of a constructor, so whatever work is done in the constructor cannot easily be handed off to, for example, another thread.
+Decision:
+  Constructors should never call virtual functions. If appropriate for your code , terminating the program may be an appropriate error handling response. Otherwise, consider a factory function or ``initialise()`` method as described in `TotW #42 <https://abseil.io/tips/42>`_ . Avoid ``initialise()`` methods on objects with no other states that affect which public methods may be called (semi-constructed objects of this form are particularly hard to work with correctly).
 
-Constructors should never call virtual functions. If appropriate for your code , terminating the program may be an appropriate error handling response. Otherwise, consider a factory function or Init() method as described in TotW #42 . Avoid Init() methods on objects with no other states that affect which public methods may be called (semi-constructed objects of this form are particularly hard to work with correctly).
+.. _`implicit conversion`:
 
 Implicit Conversions
 --------------------
 
-Do not define implicit conversions. Use the explicit keyword for conversion operators and single-argument constructors.
+Do not define implicit conversions. Use the ``explicit`` keyword for conversion operators and single-argument constructors.
 
-Implicit conversions allow an object of one type (called the source type) to be used where a different type (called the destination type) is expected, such as when passing an int argument to a function that takes a double parameter.
+Definition:
+  Implicit conversions allow an object of one type (called the *source type*) to be used where a different type (called the *destination type*) is expected, such as when passing an ``int`` argument to a function that takes a ``double`` parameter.
 
-In addition to the implicit conversions defined by the language, users can define their own, by adding appropriate members to the class definition of the source or destination type. An implicit conversion in the source type is defined by a type conversion operator named after the destination type (e.g. operator bool()). An implicit conversion in the destination type is defined by a constructor that can take the source type as its only argument (or only argument with no default value).
+  In addition to the implicit conversions defined by the language, users can define their own, by adding appropriate members to the class definition of the source or destination type. An implicit conversion in the source type is defined by a type conversion operator named after the destination type (e.g. ``operator bool()``). An implicit conversion in the destination type is defined by a constructor that can take the source type as its only argument (or only argument with no default value).
 
-The explicit keyword can be applied to a constructor or (since C++11) a conversion operator, to ensure that it can only be used when the destination type is explicit at the point of use, e.g. with a cast. This applies not only to implicit conversions, but to C++11's list initialisation syntax:
+  The ``explicit`` keyword can be applied to a constructor or (since C++11) a conversion operator, to ensure that it can only be used when the destination type is explicit at the point of use, e.g. with a cast. This applies not only to implicit conversions, but to C++11's list initialisation syntax:
 
-class Foo {
-  explicit Foo(int x, double y);
-  ...
-};
+  .. code-block:: c++
 
-void Func(Foo f);
+     class Foo {
+       explicit Foo(int x, double y);
+       ...
+     };
 
-Func({42, 3.14});  // Error
+     void Func(Foo f);
 
-This kind of code isn't technically an implicit conversion, but the language treats it as one as far as explicit is concerned.
+     Func({42, 3.14});  // Error
 
-    Implicit conversions can make a type more usable and expressive by eliminating the need to explicitly name a type when it's obvious.
-    Implicit conversions can be a simpler alternative to overloading, such as when a single function with a string_view parameter takes the place of separate overloads for string and const char*.
-    List initialisation syntax is a concise and expressive way of initialising objects.
+  This kind of code isn't technically an implicit conversion, but the language treats it as one as far as ``explicit`` is concerned.
 
-    Implicit conversions can hide type-mismatch bugs, where the destination type does not match the user's expectation, or the user is unaware that any conversion will take place.
-    Implicit conversions can make code harder to read, particularly in the presence of overloading, by making it less obvious what code is actually getting called.
-    Constructors that take a single argument may accidentally be usable as implicit type conversions, even if they are not intended to do so.
-    When a single-argument constructor is not marked explicit, there's no reliable way to tell whether it's intended to define an implicit conversion, or the author simply forgot to mark it.
-    It's not always clear which type should provide the conversion, and if they both do, the code becomes ambiguous.
-    List initialisation can suffer from the same problems if the destination type is implicit, particularly if the list has only a single element.
+  Pros:
+    - Implicit conversions can make a type more usable and expressive by eliminating the need to explicitly name a type when it's obvious.
+    - Implicit conversions can be a simpler alternative to overloading, such as when a single function with a ``string_view`` parameter takes the place of separate overloads for ``string`` and ``const char*``.
+    - List initialisation syntax is a concise and expressive way of initialising objects.
+  Cons:
+    - Implicit conversions can hide type-mismatch bugs, where the destination type does not match the user's expectation, or the user is unaware that any conversion will take place.
+    - Implicit conversions can make code harder to read, particularly in the presence of overloading, by making it less obvious what code is actually getting called.
+    - Constructors that take a single argument may accidentally be usable as implicit type conversions, even if they are not intended to do so.
+    - When a single-argument constructor is not marked ``explicit``, there's no reliable way to tell whether it's intended to define an implicit conversion, or the author simply forgot to mark it.
+    - It's not always clear which type should provide the conversion, and if they both do, the code becomes ambiguous.
+    - List initialisation can suffer from the same problems if the destination type is implicit, particularly if the list has only a single element.
 
-Type conversion operators, and constructors that are callable with a single argument, must be marked explicit in the class definition. As an exception, copy and move constructors should not be explicit, since they do not perform type conversion. Implicit conversions can sometimes be necessary and appropriate for types that are designed to transparently wrap other types. In that case, contact your project leads to request a waiver of this rule.
+  Decision:
+    Type conversion operators, and constructors that are callable with a single argument, must be marked ``explicit`` in the class definition. As an exception, copy and move constructors should not be ``explicit``, since they do not perform type conversion. Implicit conversions can sometimes be necessary and appropriate for types that are designed to transparently wrap other types. In that case, contact the `discussion forum <https://c4science.ch/Z81>`_.
 
-Constructors that cannot be called with a single argument may omit explicit. Constructors that take a single std::initialiser_list parameter should also omit explicit, in order to support copy-initialisation (e.g. MyType m = {1, 2};).
+    Constructors that cannot be called with a single argument may omit ``explicit``. Constructors that take a single ``std::initialiser_list`` parameter should also omit ``explicit``, in order to support copy-initialisation (e.g. ``MyType m{1, 2};``).
+
+.. _`copyable and movable types`:
 
 Copyable and Movable Types
 --------------------------
 
 A class's public API should make explicit whether the class is copyable, move-only, or neither copyable nor movable. Support copying and/or moving if these operations are clear and meaningful for your type.
 
-A movable type is one that can be initialised and assigned from temporaries.
+Definition:
+  A movable type is one that can be initialised and assigned from temporaries.
 
-A copyable type is one that can be initialised or assigned from any other object of the same type (so is also movable by definition), with the stipulation that the value of the source does not change. std::unique_ptr<int> is an example of a movable but not copyable type (since the value of the source std::unique_ptr<int> must be modified during assignment to the destination). int and string are examples of movable types that are also copyable. (For int, the move and copy operations are the same; for string, there exists a move operation that is less expensive than a copy.)
+  A copyable type is one that can be initialised or assigned from any other object of the same type (so is also movable by definition), with the stipulation that the value of the source does not change. ``std::unique_ptr<int>`` is an example of a movable but not copyable type (since the value of the source ``std::unique_ptr<int>`` must be modified during assignment to the destination). ``int`` and ``string`` are examples of movable types that are also copyable. (For ``int``, the move and copy operations are the same; for ``string``, there exists a move operation that is less expensive than a copy.)
 
-For user-defined types, the copy behavior is defined by the copy constructor and the copy-assignment operator. Move behavior is defined by the move constructor and the move-assignment operator, if they exist, or by the copy constructor and the copy-assignment operator otherwise.
+For user-defined types, the copy behavior is defined by the copy constructor and the copy-assignment operator. Move behaviour is defined by the move constructor and the move-assignment operator, if they exist, or by the copy constructor and the copy-assignment operator otherwise.
 
 The copy/move constructors can be implicitly invoked by the compiler in some situations, e.g. when passing objects by value.
 
-Objects of copyable and movable types can be passed and returned by value, which makes APIs simpler, safer, and more general. Unlike when passing objects by pointer or reference, there's no risk of confusion over ownership, lifetime, mutability, and similar issues, and no need to specify them in the contract. It also prevents non-local interactions between the client and the implementation, which makes them easier to understand, maintain, and optimize by the compiler. Further, such objects can be used with generic APIs that require pass-by-value, such as most containers, and they allow for additional flexibility in e.g., type composition.
+Pros:
+  Objects of copyable and movable types can be passed and returned by value, which makes APIs simpler, safer, and more general. Unlike when passing objects by pointer or reference, there's no risk of confusion over ownership, lifetime, mutability, and similar issues, and no need to specify them in the contract. It also prevents non-local interactions between the client and the implementation, which makes them easier to understand, maintain, and optimise by the compiler. Further, such objects can be used with generic APIs that require pass-by-value, such as most containers, and they allow for additional flexibility in e.g., type composition.
 
-Copy/move constructors and assignment operators are usually easier to define correctly than alternatives like Clone(), CopyFrom() or Swap(), because they can be generated by the compiler, either implicitly or with = default. They are concise, and ensure that all data members are copied. Copy and move constructors are also generally more efficient, because they don't require heap allocation or separate initialisation and assignment steps, and they're eligible for optimizations such as copy elision.
+  Copy/move constructors and assignment operators are usually easier to define correctly than alternatives like ``clone()``, ``copy_from()`` or ``swap()``, because they can be generated by the compiler, either implicitly or with ``= default``. They are concise, and ensure that all data members are copied. Copy and move constructors are also generally more efficient, because they don't require heap allocation or separate initialisation and assignment steps, and they're eligible for optimisations such as copy elision.
 
-Move operations allow the implicit and efficient transfer of resources out of rvalue objects. This allows a plainer coding style in some cases.
+  Move operations allow the implicit and efficient transfer of resources out of rvalue objects. This allows a plainer coding style in some cases.
 
-Some types do not need to be copyable, and providing copy operations for such types can be confusing, nonsensical, or outright incorrect. Types representing singleton objects (Registerer), objects tied to a specific scope (Cleanup), or closely coupled to object identity (Mutex) cannot be copied meaningfully. Copy operations for base class types that are to be used polymorphically are hazardous, because use of them can lead to object slicing. Defaulted or carelessly-implemented copy operations can be incorrect, and the resulting bugs can be confusing and difficult to diagnose.
+Cons:
+  Some types do not need to be copyable, and providing copy operations for such types can be confusing, nonsensical, or outright incorrect. Types representing singleton objects (Registerer), objects tied to a specific scope (Cleanup), or closely coupled to object identity (Mutex) cannot be copied meaningfully. Copy operations for base class types that are to be used polymorphically are hazardous, because use of them can lead to object slicing. Defaulted or carelessly-implemented copy operations can be incorrect, and the resulting bugs can be confusing and difficult to diagnose.
 
-Copy constructors are invoked implicitly, which makes the invocation easy to miss. This may cause confusion for programmers used to languages where pass-by-reference is conventional or mandatory. It may also encourage excessive copying, which can cause performance problems.
+  Copy constructors are invoked implicitly, which makes the invocation easy to miss. This may cause confusion for programmers used to languages where pass-by-reference is conventional or mandatory. It may also encourage excessive copying, which can cause performance problems.
 
-Every class's public interface should make explicit which copy and move operations the class supports. This should usually take the form of explicitly declaring and/or deleting the appropriate operations in the public section of the declaration.
+Decision:
+  Every class's public interface should make explicit which copy and move operations the class supports. This should usually take the form of explicitly declaring and/or deleting the appropriate operations in the public section of the declaration.
 
-Specifically, a copyable class should explicitly declare the copy operations, a move-only class should explicitly declare the move operations, and a non-copyable/movable class should explicitly delete the copy operations. Explicitly declaring or deleting all four copy/move operations is permitted, but not required. If you provide a copy or move assignment operator, you must also provide the corresponding constructor.
+  Specifically, a copyable class should explicitly declare the copy operations, a move-only class should explicitly declare the move operations, and a non-copyable/movable class should explicitly delete the copy operations. Explicitly declaring or deleting all four copy/move operations is required. If you provide a copy or move assignment operator, you must also provide the corresponding constructor.
 
-class Copyable {
- public:
-  Copyable(const Copyable& rhs) = default;
-  Copyable& operator=(const Copyable& rhs) = default;
+  .. code-block:: c++
 
-  // The implicit move operations are suppressed by the declarations above.
-};
+     class Copyable {
+       public:
+         //! Default constructor
+         Copyable() = delete;
 
-class MoveOnly {
- public:
-  MoveOnly(MoveOnly&& rhs);
-  MoveOnly& operator=(MoveOnly&& rhs);
+         //! Copy constructor
+         Copyable(const Copyable &other);
 
-  // The copy operations are implicitly deleted, but you can
-  // spell that out explicitly if you want:
-  MoveOnly(const MoveOnly&) = delete;
-  MoveOnly& operator=(const MoveOnly&) = delete;
-};
+         //! Move constructor
+         Copyable(Copyable &&other) = delete;
 
-class NotCopyableOrMovable {
- public:
-  // Not copyable or movable
-  NotCopyableOrMovable(const NotCopyableOrMovable&) = delete;
-  NotCopyableOrMovable& operator=(const NotCopyableOrMovable&)
-      = delete;
+         //! Destructor
+         virtual ~Copyable() noexcept;
 
-  // The move operations are implicitly disabled, but you can
-  // spell that out explicitly if you want:
-  NotCopyableOrMovable(NotCopyableOrMovable&&) = delete;
-  NotCopyableOrMovable& operator=(NotCopyableOrMovable&&)
-      = delete;
-};
+         //! Copy assignment operator
+         Copyable& operator=(const Copyable &other);
 
-These declarations/deletions can be omitted only if they are obvious: for example, if a base class isn't copyable or movable, derived classes naturally won't be either. Similarly, a struct's copyability/movability is normally determined by the copyability/movability of its data members (this does not apply to classes because in Google code their data members are not public). Note that if you explicitly declare or delete any of the copy/move operations, the others are not obvious, and so this paragraph does not apply (in particular, the rules in this section that apply to "classes" also apply to structs that declare or delete any copy/move operations).
+         //! Move assignment operator
+         Copyable& operator=(Copyable &&other) = delete;
 
-A type should not be copyable/movable if the meaning of copying/moving is unclear to a casual user, or if it incurs unexpected costs. Move operations for copyable types are strictly a performance optimization and are a potential source of bugs and complexity, so avoid defining them unless they are significantly more efficient than the corresponding copy operations. If your type provides copy operations, it is recommended that you design your class so that the default implementation of those operations is correct. Remember to review the correctness of any defaulted operations as you would any other code.
+       protected:
+         ...
+       private:
+         ...
 
-Due to the risk of slicing, prefer to avoid providing a public assignment operator or copy/move constructor for a class that's intended to be derived from (and prefer to avoid deriving from a class with such members). If your base class needs to be copyable, provide a public virtual Clone() method, and a protected copy constructor that derived classes can use to implement it.
+       };
+
+       class MoveOnly {
+       public:
+         //! Default constructor
+         MoveOnly() = delete;
+
+         //! Copy constructor
+         MoveOnly(const MoveOnly &other) = delete;
+
+         //! Move constructor
+         MoveOnly(MoveOnly &&other);
+
+         //! Destructor
+         virtual ~MoveOnly() noexcept;
+
+         //! Copy assignment operator
+         MoveOnly& operator=(const MoveOnly &other) = delete;
+
+         //! Move assignment operator
+         MoveOnly& operator=(MoveOnly &&other);
+
+       protected:
+         ...
+       private:
+         ...
+       };
+
+       class NotCopyableNorMovable {
+       public:
+         //! Default constructor
+         NotCopyableNorMovable() = delete;
+
+         //! Copy constructor
+         NotCopyableNorMovable(const NotCopyableNorMovable &other) = delete;
+
+         //! Move constructor
+         NotCopyableNorMovable(NotCopyableNorMovable &&other);
+
+         //! Destructor
+         virtual ~NotCopyableNorMovable() noexcept;
+
+         //! Copy assignment operator
+         NotCopyableNorMovable& operator=(const NotCopyableNorMovable &other) = delete;
+
+         //! Move assignment operator
+         NotCopyableNorMovable& operator=(NotCopyableNorMovable &&other) = delete;
+
+       protected:
+         ...
+       private:
+         ...
+       };
+
+  These declarations/deletions can be omitted only if they are obvious: for example, if a base class isn't copyable or movable, derived classes naturally won't be either. Similarly, a ``struct``'s copyability/movability is normally determined by the copyability/movability of its data members. Note that if you explicitly declare or delete any of the copy/move operations, the others are not obvious, and so this paragraph does not apply (in particular, the rules in this section that apply to ``class``\es also apply to ``struct``\s that declare or delete any copy/move operations).
+
+  A type should not be copyable/movable if it incurs unexpected costs. Move operations for copyable types are strictly a performance optimisation and are a potential source of bugs and complexity, so define them if they have a chance of being more efficient than the corresponding copy operations. If your type provides copy operations, it is recommended that you design your class so that the default implementation of those operations is correct. Remember to review the correctness of any defaulted operations as you would any other code.
 
 Structs vs. Classes
 -------------------
 
-Use a struct only for passive objects that carry data; everything else is a class.
+Use a ``struct`` only for passive objects that carry data or collections of templated static member functions that need to be partially specialised; everything else is a ``class``.
 
-The struct and class keywords behave almost identically in C++. We add our own semantic meanings to each keyword, so you should use the appropriate keyword for the data-type you're defining.
+The ``struct`` and ``class`` keywords behave almost identically in C++. We add our own semantic meanings to each keyword, so you should use the appropriate keyword for the data-type you're defining.
 
-structs should be used for passive objects that carry data, and may have associated constants, but lack any functionality other than access/setting the data members. The accessing/setting of fields is done by directly accessing the fields rather than through method invocations. Methods should not provide behavior but should only be used to set up the data members, e.g., constructor, destructor, Initialise(), Reset(), Validate().
+``struct``\s should be used for passive objects that carry data, and may have associated constants, but lack any functionality other than access/setting the data members. The accessing/setting of fields is done by directly accessing the fields rather than through method invocations.
 
-If more functionality is required, a class is more appropriate. If in doubt, make it a class.
+Methods should only be used in templated static method-only ``struct``\s. See, e.g.:
 
-For consistency with STL, you can use struct instead of class for functors and traits.
+.. code-block:: c++
 
-Note that member variables in structs and classes have different naming rules.
+       //! static inline implementation of Hooke's law
+       template <Dim_t Dim, class Strain_t, class Tangent_t>
+       struct Hooke {
+         /**
+          * compute Lamé's first constant
+          * @param young: Young's modulus
+          * @param poisson: Poisson's ratio
+          */
+         inline static constexpr Real
+         compute_lambda(const Real & young, const Real & poisson) {
+           return convert_elastic_modulus<ElasticModulus::lambda,
+                                          ElasticModulus::Young,
+                                          ElasticModulus::Poisson>(young, poisson);
+         }
+
+         /**
+          * compute Lamé's second constant (i.e., shear modulus)
+          * @param young: Young's modulus
+          * @param poisson: Poisson's ratio
+          */
+         inline static constexpr Real
+         compute_mu(const Real & young, const Real & poisson) {
+           return convert_elastic_modulus<ElasticModulus::Shear,
+                                          ElasticModulus::Young,
+                                          ElasticModulus::Poisson>(young, poisson);
+         }
+
+         /**
+          * compute the bulk modulus
+          * @param young: Young's modulus
+          * @param poisson: Poisson's ratio
+          */
+         inline static constexpr Real
+         compute_K(const Real & young, const Real & poisson) {
+           return convert_elastic_modulus<ElasticModulus::Bulk,
+                                          ElasticModulus::Young,
+                                          ElasticModulus::Poisson>(young, poisson);
+         }
+
+         /**
+          * compute the stiffness tensor
+          * @param lambda: Lamé's first constant
+          * @param mu: Lamé's second constant (i.e., shear modulus)
+          */
+         inline static Eigen::TensorFixedSize<Real, Eigen::Sizes<Dim, Dim, Dim, Dim>>
+         compute_C(const Real & lambda, const Real & mu) {
+           return lambda*Tensors::outer<Dim>(Tensors::I2<Dim>(),Tensors::I2<Dim>()) +
+             2*mu*Tensors::I4S<Dim>();
+         }
+
+         /**
+          * compute the stiffness tensor
+          * @param lambda: Lamé's first constant
+          * @param mu: Lamé's second constant (i.e., shear modulus)
+          */
+         inline static T4Mat<Real, Dim>
+         compute_C_T4(const Real & lambda, const Real & mu) {
+           return lambda*Matrices::Itrac<Dim>() + 2*mu*Matrices::Isymm<Dim>();
+         }
+
+         /**
+          * return stress
+          * @param lambda: First Lamé's constant
+          * @param mu: Second Lamé's constant (i.e. shear modulus)
+          * @param E: Green-Lagrange or small strain tensor
+          */
+         template <class s_t>
+         inline static decltype(auto)
+         evaluate_stress(const Real & lambda, const Real & mu, s_t && E) {
+           return E.trace()*lambda * Strain_t::Identity() + 2*mu*E;
+         }
+
+         /**
+          * return stress and tangent stiffness
+          * @param lambda: First Lamé's constant
+          * @param mu: Second Lamé's constant (i.e. shear modulus)
+          * @param E: Green-Lagrange or small strain tensor
+          * @param C: stiffness tensor (Piola-Kirchhoff 2 (or σ) w.r.t to `E`)
+          */
+         template <class s_t>
+         inline static decltype(auto)
+         evaluate_stress(const Real & lambda, const Real & mu,
+                         Tangent_t && C, s_t && E) {
+           return std::make_tuple
+             (std::move(evaluate_stress(lambda, mu, std::move(E))),
+              std::move(C));
+         }
+       };
+
+The goal of such static member functions-only ``struct``\s is to instantiate a set of function templates with consistent template parameters without repeating those parameters.
+
+If more functionality is required, a ``class`` is more appropriate. If in doubt, make it a ``class``.
+
+For consistency with STL, you can use ``struct`` instead of ``class`` for functors and traits.
+
+.. _inheritance:
 
 Inheritance
 -----------
 
-Composition is often more appropriate than inheritance. When using inheritance, make it public.
+Composition is often more appropriate than inheritance. When using inheritance, make it ``public``.
 
-When a sub-class inherits from a base class, it includes the definitions of all the data and operations that the parent base class defines. In practice, inheritance is used in two major ways in C++: implementation inheritance, in which actual code is inherited by the child, and interface inheritance, in which only method names are inherited.
+Definition:
+  When a sub-class inherits from a base class, it includes the definitions of all the data and operations that the parent base class defines. In practice, inheritance is used in two major ways in C++: implementation inheritance, in which actual code is inherited by the child, and :ref:`interface inheritance <interfaces>`, in which only method names are inherited.
 
-Implementation inheritance reduces code size by re-using the base class code as it specializes an existing type. Because inheritance is a compile-time declaration, you and the compiler can understand the operation and detect errors. Interface inheritance can be used to programmatically enforce that a class expose a particular API. Again, the compiler can detect errors, in this case, when a class does not define a necessary method of the API.
+Pros:
+  Implementation inheritance reduces code size by re-using the base class code as it specializes an existing type. Because inheritance is a compile-time declaration, you and the compiler can understand the operation and detect errors. Interface inheritance can be used to programmatically enforce that a class expose a particular API. Again, the compiler can detect errors, in this case, when a class does not define a necessary method of the API.
 
-For implementation inheritance, because the code implementing a sub-class is spread between the base and the sub-class, it can be more difficult to understand an implementation. The sub-class cannot override functions that are not virtual, so the sub-class cannot change implementation.
+Cons:
+  For implementation inheritance, because the code implementing a sub-class is spread between the base and the sub-class, it can be more difficult to understand an implementation. The sub-class cannot override functions that are not virtual, so the sub-class cannot change implementation.
 
-All inheritance should be public. If you want to do private inheritance, you should be including an instance of the base class as a member instead.
+Decision:
+  All inheritance should be ``public``. If you want to do private inheritance, you should be including an instance of the base class as a member instead.
 
-Do not overuse implementation inheritance. Composition is often more appropriate. Try to restrict use of inheritance to the "is-a" case: Bar subclasses Foo if it can reasonably be said that Bar "is a kind of" Foo.
+  Do not overuse implementation inheritance. Composition is often more appropriate. Try to restrict use of inheritance to the "is-a" case: ``Bar`` subclasses ``Foo`` if it can reasonably be said that ``Bar`` "is a kind of" ``Foo``.
 
-Limit the use of protected to those member functions that might need to be accessed from subclasses. Note that data members should be private.
+  Limit the use of protected to those member functions that might need to be accessed from subclasses. Note that :ref:`data members should be private <access control>`.
 
-Explicitly annotate overrides of virtual functions or virtual destructors with exactly one of an override or (less frequently) final specifier. Do not use virtual when declaring an override. Rationale: A function or destructor marked override or final that is not an override of a base class virtual function will not compile, and this helps catch common errors. The specifiers serve as documentation; if no specifier is present, the reader has to check all ancestors of the class in question to determine if the function or destructor is virtual or not.
+  Explicitly annotate overrides of virtual functions or virtual destructors with exactly one of either the ``override`` or (less frequently) ``override final`` specifier. Do not use ``virtual`` when declaring an ``override``. Rationale: A function or destructor marked ``override`` or ``final`` that is not an ``override`` of a base class virtual function will not compile, and this helps catch common errors. The specifiers serve as documentation; if no specifier is present, the reader has to check all ancestors of the class in question to determine if the function or destructor is ``virtual`` or not.
 
 Multiple Inheritance
 --------------------
 
-Only very rarely is multiple implementation inheritance actually useful. We allow multiple inheritance only when at most one of the base classes has an implementation; all other base classes must be pure interface classes tagged with the Interface suffix.
+Only very rarely is multiple implementation inheritance actually useful. We allow multiple inheritance only when at most one of the base classes has an implementation; all other base classes must be :ref:`pure interface <interfaces>` classes.
 
-Multiple inheritance allows a sub-class to have more than one base class. We distinguish between base classes that are pure interfaces and those that have an implementation.
+Definition:
+  Multiple inheritance allows a sub-class to have more than one base class. We distinguish between base classes that are *pure interfaces* and those that have an *implementation*.
 
-Multiple implementation inheritance may let you re-use even more code than single inheritance (see Inheritance).
+Pros:
+  Multiple implementation inheritance may let you re-use even more code than single inheritance (see :ref:`inheritance`).
 
-Only very rarely is multiple implementation inheritance actually useful. When multiple implementation inheritance seems like the solution, you can usually find a different, more explicit, and cleaner solution.
+Cons:
+  Only very rarely is multiple *implementation* inheritance actually useful. When multiple implementation inheritance seems like the solution, you can usually find a different, more explicit, and cleaner solution.
 
-Multiple inheritance is allowed only when all superclasses, with the possible exception of the first one, are pure interfaces. In order to ensure that they remain pure interfaces, they must end with the Interface suffix.
+Decision:
+  Multiple inheritance is allowed only when all superclasses, with the possible exception of the first one, are :ref:`pure interfaces <interfaces>`.
 
-There is an exception to this rule on Windows.
+Note:
+  There is an :ref:`exception <joke>` to this rule on Windows.
+
+.. _interfaces:
 
 Interfaces
 ----------
 
-Classes that satisfy certain conditions are allowed, but not required, to end with an Interface suffix.
+Definition:
+  A class is a pure interface if it meets the following requirements:
 
-A class is a pure interface if it meets the following requirements:
+  - It has only public pure virtual (``= 0``) methods and static methods (but see below for destructor).
+  - It may not have non-static data members.
+  - It need not have any constructors defined. If a constructor is provided, it must take no arguments and it must be protected.
+  - If it is a subclass, it may only be derived from classes that satisfy these conditions.
 
-    It has only public pure virtual ("= 0") methods and static methods (but see below for destructor).
-    It may not have non-static data members.
-    It need not have any constructors defined. If a constructor is provided, it must take no arguments and it must be protected.
-    If it is a subclass, it may only be derived from classes that satisfy these conditions and are tagged with the Interface suffix.
+  An interface class can never be directly instantiated because of the pure virtual method(s) it declares. To make sure all implementations of the interface can be destroyed correctly, the interface must also declare a virtual destructor (in an exception to the first rule, this should not be pure). See *Stroustrup, The C++ Programming Language, 4th edition, 2014*, section 20.3 for details.
 
-An interface class can never be directly instantiated because of the pure virtual method(s) it declares. To make sure all implementations of the interface can be destroyed correctly, the interface must also declare a virtual destructor (in an exception to the first rule, this should not be pure). See Stroustrup, The C++ Programming Language, 3rd edition, section 12.4 for details.
-
-Tagging a class with the Interface suffix lets others know that they must not add implemented methods or non static data members. This is particularly important in the case of multiple inheritance. Additionally, the interface concept is already well-understood by Java programmers.
-
-The Interface suffix lengthens the class name, which can make it harder to read and understand. Also, the interface property may be considered an implementation detail that shouldn't be exposed to clients.
-
-A class may end with Interface only if it meets the above requirements. We do not require the converse, however: classes that meet the above requirements are not required to end with Interface.
 
 Operator Overloading
 --------------------
 
-Overload operators judiciously. Do not create user-defined literals.
+Overload operators judiciously.
 
-C++ permits user code to declare overloaded versions of the built-in operators using the operator keyword, so long as one of the parameters is a user-defined type. The operator keyword also permits user code to define new kinds of literals using operator"", and to define type-conversion functions such as operator bool().
+Definition:
+  C++ permits user code to `declare overloaded versions of the built-in operators <http://en.cppreference.com/w/cpp/language/operators>`_ using the ``operator`` keyword, so long as one of the parameters is a user-defined type. The ``operator`` keyword also permits user code to define new kinds of literals using ``operator""``, and to define type-conversion functions such as ``operator bool()``.
 
-Operator overloading can make code more concise and intuitive by enabling user-defined types to behave the same as built-in types. Overloaded operators are the idiomatic names for certain operations (e.g. ==, <, =, and <<), and adhering to those conventions can make user-defined types more readable and enable them to interoperate with libraries that expect those names.
+Pros:
+  Operator overloading can make code more concise and intuitive by enabling user-defined types to behave the same as built-in types. Overloaded operators are the idiomatic names for certain operations (e.g. ``==``, ``<``, ``=``, and ``<<``), and adhering to those conventions can make user-defined types more readable and enable them to interoperate with libraries that expect those names.
 
-User-defined literals are a very concise notation for creating objects of user-defined types.
+  User-defined literals are a very concise notation for creating objects of user-defined types.
 
-    Providing a correct, consistent, and unsurprising set of operator overloads requires some care, and failure to do so can lead to confusion and bugs.
-    Overuse of operators can lead to obfuscated code, particularly if the overloaded operator's semantics don't follow convention.
-    The hazards of function overloading apply just as much to operator overloading, if not more so.
-    Operator overloads can fool our intuition into thinking that expensive operations are cheap, built-in operations.
-    Finding the call sites for overloaded operators may require a search tool that's aware of C++ syntax, rather than e.g. grep.
-    If you get the argument type of an overloaded operator wrong, you may get a different overload rather than a compiler error. For example, foo < bar may do one thing, while &foo < &bar does something totally different.
-    Certain operator overloads are inherently hazardous. Overloading unary & can cause the same code to have different meanings depending on whether the overload declaration is visible. Overloads of &&, ||, and , (comma) cannot match the evaluation-order semantics of the built-in operators.
-    Operators are often defined outside the class, so there's a risk of different files introducing different definitions of the same operator. If both definitions are linked into the same binary, this results in undefined behavior, which can manifest as subtle run-time bugs.
-    User-defined literals allow the creation of new syntactic forms that are unfamiliar even to experienced C++ programmers.
+Cons:
+  - Providing a correct, consistent, and unsurprising set of operator overloads requires some care, and failure to do so can lead to confusion and bugs.
+  - Overuse of operators can lead to obfuscated code, particularly if the overloaded operator's semantics don't follow convention.
+  - The hazards of function overloading apply just as much to operator overloading, if not more so.
+  - Operator overloads can fool our intuition into thinking that expensive operations are cheap, built-in operations.
+  - Finding the call sites for overloaded operators may require a search tool that's aware of C++ syntax, rather than e.g. grep.
+  - If you get the argument type of an overloaded operator wrong, you may get a different overload rather than a compiler error. For example, ``foo < bar`` may do one thing, while ``&foo < &bar`` does something totally different.
+  - Certain operator overloads are inherently hazardous. Overloading unary ``&`` can cause the same code to have different meanings depending on whether the overload declaration is visible. Overloads of ``&&``, ``||``, and ``,`` (comma) cannot match the evaluation-order semantics of the built-in operators.
+  - Operators are often defined outside the class, so there's a risk of different files introducing different definitions of the same operator. If both definitions are linked into the same binary, this results in undefined behavior, which can manifest as subtle run-time bugs.
+  - User-defined literals allow the creation of new syntactic forms that are unfamiliar even to experienced C++ programmers.
 
-Define overloaded operators only if their meaning is obvious, unsurprising, and consistent with the corresponding built-in operators. For example, use | as a bitwise- or logical-or, not as a shell-style pipe.
+Decisions:
+  Define overloaded operators only if their meaning is obvious, unsurprising, and consistent with the corresponding built-in operators. For example, use ``|`` as a bitwise- or logical-or, not as a shell-style pipe.
 
-Define operators only on your own types. More precisely, define them in the same headers, ``.cc`` files, and namespaces as the types they operate on. That way, the operators are available wherever the type is, minimizing the risk of multiple definitions. If possible, avoid defining operators as templates, because they must satisfy this rule for any possible template arguments. If you define an operator, also define any related operators that make sense, and make sure they are defined consistently. For example, if you overload <, overload all the comparison operators, and make sure < and > never return true for the same arguments.
+  Define operators only on your own types. More precisely, define them in the same headers, ``.cc`` files, and namespaces as the types they operate on. That way, the operators are available wherever the type is, minimizing the risk of multiple definitions. If possible, avoid defining operators as templates, because they must satisfy this rule for any possible template arguments. If you define an operator, also define any related operators that make sense, and make sure they are defined consistently. For example, if you overload ``<``, overload all the comparison operators, and make sure ``<`` and ``>`` never return true for the same arguments.
 
-Prefer to define non-modifying binary operators as non-member functions. If a binary operator is defined as a class member, implicit conversions will apply to the right-hand argument, but not the left-hand one. It will confuse your users if a < b compiles but b < a doesn't.
+  Prefer to define non-modifying binary operators as non-member functions. If a binary operator is defined as a class member, implicit conversions will apply to the right-hand argument, but not the left-hand one. It will confuse your users if ``a < b`` compiles but ``b < a`` doesn't.
 
-Don't go out of your way to avoid defining operator overloads. For example, prefer to define ==, =, and <<, rather than Equals(), CopyFrom(), and PrintTo(). Conversely, don't define operator overloads just because other libraries expect them. For example, if your type doesn't have a natural ordering, but you want to store it in a std::set, use a custom comparator rather than overloading <.
+  Don't go out of your way to avoid defining operator overloads. For example, prefer to define ``==``, ``=``, and ``<<``, rather than ``equals()``, ``copy_from()``, and ``print_to()``. Conversely, don't define operator overloads just because other libraries expect them. For example, if your type doesn't have a natural ordering, but you want to store it in a ``std::set``, use a custom comparator rather than overloading ``<``.
 
-Do not overload &&, ||, , (comma), or unary &. Do not overload operator"", i.e. do not introduce user-defined literals.
+Do not overload ``&&``, ``||``, ``,`` (comma), or unary ``&``.
 
-Type conversion operators are covered in the section on implicit conversions. The = operator is covered in the section on copy constructors. Overloading << for use with streams is covered in the section on streams. See also the rules on function overloading, which apply to operator overloading as well.
+Type conversion operators are covered in :ref:`implicit conversion`. The ``=`` operator is covered in :ref:`copyable and movable types`. Overloading ``<<`` for use with streams is covered in :ref:`streams`. See also the rules on :ref:`function overloading <function overloading>`, which apply to operator overloading as well.
+
+.. _`access control`:
 
 Access Control
 --------------
 
-Make data members private, unless they are static const (and follow the naming convention for constants).
+Make data members ``protected``, unless they are ``static const`` (and follow the :ref:`naming convention for constants <constant names>`).
 
-For technical reasons, we allow data members of a test fixture class to be protected when using Google Test).
 
 Declaration Order
 -----------------
 
-Group similar declarations together, placing public parts earlier.
+Group similar declarations together, placing ``public`` parts earlier.
 
-A class definition should usually start with a public: section, followed by protected:, then private:. Omit sections that would be empty.
+A class definition should usually start with a ``public:`` section, followed by ``protected:``, then ``private:``. Omit sections that would be empty.
 
-Within each section, generally prefer grouping similar kinds of declarations together, and generally prefer the following order: types (including typedef, using, and nested structs and classes), constants, factory functions, constructors, assignment operators, destructor, all other methods, data members.
+Within each section, generally prefer grouping similar kinds of declarations together, and generally prefer the following order: types (including ``using``, and nested ``struct``\s and ``class``\es), constants, factory functions, constructors, assignment operators, destructor, all other methods, data members.
 
-Do not put large method definitions inline in the class definition. Usually, only trivial or performance-critical, and very short, methods may be defined inline. See Inline Functions for more details.
+Do not put large method definitions inline in the class definition. Trivial, performance-critical, or template methods may be defined inline. See :ref:`inline functions` for more details.
 
 Functions
 =========
@@ -786,11 +955,11 @@ Output Parameters
 
 Prefer using return values rather than output parameters. If output-only parameters are used they should appear after input parameters.
 
-The output of a C++ function is naturally provided via a return value and sometimes via output parameters.
+The output(s) of a C++ function is/are naturally provided via a (tuple of) return value and sometimes via output parameters.
 
-Prefer using return values instead of output parameters since they improve readability and oftentimes provide the same or better performance.
+Prefer using return values and return value tuples over output parameters since they improve readability and oftentimes provide the same or better performance.
 
-Parameters are either input to the function, output from the function, or both. Input parameters are usually values or const references, while output and input/output parameters will be pointers to non-const.
+Parameters are either input to the function, output from the function, or both. Input parameters are usually values or const references, while output and input/output parameters will be references to non-const.
 
 When ordering function parameters, put all input-only parameters before any output parameters. In particular, do not add new parameters to the end of the function just because they are new; place new input-only parameters before the output parameters.
 
@@ -801,443 +970,472 @@ Write Short Functions
 
 Prefer small and focused functions.
 
-We recognize that long functions are sometimes appropriate, so no hard limit is placed on functions length. If a function exceeds about 40 lines, think about whether it can be broken up without harming the structure of the program.
+We recognise that long functions are sometimes appropriate, so no hard limit is placed on functions length. If a function exceeds about 40 lines, think about whether it can be broken up without harming the structure of the program.
 
-Even if your long function works perfectly now, someone modifying it in a few months may add new behavior. This could result in bugs that are hard to find. Keeping your functions short and simple makes it easier for other people to read and modify your code.
+Even if your long function works perfectly now, someone modifying it in a few months may add new behaviour. This could result in bugs that are hard to find. Keeping your functions short and simple makes it easier for other people to read and modify your code.
 
 You could find long and complicated functions when working with some code. Do not be intimidated by modifying existing code: if working with such a function proves to be difficult, you find that errors are hard to debug, or you want to use a piece of it in several different contexts, consider breaking up the function into smaller and more manageable pieces.
 
 Reference Arguments
 -------------------
 
-All parameters passed by reference must be labeled const.
+All input parameters passed by reference must be labelled ``const``, Output and input/output parameters can be passed as references, :ref:`smart pointers <ownership and smart pointers>`, or ``std::optional``. **There are no raw pointers** within *µ*\Spectre, ever.
 
-In C, if a function needs to modify a variable, the parameter must use a pointer, eg int foo(int *pval). In C++, the function can alternatively declare a reference parameter: int foo(int &val).
+Definition:
+  In C, if a function needs to modify a variable, the parameter must use a pointer, e.g., ``int foo(int *pval)``. In C++, the function can alternatively declare a reference parameter: ``int foo(int &val)``.
 
-Defining a parameter as reference avoids ugly code like (*pval)++. Necessary for some applications like copy constructors. Makes it clear, unlike with pointers, that a null pointer is not a possible value.
+Pros:
+  Defining a parameter as reference avoids ugly code like ``(*pval)++``. Necessary for some applications like copy constructors. Makes it clear, unlike with pointers, that a null pointer is not a possible value.
 
-References can be confusing, as they have value syntax but pointer semantics.
+Cons:
+  References can be confusing to absolute beginners, as they have value syntax but pointer semantics.
 
-Within function parameter lists all references must be const:
+Decision:
+  The one hard rule in *µ*\Spectre is that no raw pointers will be tolerated (with the obvious exception of interacting with third-party APIs). Pointers are to be considered a bug-generating relic of a darker time when ``goto`` statements were allowed to exist. If you need to mimic the questionable practice of passing a pointer that could be ``nullptr`` to indicate that there is no value, use ``std::optional``.
 
-void Foo(const string &in, string *out);
-
-In fact it is a very strong convention in Google code that input arguments are values or const references while output arguments are pointers. Input parameters may be const pointers, but we never allow non-const reference parameters except when required by convention, e.g., swap().
-
-However, there are some instances where using const T* is preferable to const T& for input parameters. For example:
-
-    You want to pass in a null pointer.
-    The function saves a pointer or reference to the input.
-
-Remember that most of the time input parameters are going to be specified as const T&. Using const T* instead communicates to the reader that the input is somehow treated differently. So if you choose const T* rather than const T&, do so for a concrete reason; otherwise it will likely confuse readers by making them look for an explanation that doesn't exist.
+.. _`function overloading`:
 
 Function Overloading
 --------------------
 
 Use overloaded functions (including constructors) only if a reader looking at a call site can get a good idea of what is happening without having to first figure out exactly which overload is being called.
 
-You may write a function that takes a const string& and overload it with another that takes const char*. However, in this case consider std::string_view instead.
+Definition:
+  You may write a function that takes a ``const string&`` and overload it with another that takes ``const char*``. However, in this case consider ``std::string_view`` instead.
 
-class MyClass {
- public:
-  void Analyze(const string &text);
-  void Analyze(const char *text, size_t textlen);
-};
+  .. code-block:: c++
 
-Overloading can make code more intuitive by allowing an identically-named function to take different arguments. It may be necessary for templatized code, and it can be convenient for Visitors.
+     class MyClass {
+      public:
+       void Analyze(const string &text);
+       void Analyze(const char *text, size_t textlen);
+     };
 
-If a function is overloaded by the argument types alone, a reader may have to understand C++'s complex matching rules in order to tell what's going on. Also many people are confused by the semantics of inheritance if a derived class overrides only some of the variants of a function.
+Pros:
+  Overloading can make code more intuitive by allowing an identically-named function to take different arguments. It may be necessary for templated code, and it can be convenient for Visitors.
 
-You may overload a function when there are no semantic differences between variants, or when the differences are clear at the callsite.
+Cons:
+  If a function is overloaded by the argument types alone, a reader may have to understand C++'s complex matching rules in order to tell what's going on. Also many people are confused by the semantics of inheritance if a derived class overrides only some of the variants of a function.
 
-If you are overloading a function to support variable number of arguments of the same type, consider making it take a std::vector so that the user can use an initialiser list to specify the arguments.
+Decision:
+  You may overload a function when there are no semantic differences between variants, or when the differences are clear at the call site.
+
+  If you are overloading a function to support variable number of arguments of the same type, consider making it take a STL container so that the user can use an :ref:`initialiser list <braced initialiser list>` to specify the arguments.
 
 Default Arguments
 -----------------
 
-Default arguments are allowed on non-virtual functions when the default is guaranteed to always have the same value. Follow the same restrictions as for function overloading, and prefer overloaded functions if the readability gained with default arguments doesn't outweigh the downsides below.
+Default arguments are allowed on non-virtual functions when the default is guaranteed to always have the same value. Follow the same restrictions as for :ref:`function overloading <function overloading>`, and prefer overloaded functions if the readability gained with default arguments doesn't outweigh the downsides below.
 
-Often you have a function that uses default values, but occasionally you want to override the defaults. Default parameters allow an easy way to do this without having to define many functions for the rare exceptions. Compared to overloading the function, default arguments have a cleaner syntax, with less boilerplate and a clearer distinction between 'required' and 'optional' arguments.
+Pros:
+  Often you have a function that uses default values, but occasionally you want to override the defaults. Default parameters allow an easy way to do this without having to define many functions for the rare exceptions. Compared to overloading the function, default arguments have a cleaner syntax, with less boilerplate and a clearer distinction between 'required' and 'optional' arguments.
 
-Defaulted arguments are another way to achieve the semantics of overloaded functions, so all the reasons not to overload functions apply.
+Cons:
+  Defaulted arguments are another way to achieve the semantics of overloaded functions, so all the :ref:`reasons not to overload functions <function overloading>` apply.
 
-The defaults for arguments in a virtual function call are determined by the static type of the target object, and there's no guarantee that all overrides of a given function declare the same defaults.
+  The defaults for arguments in a virtual function call are determined by the static type of the target object, and there's no guarantee that all overrides of a given function declare the same defaults.
 
-Default parameters are re-evaluated at each call site, which can bloat the generated code. Readers may also expect the default's value to be fixed at the declaration instead of varying at each call.
+  Default parameters are re-evaluated at each call site, which can bloat the generated code. Readers may also expect the default's value to be fixed at the declaration instead of varying at each call.
 
-Function pointers are confusing in the presence of default arguments, since the function signature often doesn't match the call signature. Adding function overloads avoids these problems.
+  Function pointers are confusing in the presence of default arguments, since the function signature often doesn't match the call signature. Adding function overloads avoids these problems.
 
-Default arguments are banned on virtual functions, where they don't work properly, and in cases where the specified default might not evaluate to the same value depending on when it was evaluated. (For example, don't write void f(int n = counter++);.)
+Decision:
+  Default arguments are banned on virtual functions, where they don't work properly, and in cases where the specified default might not evaluate to the same value depending on when it was evaluated. (For example, don't write ``void f(int n = counter++);``.)
 
-In some other cases, default arguments can improve the readability of their function declarations enough to overcome the downsides above, so they are allowed. When in doubt, use overloads.
+  In some other cases, default arguments can improve the readability of their function declarations enough to overcome the downsides above, so they are allowed.
 
 Trailing Return Type Syntax
 ---------------------------
 
 Use trailing return types only where using the ordinary syntax (leading return types) is impractical or much less readable.
 
-C++ allows two different forms of function declarations. In the older form, the return type appears before the function name. For example:
+Definition:
+  C++ allows two different forms of function declarations. In the older form, the return type appears before the function name. For example:
 
-int foo(int x);
+  .. code-block:: c++
 
-The new form, introduced in C++11, uses the auto keyword before the function name and a trailing return type after the argument list. For example, the declaration above could equivalently be written:
+     int foo(int x);
 
-auto foo(int x) -> int;
+  The new form, introduced in C++11, uses the auto keyword before the function name and a trailing return type after the argument list. For example, the declaration above could equivalently be written:
 
-The trailing return type is in the function's scope. This doesn't make a difference for a simple case like int but it matters for more complicated cases, like types declared in class scope or types written in terms of the function parameters.
+  .. code-block:: c++
 
-Trailing return types are the only way to explicitly specify the return type of a lambda expression. In some cases the compiler is able to deduce a lambda's return type, but not in all cases. Even when the compiler can deduce it automatically, sometimes specifying it explicitly would be clearer for readers.
+     auto foo(int x) -> int;
 
-Sometimes it's easier and more readable to specify a return type after the function's parameter list has already appeared. This is particularly true when the return type depends on template parameters. For example:
+  The trailing return type is in the function's scope. This doesn't make a difference for a simple case like int but it matters for more complicated cases, like types declared in class scope or types written in terms of the function parameters.
 
-    template <typename T, typename U>
-    auto add(T t, U u) -> decltype(t + u);
+Pros:
+  Trailing return types are the only way to explicitly specify the return type of a :ref:`lambda expression <lambda expressions>`. In some cases the compiler is able to deduce a lambda's return type, but not in all cases. Even when the compiler can deduce it automatically, sometimes specifying it explicitly would be clearer for readers.
+
+  Sometimes it's easier and more readable to specify a return type after the function's parameter list has already appeared. This is particularly true when the return type depends on template parameters. For example:
+
+  .. code-block:: c++
+
+     template <typename T, typename U>
+     auto add(T t, U u) -> decltype(t + u);
 
 
-versus
+  versus
 
-    template <typename T, typename U>
-    decltype(declval<T&>() + declval<U&>()) add(T t, U u);
+  .. code-block:: c++
 
+     template <typename T, typename U>
+     decltype(declval<T&>() + declval<U&>()) add(T t, U u);
 
-Trailing return type syntax is relatively new and it has no analogue in C++-like languages like C and Java, so some readers may find it unfamiliar.
-
-Existing code bases have an enormous number of function declarations that aren't going to get changed to use the new syntax, so the realistic choices are using the old syntax only or using a mixture of the two. Using a single version is better for uniformity of style.
-
-In most cases, continue to use the older style of function declaration where the return type goes before the function name. Use the new trailing-return-type form only in cases where it's required (such as lambdas) or where, by putting the type after the function's parameter list, it allows you to write the type in a much more readable way. The latter case should be rare; it's mostly an issue in fairly complicated template code, which is discouraged in most cases.
+Decision:
+  In most cases, continue to use the older style of function declaration where the return type goes before the function name. Use the new trailing-return-type form only in cases where it's required (such as lambdas) or where, by putting the type after the function's parameter list, it allows you to write the type in a much more readable way.
 
 Ownership and linting
 =====================
 
 There are various tricks and utilities that we use to make C++ code more robust, and various ways we use C++ that may differ from what you see elsewhere.
 
+.. _`ownership and smart pointers`:
+
 Ownership and Smart Pointers
 ----------------------------
 
 Prefer to have single, fixed owners for dynamically allocated objects. Prefer to transfer ownership with smart pointers.
 
-"Ownership" is a bookkeeping technique for managing dynamically allocated memory (and other resources). The owner of a dynamically allocated object is an object or function that is responsible for ensuring that it is deleted when no longer needed. Ownership can sometimes be shared, in which case the last owner is typically responsible for deleting it. Even when ownership is not shared, it can be transferred from one piece of code to another.
+Definition:
+  "Ownership" is a bookkeeping technique for managing dynamically allocated memory (and other resources). The owner of a dynamically allocated object is an object or function that is responsible for ensuring that it is deleted when no longer needed. Ownership can sometimes be shared, in which case the last owner is typically responsible for deleting it. Even when ownership is not shared, it can be transferred from one piece of code to another.
 
-"Smart" pointers are classes that act like pointers, e.g. by overloading the * and -> operators. Some smart pointer types can be used to automate ownership bookkeeping, to ensure these responsibilities are met. std::unique_ptr is a smart pointer type introduced in C++11, which expresses exclusive ownership of a dynamically allocated object; the object is deleted when the std::unique_ptr goes out of scope. It cannot be copied, but can be moved to represent ownership transfer. std::shared_ptr is a smart pointer type that expresses shared ownership of a dynamically allocated object. std::shared_ptrs can be copied; ownership of the object is shared among all copies, and the object is deleted when the last std::shared_ptr is destroyed.
+  "Smart" pointers are classes that act like pointers, e.g. by overloading the ``*`` and ``->`` operators. Some smart pointer types can be used to automate ownership bookkeeping, to ensure these responsibilities are met. ``std::unique_ptr`` is a smart pointer type introduced in C++11, which expresses exclusive ownership of a dynamically allocated object; the object is deleted when the ``std::unique_ptr`` goes out of scope. It cannot be copied, but can be moved to represent ownership transfer. ``std::shared_ptr`` is a smart pointer type that expresses shared ownership of a dynamically allocated object. ``std::shared_ptrs`` can be copied; ownership of the object is shared among all copies, and the object is deleted when the last ``std::shared_ptr`` is destroyed.
 
-    It's virtually impossible to manage dynamically allocated memory without some sort of ownership logic.
-    Transferring ownership of an object can be cheaper than copying it (if copying it is even possible).
-    Transferring ownership can be simpler than 'borrowing' a pointer or reference, because it reduces the need to coordinate the lifetime of the object between the two users.
-    Smart pointers can improve readability by making ownership logic explicit, self-documenting, and unambiguous.
-    Smart pointers can eliminate manual ownership bookkeeping, simplifying the code and ruling out large classes of errors.
-    For const objects, shared ownership can be a simple and efficient alternative to deep copying.
+Pros:
 
-    Ownership must be represented and transferred via pointers (whether smart or plain). Pointer semantics are more complicated than value semantics, especially in APIs: you have to worry not just about ownership, but also aliasing, lifetime, and mutability, among other issues.
-    The performance costs of value semantics are often overestimated, so the performance benefits of ownership transfer might not justify the readability and complexity costs.
-    APIs that transfer ownership force their clients into a single memory management model.
-    Code using smart pointers is less explicit about where the resource releases take place.
-    std::unique_ptr expresses ownership transfer using C++11's move semantics, which are relatively new and may confuse some programmers.
-    Shared ownership can be a tempting alternative to careful ownership design, obfuscating the design of a system.
-    Shared ownership requires explicit bookkeeping at run-time, which can be costly.
-    In some cases (e.g. cyclic references), objects with shared ownership may never be deleted.
-    Smart pointers are not perfect substitutes for plain pointers.
+  - It's virtually impossible to manage dynamically allocated memory without some sort of ownership logic.
+  - Transferring ownership of an object can be cheaper than copying it (if copying it is even possible).
+  - Transferring ownership can be simpler than 'borrowing' a pointer or reference, because it reduces the need to coordinate the lifetime of the object between the two users.
+  - Smart pointers can improve readability by making ownership logic explicit, self-documenting, and unambiguous.
+  - Smart pointers can eliminate manual ownership bookkeeping, simplifying the code and ruling out large classes of errors.
+  - For const objects, shared ownership can be a simple and efficient alternative to deep copying.
 
-If dynamic allocation is necessary, prefer to keep ownership with the code that allocated it. If other code needs access to the object, consider passing it a copy, or passing a pointer or reference without transferring ownership. Prefer to use std::unique_ptr to make ownership transfer explicit. For example:
+Cons:
+  - Ownership must be represented and transferred via smart pointers. Pointer semantics are more complicated than value semantics, especially in APIs: you have to worry not just about ownership, but also aliasing, lifetime, and mutability, among other issues.
+  - The performance costs of value semantics are often overestimated, so the performance benefits of ownership transfer might not justify the readability and complexity costs.
+  - APIs that transfer ownership force their clients into a single memory management model.
+  - Code using smart pointers is less explicit about where the resource releases take place.
+  - Shared ownership can be a tempting alternative to careful ownership design, obfuscating the design of a system.
+  - Shared ownership requires explicit bookkeeping at run-time, which can be costly.
+  - In some cases (e.g. cyclic references), objects with shared ownership may never be deleted.
 
-std::unique_ptr<Foo> FooFactory();
-void FooConsumer(std::unique_ptr<Foo> ptr);
+Decision:
+  If dynamic allocation is necessary, prefer to keep ownership with the code that allocated it. If other code needs momentary access to the object (i.e., there is no risk of the other code accessing it later, after the object may have been destroyed), consider passing it a reference without transferring ownership. Prefer to use ``std::unique_ptr`` to make ownership transfer explicit. For example:
 
-Do not design your code to use shared ownership without a very good reason. One such reason is to avoid expensive copy operations, but you should only do this if the performance benefits are significant, and the underlying object is immutable (i.e. std::shared_ptr<const Foo>). If you do use shared ownership, prefer to use std::shared_ptr.
+  .. code-block:: c++
 
-Never use std::auto_ptr. Instead, use std::unique_ptr.
+     std::unique_ptr<Foo> FooFactory();
+     void FooConsumer(std::unique_ptr<Foo> ptr);
+
+  Do not design your code to use shared ownership without a very good reason. One such reason is to avoid expensive copy operations. If you do use shared ownership, prefer to use ``std::shared_ptr``.
+
+  Never use ``std::auto_ptr`` it has no longer any value. Instead, use ``std::unique_ptr``.
 
 cpplint
 -------
 
-Use cpplint.py to detect style errors.
+Use ``cpplint.py`` to detect style errors.
 
-cpplint.py is a tool that reads a source file and identifies many style errors. It is not perfect, and has both false positives and false negatives, but it is still a valuable tool. False positives can be ignored by putting // NOLINT at the end of the line or // NOLINTNEXTLINE in the previous line.
-
-Some projects have instructions on how to run cpplint.py from their project tools. If the project you are contributing to does not, you can download cpplint.py separately.
+``cpplint.py`` is a tool that reads a source file and identifies many style errors. It is not perfect, and has both false positives and false negatives, but it is still a valuable tool. False positives can be ignored by putting ``// NOLINT`` at the end of the line or ``// NOLINTNEXTLINE`` in the previous line.
 
 Other C++ Features
 ==================
 Rvalue References
 -----------------
 
-Use rvalue references only to define move constructors and move assignment operators, or for perfect forwarding.
+Use rvalue references to define move constructors and move assignment operators, or for perfect forwarding.
 
-Rvalue references are a type of reference that can only bind to temporary objects. The syntax is similar to traditional reference syntax. For example, void f(string&& s); declares a function whose argument is an rvalue reference to a string.
+Definition:
+  Rvalue references are a type of reference that can only bind to temporary objects. The syntax is similar to traditional reference syntax. For example, ``void f(string&& s);`` declares a function whose argument is an rvalue reference to a ``string``.
 
-    Defining a move constructor (a constructor taking an rvalue reference to the class type) makes it possible to move a value instead of copying it. If v1 is a std::vector<string>, for example, then auto v2(std::move(v1)) will probably just result in some simple pointer manipulation instead of copying a large amount of data. In some cases this can result in a major performance improvement.
-    Rvalue references make it possible to write a generic function wrapper that forwards its arguments to another function, and works whether or not its arguments are temporary objects. (This is sometimes called "perfect forwarding".)
-    Rvalue references make it possible to implement types that are movable but not copyable, which can be useful for types that have no sensible definition of copying but where you might still want to pass them as function arguments, put them in containers, etc.
-    std::move is necessary to make effective use of some standard-library types, such as std::unique_ptr.
+Pros:
+  - Defining a move constructor (a constructor taking an rvalue reference to the class type) makes it possible to move a value instead of copying it. If ``v1`` is a ``std::vector<string>``, for example, then auto ``v2(std::move(v1))`` will probably just result in some simple pointer manipulation instead of copying a large amount of data. In some cases this can result in a major performance improvement.
+  - Rvalue references make it possible to write a generic function wrapper that forwards its arguments to another function, and works whether or not its arguments are temporary objects. (This is sometimes called "perfect forwarding".)
+  - Rvalue references make it possible to implement types that are movable but not copyable, which can be useful for types that have no sensible definition of copying but where you might still want to pass them as function arguments, put them in containers, etc.
+  - ``std::move`` is necessary to make effective use of some standard-library types, such as ``std::unique_ptr``.
 
-    Rvalue references are a relatively new feature (introduced as part of C++11), and not yet widely understood. Rules like reference collapsing, and automatic synthesis of move constructors, are complicated.
-
-Use rvalue references only to define move constructors and move assignment operators (as described in Copyable and Movable Types) and, in conjunction with std::forward, to support perfect forwarding. You may use std::move to express moving a value from one object to another rather than copying it.
+Decision:
+  Use rvalue references to define move constructors and move assignment operators (as described in :ref:`Copyable and Movable Types <copyable and movable types>`) and, in conjunction with ``std::forward``, to support perfect forwarding. You may use ``std::move`` to express moving a value from one object to another rather than copying it.
 
 Friends
 -------
 
-We allow use of friend classes and functions, within reason.
+We allow use of ``friend`` classes and functions, within reason.
 
-Friends should usually be defined in the same file so that the reader does not have to look in another file to find uses of the private members of a class. A common use of friend is to have a FooBuilder class be a friend of Foo so that it can construct the inner state of Foo correctly, without exposing this state to the world. In some cases it may be useful to make a unittest class a friend of the class it tests.
+Friends should usually be defined in the same file so that the reader does not have to look in another file to find uses of the private members of a class. A common use of friend is to have a ``FooBuilder`` class be a friend of ``Foo`` so that it can construct the inner state of ``Foo`` correctly, without exposing this state to the world.
 
 Friends extend, but do not break, the encapsulation boundary of a class. In some cases this is better than making a member public when you want to give only one other class access to it. However, most classes should interact with other classes solely through their public members.
 
 Exceptions
 ----------
 
-We do not use C++ exceptions.
+We use C++ exceptions extensively.
 
-    Exceptions allow higher levels of an application to decide how to handle "can't happen" failures in deeply nested functions, without the obscuring and error-prone bookkeeping of error codes.
-    Exceptions are used by most other modern languages. Using them in C++ would make it more consistent with Python, Java, and the C++ that others are familiar with.
-    Some third-party C++ libraries use exceptions, and turning them off internally makes it harder to integrate with those libraries.
-    Exceptions are the only way for a constructor to fail. We can simulate this with a factory function or an Init() method, but these require heap allocation or a new "invalid" state, respectively.
-    Exceptions are really handy in testing frameworks.
+Pros:
+  - Exceptions allow higher levels of an application to decide how to handle "can't happen" failures in deeply nested functions, without the obscuring and error-prone bookkeeping of error codes.
+  - Exceptions are used by most other modern languages. Using them in C++ would make it more consistent with Python, Java, and the C++ that others are familiar with.
+  - Some third-party C++ libraries use exceptions, and turning them off internally makes it harder to integrate with those libraries.
+  - Exceptions are the only way for a constructor to fail. We can simulate this with a factory function or an ``initialise()`` method, but these require heap allocation or a new "invalid" state, respectively.
+  - Exceptions are really handy in testing frameworks.
 
-    When you add a throw statement to an existing function, you must examine all of its transitive callers. Either they must make at least the basic exception safety guarantee, or they must never catch the exception and be happy with the program terminating as a result. For instance, if f() calls g() calls h(), and h throws an exception that f catches, g has to be careful or it may not clean up properly.
-    More generally, exceptions make the control flow of programs difficult to evaluate by looking at code: functions may return in places you don't expect. This causes maintainability and debugging difficulties. You can minimize this cost via some rules on how and where exceptions can be used, but at the cost of more that a developer needs to know and understand.
-    Exception safety requires both RAII and different coding practices. Lots of supporting machinery is needed to make writing correct exception-safe code easy. Further, to avoid requiring readers to understand the entire call graph, exception-safe code must isolate logic that writes to persistent state into a "commit" phase. This will have both benefits and costs (perhaps where you're forced to obfuscate code to isolate the commit). Allowing exceptions would force us to always pay those costs even when they're not worth it.
-    Turning on exceptions adds data to each binary produced, increasing compile time (probably slightly) and possibly increasing address space pressure.
-    The availability of exceptions may encourage developers to throw them when they are not appropriate or recover from them when it's not safe to do so. For example, invalid user input should not cause exceptions to be thrown. We would need to make the style guide even longer to document these restrictions!
+Cons:
+  - When you add a throw statement to an existing function, you must examine all of its transitive callers. Either they must make at least the basic exception safety guarantee, or they must never catch the exception and be happy with the program terminating as a result. For instance, if ``f()`` calls ``g()`` calls ``h()``, and ``h`` throws an exception that ``f`` catches, ``g`` has to be careful or it may not clean up properly.
+  - More generally, exceptions make the control flow of programs difficult to evaluate by looking at code: functions may return in places you don't expect. This causes maintainability and debugging difficulties. You can minimize this cost via some rules on how and where exceptions can be used, but at the cost of more that a developer needs to know and understand.
+  - Exception safety requires both RAII and different coding practices. Lots of supporting machinery is needed to make writing correct exception-safe code easy. Further, to avoid requiring readers to understand the entire call graph, exception-safe code must isolate logic that writes to persistent state into a "commit" phase. This will have both benefits and costs (perhaps where you're forced to obfuscate code to isolate the commit). Allowing exceptions would force us to always pay those costs even when they're not worth it.
+  - Turning on exceptions adds data to each binary produced, increasing compile time (probably slightly) and possibly increasing address space pressure.
 
-On their face, the benefits of using exceptions outweigh the costs, especially in new projects. However, for existing code, the introduction of exceptions has implications on all dependent code. If exceptions can be propagated beyond a new project, it also becomes problematic to integrate the new project into existing exception-free code. Because most existing C++ code at Google is not prepared to deal with exceptions, it is comparatively difficult to adopt new code that generates exceptions.
 
-Given that Google's existing code is not exception-tolerant, the costs of using exceptions are somewhat greater than the costs in a new project. The conversion process would be slow and error-prone. We don't believe that the available alternatives to exceptions, such as error codes and assertions, introduce a significant burden.
+Decision:
+On their face, the benefits of using exceptions outweigh the costs, especially in new projects. Especially in a computational project, were we are perfectly happy to terminate if an exception is thrown.
 
-Our advice against using exceptions is not predicated on philosophical or moral grounds, but practical ones. Because we'd like to use our open-source projects at Google and it's difficult to do so if those projects use exceptions, we need to advise against exceptions in Google open-source projects as well. Things would probably be different if we had to do it all over again from scratch.
-
-This prohibition also applies to the exception handling related features added in C++11, such as std::exception_ptr and std::nested_exception.
-
-There is an exception to this rule (no pun intended) for Windows code.
+There is an :ref:`exception <joke>` to this rule (no pun intended) for Windows code.
 
 noexcept
 --------
-Specify noexcept when it is useful and correct.
+Specify ``noexcept`` when it is useful and correct.
 
-The noexcept specifier is used to specify whether a function will throw exceptions or not. If an exception escapes from a function marked noexcept, the program crashes via std::terminate.
+Definition:
+  The ``noexcept`` specifier is used to specify whether a function will throw exceptions or not. If an exception escapes from a function marked ``noexcept``, the program crashes via ``std::terminate``.
 
-The noexcept operator performs a compile-time check that returns true if an expression is declared to not throw any exceptions.
+  The ``noexcept`` operator performs a compile-time check that returns true if an expression is declared to not throw any exceptions.
 
-    Specifying move constructors as noexcept improves performance in some cases, e.g. std::vector<T>::resize() moves rather than copies the objects if T's move constructor is noexcept.
-    Specifying noexcept on a function can trigger compiler optimizations in environments where exceptions are enabled, e.g. compiler does not have to generate extra code for stack-unwinding, if it knows that no exceptions can be thrown due to a noexcept specifier.
+Pros:
+  - Specifying move constructors as noexcept improves performance in some cases, e.g. ``std::vector<T>::resize()`` moves rather than copies the objects if ``T``'s move constructor is ``noexcept``.
+  - Specifying ``noexcept`` on a function can trigger compiler optimisations in environments where exceptions are enabled, e.g. compiler does not have to generate extra code for stack-unwinding, if it knows that no exceptions can be thrown due to a ``noexcept`` specifier.
 
-    In projects following this guide that have exceptions disabled it is hard to ensure that noexcept specifiers are correct, and hard to define what correctness even means.
-    It's hard, if not impossible, to undo noexcept because it eliminates a guarantee that callers may be relying on, in ways that are hard to detect.
+Cons:
+  - It's hard, if not impossible, to undo ``noexcept`` because it eliminates a guarantee that callers may be relying on, in ways that are hard to detect.
 
-You may use noexcept when it is useful for performance if it accurately reflects the intended semantics of your function, i.e. that if an exception is somehow thrown from within the function body then it represents a fatal error. You can assume that noexcept on move constructors has a meaningful performance benefit. If you think there is significant performance benefit from specifying noexcept on some other function, please discuss it with your project leads.
+Decision:
+  You should use ``noexcept`` when it is useful for performance if it accurately reflects the intended semantics of your function, i.e. that if an exception is somehow thrown from within the function body then it represents a fatal error. You can assume that ``noexcept`` on move constructors has a meaningful performance benefit. If you think there is significant performance benefit from specifying ``noexcept`` on some other function, feel free to use it.
 
-Prefer unconditional noexcept if exceptions are completely disabled (i.e. most Google C++ environments). Otherwise, use conditional noexcept specifiers with simple conditions, in ways that evaluate false only in the few cases where the function could potentially throw. The tests might include type traits check on whether the involved operation might throw (e.g. std::is_nothrow_move_constructible for move-constructing objects), or on whether allocation can throw (e.g. absl::default_allocator_is_nothrow for standard default allocation). Note in many cases the only possible cause for an exception is allocation failure (we believe move constructors should not throw except due to allocation failure), and there are many applications where it’s appropriate to treat memory exhaustion as a fatal error rather than an exceptional condition that your program should attempt to recover from. Even for other potential failures you should prioritize interface simplicity over supporting all possible exception throwing scenarios: instead of writing a complicated noexcept clause that depends on whether a hash function can throw, for example, simply document that your component doesn’t support hash functions throwing and make it unconditionally noexcept.
+.. _`rtti`:
 
 Run-Time Type Information (RTTI)
 --------------------------------
-Avoid using Run Time Type Information (RTTI).
+When possible, avoid using Run Time Type Information (RTTI).
 
-RTTI allows a programmer to query the C++ class of an object at run time. This is done by use of typeid or dynamic_cast.
+Definition:
+  RTTI allows a programmer to query the C++ class of an object at run time. This is done by use of ``typeid`` or ``dynamic_cast``.
 
-Querying the type of an object at run-time frequently means a design problem. Needing to know the type of an object at runtime is often an indication that the design of your class hierarchy is flawed.
+Cons:
+  Querying the type of an object at run-time frequently means a design problem. Needing to know the type of an object at runtime is often an indication that the design of your class hierarchy is flawed.
 
-Undisciplined use of RTTI makes code hard to maintain. It can lead to type-based decision trees or switch statements scattered throughout the code, all of which must be examined when making further changes.
+  Undisciplined use of RTTI makes code hard to maintain. It can lead to type-based decision trees or switch statements scattered throughout the code, all of which must be examined when making further changes.
 
-The standard alternatives to RTTI (described below) require modification or redesign of the class hierarchy in question. Sometimes such modifications are infeasible or undesirable, particularly in widely-used or mature code.
+Pros:
+  RTTI can be very useful when interacting with duck-typed languages (like python) and when implementing efficient containers with polymorphic interfaces, see, e.g., *µ*\Spectre's ``FieldMap`` implementation.
 
-RTTI can be useful in some unit tests. For example, it is useful in tests of factory classes where the test has to verify that a newly created object has the expected dynamic type. It is also useful in managing the relationship between objects and their mocks.
+  RTTI can be useful in some unit tests. For example, it is useful in tests of factory classes where the test has to verify that a newly created object has the expected dynamic type. It is also useful in managing the relationship between objects and their mocks.
 
-RTTI is useful when considering multiple abstract objects. Consider
+  RTTI is useful when considering multiple abstract objects. Consider
 
-bool Base::Equal(Base* other) = 0;
-bool Derived::Equal(Base* other) {
-  Derived* that = dynamic_cast<Derived*>(other);
-  if (that == nullptr)
-    return false;
-  ...
-}
+  .. code-block:: c++
 
-RTTI has legitimate uses but is prone to abuse, so you must be careful when using it. You may use it freely in unittests, but avoid it when possible in other code. In particular, think twice before using RTTI in new code. If you find yourself needing to write code that behaves differently based on the class of an object, consider one of the following alternatives to querying the type:
+     bool Base::Equal(Base* other) = 0;
+     bool Derived::Equal(Base* other) {
+       Derived* that = dynamic_cast<Derived*>(other);
+       if (that == nullptr) {
+         return false;
+       }
+       ...
+     }
 
-    Virtual methods are the preferred way of executing different code paths depending on a specific subclass type. This puts the work within the object itself.
-    If the work belongs outside the object and instead in some processing code, consider a double-dispatch solution, such as the Visitor design pattern. This allows a facility outside the object itself to determine the type of class using the built-in type system.
+Decision:
+  RTTI has legitimate uses but is prone to abuse, so you must be careful when using it. You may use it freely in unittests, but avoid it when possible in other code. In particular, think twice before using RTTI in new code. If you find yourself needing to write code that behaves differently based on the class of an object, consider one of the following alternatives to querying the type:
 
-When the logic of a program guarantees that a given instance of a base class is in fact an instance of a particular derived class, then a dynamic_cast may be used freely on the object. Usually one can use a static_cast as an alternative in such situations.
+  - Virtual methods are the preferred way of executing different code paths depending on a specific subclass type. This puts the work within the object itself.
+  - If the work belongs outside the object and instead in some processing code, consider a double-dispatch solution, such as the Visitor design pattern. This allows a facility outside the object itself to determine the type of class using the built-in type system.
 
-Decision trees based on type are a strong indication that your code is on the wrong track.
+  When the logic of a program guarantees that a given instance of a base class is in fact an instance of a particular derived class, then a ``dynamic_cast`` may be used freely on the object. Usually one can use a ``static_cast`` as an alternative in such situations.
 
-if (typeid(*data) == typeid(D1)) {
-  ...
-} else if (typeid(*data) == typeid(D2)) {
-  ...
-} else if (typeid(*data) == typeid(D3)) {
-...
+  Decision trees based on type are a strong indication that your code is on the wrong track.
 
-Code such as this usually breaks when additional subclasses are added to the class hierarchy. Moreover, when properties of a subclass change, it is difficult to find and modify all the affected code segments.
+  .. code-block:: c++
 
-Do not hand-implement an RTTI-like workaround. The arguments against RTTI apply just as much to workarounds like class hierarchies with type tags. Moreover, workarounds disguise your true intent.
+     if (typeid(*data) == typeid(D1)) {
+      ...
+     } else if (typeid(*data) == typeid(D2)) {
+       ...
+     } else if (typeid(*data) == typeid(D3)) {
+     ...
+
+  Code such as this usually breaks when additional subclasses are added to the class hierarchy. Moreover, when properties of a subclass change, it is difficult to find and modify all the affected code segments.
+
+  Do not hand-implement an RTTI-like workaround. The arguments against RTTI apply just as much to workarounds like class hierarchies with type tags. Moreover, workarounds disguise your true intent.
 
 Casting
 -------
-Use C++-style casts like static_cast<float>(double_value), or brace initialisation for conversion of arithmetic types like int64 y = int64{1} << 42. Do not use cast formats like int y = (int)x or int y = int(x) (but the latter is okay when invoking a constructor of a class type).
+Use C++-style casts like ``static_cast<float>(double_value)``, or brace initialisation for conversion of arithmetic types like ``int64 y{int64{1} << 42}``. Do not use cast formats like ``int y{(int)x}`` or ``int y{int(x)}`` (but the latter is okay when invoking a constructor of a class type).
 
-C++ introduced a different cast system from C that distinguishes the types of cast operations.
+Definition:
+  C++ introduced a different cast system from C that distinguishes the types of cast operations.
 
-The problem with C casts is the ambiguity of the operation; sometimes you are doing a conversion (e.g., (int)3.5) and sometimes you are doing a cast (e.g., (int)"hello"). Brace initialisation and C++ casts can often help avoid this ambiguity. Additionally, C++ casts are more visible when searching for them.
+Pros:
+  The problem with C casts is the ambiguity of the operation; sometimes you are doing a conversion (e.g., ``(int)3.5``) and sometimes you are doing a cast (e.g., ``(int)"hello"``). Brace initialisation and C++ casts can often help avoid this ambiguity. Additionally, C++ casts are more visible when searching for them.
 
-The C++-style cast syntax is verbose and cumbersome.
+Cons:
+  The C++-style cast syntax is verbose
 
-Do not use C-style casts. Instead, use these C++-style casts when explicit type conversion is necessary.
+Decision:
+  Do not use C-style casts. Instead, use these C++-style casts when explicit type conversion is necessary.
 
-    Use brace initialisation to convert arithmetic types (e.g. int64{x}). This is the safest approach because code will not compile if conversion can result in information loss. The syntax is also concise.
-    Use static_cast as the equivalent of a C-style cast that does value conversion, when you need to explicitly up-cast a pointer from a class to its superclass, or when you need to explicitly cast a pointer from a superclass to a subclass. In this last case, you must be sure your object is actually an instance of the subclass.
-    Use const_cast to remove the const qualifier (see const).
-    Use reinterpret_cast to do unsafe conversions of pointer types to and from integer and other pointer types. Use this only if you know what you are doing and you understand the aliasing issues.
+  - Use brace initialisation to convert arithmetic types (e.g. ``int64{x}``). This is the safest approach because code will not compile if conversion can result in information loss. The syntax is also concise.
+  - Use ``static_cast`` as the equivalent of a C-style cast that does value conversion, when you need to explicitly up-cast a pointer from a class to its superclass, or when you need to explicitly cast a pointer from a superclass to a subclass. In this last case, you must be sure your object is actually an instance of the subclass.
+  - Use ``const_cast`` to remove the ``const`` qualifier (see :ref:`const`). **This indicates a serious design flaw if it happens in µSpectre and is to be considered a bug**. Only use this if third-party libraries force you to.
+  - Use ``reinterpret_cast`` to do unsafe conversions of pointer types to and from integer and other pointer types. Use this only if you know what you are doing and you understand the aliasing issues.
 
-See the RTTI section for guidance on the use of dynamic_cast.
+See the :ref:`RTTI <rtti>` section for guidance on the use of ``dynamic_cast``.
+
+.. _streams:
 
 Streams
 -------
 
-Use streams where appropriate, and stick to "simple" usages. Overload << for streaming only for types representing values, and write only the user-visible value, not any implementation details.
+Use streams where appropriate, and stick to "simple" usages. Overload ``<<`` for streaming only for types representing values, and write only the user-visible value, not any implementation details.
 
-Streams are the standard I/O abstraction in C++, as exemplified by the standard header <iostream>. They are widely used in Google code, but only for debug logging and test diagnostics.
+Definition:
+  Streams are the standard I/O abstraction in C++, as exemplified by the standard header ``<iostream>``.
 
-The << and >> stream operators provide an API for formatted I/O that is easily learned, portable, reusable, and extensible. printf, by contrast, doesn't even support string, to say nothing of user-defined types, and is very difficult to use portably. printf also obliges you to choose among the numerous slightly different versions of that function, and navigate the dozens of conversion specifiers.
+Pros:
+  The ``<<`` and ``>>`` stream operators provide an API for formatted I/O that is easily learned, portable, reusable, and extensible. ``printf``, by contrast, doesn't even support string, to say nothing of user-defined types, and is very difficult to use portably. ``printf`` also obliges you to choose among the numerous slightly different versions of that function, and navigate the dozens of conversion specifiers.
 
-Streams provide first-class support for console I/O via std::cin, std::cout, std::cerr, and std::clog. The C APIs do as well, but are hampered by the need to manually buffer the input.
+  Streams provide first-class support for console I/O via ``std::cin``, ``std::cout``, ``std::cerr``, and ``std::clog``. The C APIs do as well, but are hampered by the need to manually buffer the input.
 
-    Stream formatting can be configured by mutating the state of the stream. Such mutations are persistent, so the behavior of your code can be affected by the entire previous history of the stream, unless you go out of your way to restore it to a known state every time other code might have touched it. User code can not only modify the built-in state, it can add new state variables and behaviors through a registration system.
-    It is difficult to precisely control stream output, due to the above issues, the way code and data are mixed in streaming code, and the use of operator overloading (which may select a different overload than you expect).
-    The practice of building up output through chains of << operators interferes with internationalization, because it bakes word order into the code, and streams' support for localization is flawed.
-    The streams API is subtle and complex, so programmers must develop experience with it in order to use it effectively.
-    Resolving the many overloads of << is extremely costly for the compiler. When used pervasively in a large code base, it can consume as much as 20% of the parsing and semantic analysis time.
+Cons:
+ - Stream formatting can be configured by mutating the state of the stream. Such mutations are persistent, so the behaviour of your code can be affected by the entire previous history of the stream, unless you go out of your way to restore it to a known state every time other code might have touched it. User code can not only modify the built-in state, it can add new state variables and behaviours through a registration system.
+ - It is difficult to precisely control stream output, due to the above issues, the way code and data are mixed in streaming code, and the use of operator overloading (which may select a different overload than you expect).
+ - The streams API is subtle and complex, so programmers must develop experience with it in order to use it effectively.
+ - Resolving the many overloads of ``<<`` is extremely costly for the compiler. When used pervasively in a large code base, it can consume as much as 20% of the parsing and semantic analysis time.
 
-Use streams only when they are the best tool for the job. This is typically the case when the I/O is ad-hoc, local, human-readable, and targeted at other developers rather than end-users. Be consistent with the code around you, and with the codebase as a whole; if there's an established tool for your problem, use that tool instead. In particular, logging libraries are usually a better choice than std::cerr or std::clog for diagnostic output, and the libraries in absl/strings or the equivalent are usually a better choice than std::stringstream.
+Decision:
+  Use streams only when they are the best tool for the job. This is typically the case when the I/O is ad-hoc, local, human-readable, and targeted at other developers rather than end-users. Be consistent with the code around you, and with the code base as a whole; if there's an established tool for your problem, use that tool instead. In particular, logging libraries are usually a better choice than ``std::cerr`` or ``std::clog`` for diagnostic output.
 
-Avoid using streams for I/O that faces external users or handles untrusted data. Instead, find and use the appropriate templating libraries to handle issues like internationalization, localization, and security hardening.
-
-If you do use streams, avoid the stateful parts of the streams API (other than error state), such as imbue(), xalloc(), and register_callback(). Use explicit formatting functions (see e.g. absl/strings) rather than stream manipulators or formatting flags to control formatting details such as number base, precision, or padding.
-
-Overload << as a streaming operator for your type only if your type represents a value, and << writes out a human-readable string representation of that value. Avoid exposing implementation details in the output of <<; if you need to print object internals for debugging, use named functions instead (a method named DebugString() is the most common convention).
+  Overload ``<<`` as a streaming operator for your type only if your type represents a value, and ``<<`` writes out a human-readable string representation of that value. Avoid exposing implementation details in the output of ``<<``; if you need to print object internals for debugging, use named functions instead (a method named ``debug_string()`` is the most common convention).
 
 Preincrement and Predecrement
 -----------------------------
 
-Use prefix form (++i) of the increment and decrement operators with iterators and other template objects.
+Use prefix form (``++i``) of the increment and decrement operators with iterators and other template objects.
 
-When a variable is incremented (++i or i++) or decremented (--i or i--) and the value of the expression is not used, one must decide whether to preincrement (decrement) or postincrement (decrement).
+Definition:
+  When a variable is incremented (``++i`` or ``i++``) or decremented (``--i`` or ``i--``) and the value of the expression is not used, one must decide whether to pre-increment (decrement) or post-increment (decrement).
 
-When the return value is ignored, the "pre" form (++i) is never less efficient than the "post" form (i++), and is often more efficient. This is because post-increment (or decrement) requires a copy of i to be made, which is the value of the expression. If i is an iterator or other non-scalar type, copying i could be expensive. Since the two types of increment behave the same when the value is ignored, why not just always pre-increment?
+Pros:
+  When the return value is ignored, the "pre" form (``++i``) is never less efficient than the "post" form (``i++``), and is often more efficient. This is because post-increment (or decrement) requires a copy of ``i`` to be made, which is the value of the expression. If ``i`` is an iterator or other non-scalar type, copying ``i`` could be expensive. Since the two types of increment behave the same when the value is ignored, why not just always pre-increment?
 
-The tradition developed, in C, of using post-increment when the expression value is not used, especially in for loops. Some find post-increment easier to read, since the "subject" (i) precedes the "verb" (++), just like in English.
+Cons:
+  The tradition developed, in C, of using post-increment when the expression value is not used, especially in for loops. Some find post-increment easier to read, since the "subject" (``i``) precedes the "verb" (``++``), just like in English. This is a dumb tradition and should be abolished.
 
-For simple scalar (non-object) values there is no reason to prefer one form and we allow either. For iterators and other template types, use pre-increment.
+Decision:
+  If the return value is ignored, a post-increment (post-decrement) is a bug.
+
+.. _`const`:
 
 Use of const
 ------------
 
-Use const whenever it makes sense. With C++11, ``constexpr`` is a better choice for some uses of const.
+Use ``const`` doggedly whenever it makes is correct. With C++11, ``constexpr`` is a better choice for some uses of ``const``.
 
-Declared variables and parameters can be preceded by the keyword const to indicate the variables are not changed (e.g., const int foo). Class functions can have the const qualifier to indicate the function does not change the state of the class member variables (e.g., class Foo { int Bar(char c) const; };).
+Definition:
+  Declared variables and parameters can be preceded by the keyword ``const`` to indicate the variables are not changed (e.g., ``const int foo``). Class functions can have the ``const`` qualifier to indicate the function does not change the state of the class member variables (e.g., ``class Foo { int Bar(char c) const; };``).
 
-Easier for people to understand how variables are being used. Allows the compiler to do better type checking, and, conceivably, generate better code. Helps people convince themselves of program correctness because they know the functions they call are limited in how they can modify your variables. Helps people know what functions are safe to use without locks in multi-threaded programs.
+Pros:
+  Easier for people to understand how variables are being used. Allows the compiler to do better type checking, and, conceivably, generate better code. Helps people convince themselves of program correctness because they know the functions they call are limited in how they can modify your variables. Helps people know what functions are safe to use without locks in multi-threaded programs.
 
-const is viral: if you pass a const variable to a function, that function must have const in its prototype (or the variable will need a const_cast). This can be a particular problem when calling library functions.
+  ``const`` is viral: if you pass a ``const`` variable to a function, that function must have ``const`` in its prototype.
 
-const variables, data members, methods and arguments add a level of compile-time type checking; it is better to detect errors as soon as possible. Therefore we strongly recommend that you use const whenever it makes sense to do so:
+Cons:
+  ``const`` can be problem when calling library functions, and require ``const_cast``.
 
-    If a function guarantees that it will not modify an argument passed by reference or by pointer, the corresponding function parameter should be a reference-to-const (const T&) or pointer-to-const (const T*), respectively.
-    Declare methods to be const whenever possible. Accessors should almost always be const. Other methods should be const if they do not modify any data members, do not call any non-const methods, and do not return a non-const pointer or non-const reference to a data member.
-    Consider making data members const whenever they do not need to be modified after construction.
+Decision:
+  const variables, data members, methods and arguments add a level of compile-time type checking; it is better to detect errors as soon as possible. Therefore we strongly recommend that you use ``const`` whenever it is possible to do so:
 
-The mutable keyword is allowed but is unsafe when used with threads, so thread safety should be carefully considered first.
-Where to put the const
+  - If a function guarantees that it will not modify an argument passed by reference, the corresponding function parameter should be a reference-to-const (``const T&``).
+  - Declare methods to be ``const`` whenever possible. Accessors should almost always be ``const``. Other methods should be ``const`` if they do not modify any data members, do not call any non-``const`` methods, and do not return a non-``const`` reference to a data member.
+  - Consider making data members ``const`` whenever they do not need to be modified after construction.
 
-Some people favor the form int const *foo to const int* foo. They argue that this is more readable because it's more consistent: it keeps the rule that const always follows the object it's describing. However, this consistency argument doesn't apply in codebases with few deeply-nested pointer expressions since most const expressions have only one const, and it applies to the underlying value. In such cases, there's no consistency to maintain. Putting the const first is arguably more readable, since it follows English in putting the "adjective" (const) before the "noun" (int).
-
-That said, while we encourage putting const first, we do not require it. But be consistent with the code around you!
+The ``mutable`` keyword is allowed but is unsafe when used with threads, so thread safety should be carefully considered first.
 
 Use of ``constexpr``
 --------------------
 
 In C++11, use ``constexpr`` to define true constants or to ensure constant initialisation.
 
-Some variables can be declared ``constexpr`` to indicate the variables are true constants, i.e. fixed at compilation/link time. Some functions and constructors can be declared ``constexpr`` which enables them to be used in defining a ``constexpr`` variable.
+Definition:
+  Some variables can be declared ``constexpr`` to indicate the variables are true constants, i.e. fixed at compilation/link time. Some functions and constructors can be declared ``constexpr`` which enables them to be used in defining a ``constexpr`` variable.
 
-Use of ``constexpr`` enables definition of constants with floating-point expressions rather than just literals; definition of constants of user-defined types; and definition of constants with function calls.
+Pros:
+  Use of ``constexpr`` enables definition of constants with floating-point expressions rather than just literals; definition of constants of user-defined types; and definition of constants with function calls.
 
-Prematurely marking something as ``constexpr`` may cause migration problems if later on it has to be downgraded. Current restrictions on what is allowed in ``constexpr`` functions and constructors may invite obscure workarounds in these definitions.
-
-``constexpr`` definitions enable a more robust specification of the constant parts of an interface. Use ``constexpr`` to specify true constants and the functions that support their definitions. Avoid complexifying function definitions to enable their use with ``constexpr``. Do not use ``constexpr`` to force inlining.
+Decision:
+  ``constexpr`` definitions enable a more robust specification of the constant parts of an interface. Use ``constexpr`` to specify true constants and the functions that support their definitions. You can use ``constexpr`` to force inlining of functions.
 
 Integer Types
 -------------
 
-Of the built-in C++ integer types, the only one used is int. If a program needs a variable of a different size, use a precise-width integer type from <stdint.hh>, such as int16_t. If your variable represents a value that could ever be greater than or equal to 2^31 (2GiB), use a 64-bit type such as int64_t. Keep in mind that even if your value won't ever be too large for an int, it may be used in intermediate calculations which may require a larger type. When in doubt, choose a larger type.
+We do not use the built-in C++ integer types in *µ*\Spectre, rather the alias ``Int``. If a part needs a variable of a different size, use a precise-width integer type from ``<cstdint>``, such as ``int16_t``. If your variable represents a value that could ever be greater than or equal to 2³¹ (2GiB), use a 64-bit type such as ``int64_t``. Keep in mind that even if your value won't ever be too large for an ``Int``, it may be used in intermediate calculations which may require a larger type. When in doubt, choose a larger type.
 
-C++ does not specify the sizes of integer types like int. Typically people assume that short is 16 bits, int is 32 bits, long is 32 bits and long long is 64 bits.
+Definition:
+  *µ*\Spectre does not specify the size of ``Int``. Assume it's 32 bits.
 
-Uniformity of declaration.
+Pros:
+  Uniformity of declaration.
 
-The sizes of integral types in C++ can vary based on compiler and architecture.
+Cons:
+  The sizes of integral types in C++ can vary based on compiler and architecture.
 
-<stdint.hh> defines types like int16_t, uint32_t, int64_t, etc. You should always use those in preference to short, unsigned long long and the like, when you need a guarantee on the size of an integer. Of the C integer types, only int should be used. When appropriate, you are welcome to use standard types like size_t and ptrdiff_t.
+Decision:
+  ``<cstdint>`` defines types like ``int16_t``, ``uint32_t``, ``int64_t``, etc. You should always use those in preference to short, unsigned long long and the like, when you need a guarantee on the size of an integer. When appropriate, you are welcome to use standard types like ``size_t`` and ``ptrdiff_t``.
 
-We use int very often, for integers we know are not going to be too big, e.g., loop counters. Use plain old int for such things. You should assume that an int is at least 32 bits, but don't assume that it has more than 32 bits. If you need a 64-bit integer type, use int64_t or uint64_t.
+  We use ``Int`` very often, for integers we know are not going to be too big, e.g., loop counters. Use plain old ``Int`` for such things. You should assume that an ``Int`` is at least 32 bits, but don't assume that it has more than 32 bits. If you need a 64-bit integer type, use ``int64_t`` or ``uint64_t``.
 
-For integers we know can be "big", use int64_t.
+  For integers we know can be "big", use ``int64_t``.
 
-You should not use the unsigned integer types such as uint32_t, unless there is a valid reason such as representing a bit pattern rather than a number, or you need defined overflow modulo 2^N. In particular, do not use unsigned types to say a number will never be negative. Instead, use assertions for this.
+  You should not use the unsigned integer types such as ``uint32_t``, unless there is a valid reason such as representing a bit pattern rather than a number, or you need defined overflow modulo 2ᴺ. In particular, do not use unsigned types to say a number will never be negative. Instead, use assertions for this.
 
-If your code is a container that returns a size, be sure to use a type that will accommodate any possible usage of your container. When in doubt, use a larger type rather than a smaller type.
+  If your code is a container that returns a size, be sure to use a type that will accommodate any possible usage of your container. When in doubt, use a larger type rather than a smaller type.
 
-Use care when converting integer types. Integer conversions and promotions can cause undefined behavior, leading to security bugs and other problems.
+  Use care when converting integer types. Integer conversions and promotions can cause undefined behaviour, leading to security bugs and other problems.
+
 On Unsigned Integers
 
 Unsigned integers are good for representing bitfields and modular arithmetic. Because of historical accident, the C++ standard also uses unsigned integers to represent the size of containers - many members of the standards body believe this to be a mistake, but it is effectively impossible to fix at this point. The fact that unsigned arithmetic doesn't model the behavior of a simple integer, but is instead defined by the standard to model modular arithmetic (wrapping around on overflow/underflow), means that a significant class of bugs cannot be diagnosed by the compiler. In other cases, the defined behavior impedes optimization.
 
 That said, mixing signedness of integer types is responsible for an equally large class of problems. The best advice we can provide: try to use iterators and containers rather than pointers and sizes, try not to mix signedness, and try to avoid unsigned types (except for representing bitfields or modular arithmetic). Do not use an unsigned type merely to assert that a variable is non-negative.
 
-64-bit Portability
-------------------
-
-Code should be 64-bit and 32-bit friendly. Bear in mind problems of printing, comparisons, and structure alignment.
-
-    Correct portable printf() conversion specifiers for some integral typedefs rely on macro expansions that we find unpleasant to use and impractical to require (the PRI macros from <cinttypes>). Unless there is no reasonable alternative for your particular case, try to avoid or even upgrade APIs that rely on the printf family. Instead use a library supporting typesafe numeric formatting, such as StrCat or Substitute for fast simple conversions, or std::ostream.
-
-    Unfortunately, the PRI macros are the only portable way to specify a conversion for the standard bitwidth typedefs (e.g. int64_t, uint64_t, int32_t, uint32_t, etc). Where possible, avoid passing arguments of types specified by bitwidth typedefs to printf-based APIs. Note that it is acceptable to use typedefs for which printf has dedicated length modifiers, such as size_t (z), ptrdiff_t (t), and maxint_t (j).
-    Remember that sizeof(void *) != sizeof(int). Use intptr_t if you want a pointer-sized integer.
-    You may need to be careful with structure alignments, particularly for structures being stored on disk. Any class/structure with a int64_t/uint64_t member will by default end up being 8-byte aligned on a 64-bit system. If you have such structures being shared on disk between 32-bit and 64-bit code, you will need to ensure that they are packed the same on both architectures. Most compilers offer a way to alter structure alignment. For gcc, you can use __attribute__((packed)). MSVC offers #pragma pack() and __declspec(align()).
-
-    Use braced-initialisation as needed to create 64-bit constants. For example:
-
-    int64_t my_value{0x123456789};
-    uint64_t my_mask{3ULL << 48};
-
 Preprocessor Macros
 -------------------
 
-Avoid defining macros, especially in headers; prefer inline functions, enums, and const variables. Name macros with a project-specific prefix. Do not use macros to define pieces of a C++ API.
+Avoid defining macros, especially in headers; prefer inline functions, enums, and const variables. Do not use macros to define pieces of a C++ API. Be aware that if you do not have a **very** good reason to submit code with a macro, it will likely be rejected.
 
 Macros mean that the code you see is not the same as the code the compiler sees. This can introduce unexpected behavior, especially since macros have global scope.
 
 The problems introduced by macros are especially severe when they are used to define pieces of a C++ API, and still more so for public APIs. Every error message from the compiler when developers incorrectly use that interface now must explain how the macros formed the interface. Refactoring and analysis tools have a dramatically harder time updating the interface. As a consequence, we specifically disallow using macros in this way. For example, avoid patterns like:
 
-class WOMBAT_TYPE(Foo) {
-  // ...
+.. code-block:: c++
 
- public:
-  EXPAND_PUBLIC_WOMBAT_API(Foo)
+   class WOMBAT_TYPE(Foo) {
+     // ...
 
-  EXPAND_WOMBAT_COMPARISONS(Foo, ==, <)
-};
+    public:
+     EXPAND_PUBLIC_WOMBAT_API(Foo)
 
-Luckily, macros are not nearly as necessary in C++ as they are in C. Instead of using a macro to inline performance-critical code, use an inline function. Instead of using a macro to store a constant, use a const variable. Instead of using a macro to "abbreviate" a long variable name, use a reference. Instead of using a macro to conditionally compile code ... well, don't do that at all (except, of course, for the #define guards to prevent double inclusion of header files). It makes testing much more difficult.
+     EXPAND_WOMBAT_COMPARISONS(Foo, ==, <)
+   };
 
-Macros can do things these other techniques cannot, and you do see them in the codebase, especially in the lower-level libraries. And some of their special features (like stringifying, concatenation, and so forth) are not available through the language proper. But before using a macro, consider carefully whether there's a non-macro way to achieve the same result. If you need to use a macro to define an interface, contact your project leads to request a waiver of this rule.
+Luckily, macros are not nearly as necessary in C++ as they are in C. Instead of using a macro to inline performance-critical code, use an inline function. Instead of using a macro to store a constant, use a ``const`` or ``consexpr`` variable. Instead of using a macro to "abbreviate" a long variable name, use a reference. Instead of using a macro to conditionally compile code ... well, don't do that at all (except, of course, for the ``#define`` guards to prevent double inclusion of header files, and packages such as MPI). It makes testing much more difficult.
+
+Macros can do things these other techniques cannot, and you do see them in the code base, especially in the lower-level libraries. And some of their special features (like stringifying, concatenation, and so forth) are not available through the language proper. But before using a macro, consider carefully whether there's a non-macro way to achieve the same result. If you need to use a macro to define an interface, contact the `discussion forum <https://c4science.ch/Z81>`_.
 
 The following usage pattern will avoid many problems with macros; if you use macros, follow it whenever possible:
 
-    Don't define macros in a ``.hh`` file.
-    #define macros right before you use them, and #undef them right after.
-    Do not just #undef an existing macro before replacing it with your own; instead, pick a name that's likely to be unique.
-    Try not to use macros that expand to unbalanced C++ constructs, or at least document that behavior well.
-    Prefer not using ## to generate function/class/variable names.
+  - Don't define macros in a ``.hh`` file.
+  - ``#define`` macros right before you use them, and ``#undef`` them right after.
+  - Do not just ``#undef`` an existing macro before replacing it with your own; instead, pick a name that's likely to be unique.
+  - Try not to use macros that expand to unbalanced C++ constructs, or at least document that behaviour well.
+  - Prefer not using ``##`` to generate function/class/variable names.
 
 Exporting macros from headers (i.e. defining them in a header without #undefing them before the end of the header) is extremely strongly discouraged. If you do export a macro from a header, it must have a globally unique name. To achieve this, it must be named with a prefix consisting of your project's namespace name (but upper case).
 
@@ -1307,6 +1505,8 @@ Specific cases where auto is allowed or encouraged:
       // a reader can see the types in question, and we've avoided
       // the too-common case of extra copies in this iteration.
     }
+
+.. _`braced initialiser list`:
 
 Braced Initialiser List
 -----------------------
@@ -1380,6 +1580,8 @@ auto d = {1.23};        // d is a std::initialiser_list<double>
 auto d = double{1.23};  // Good -- d is a double, not a std::initialiser_list.
 
 See Braced_Initialiser_List_Format for formatting.
+
+.. _`lambda expressions`:
 
 Lambda expressions
 ------------------
@@ -1740,6 +1942,8 @@ struct UrlTableProperties {
 
 See Structs vs. Classes for a discussion of when to use a struct versus a class.
 
+.. _`constant names`:
+
 Constant Names
 --------------
 
@@ -2067,9 +2271,9 @@ You can mark an interface as deprecated by writing a comment containing the word
 
 After the word DEPRECATED, write your name, e-mail address, or other identifier in parentheses.
 
-A deprecation comment must include simple, clear directions for people to fix their callsites. In C++, you can implement a deprecated function as an inline function that calls the new interface point.
+A deprecation comment must include simple, clear directions for people to fix their call sites. In C++, you can implement a deprecated function as an inline function that calls the new interface point.
 
-Marking an interface point DEPRECATED will not magically cause any callsites to change. If you want people to actually stop using the deprecated facility, you will have to fix the callsites yourself or recruit a crew to help you.
+Marking an interface point DEPRECATED will not magically cause any call sites to change. If you want people to actually stop using the deprecated facility, you will have to fix the call sites yourself or recruit a crew to help you.
 
 New code should not contain calls to deprecated interface points. Use the new interface point instead. If you cannot understand the directions, find the person who created the deprecation and ask them for help using the new interface point.
 
@@ -2755,6 +2959,8 @@ Existing Non-conformant Code
 You may diverge from the rules when dealing with code that does not conform to this style guide.
 
 If you find yourself modifying code that was written to specifications other than those presented by this guide, you may have to diverge from these rules in order to stay consistent with the local conventions in that code. If you are in doubt about how to do this, ask the original author or the person currently responsible for the code. Remember that consistency includes local consistency, too.
+
+.. _joke:
 
 Windows Code
 ------------

@@ -1,10 +1,10 @@
 Getting Started
 ~~~~~~~~~~~~~~~
 
-Obtaining *µ*\Spectre**
-**********************
+Obtaining *µ*\Spectre
+*********************
 
-*µ*\Spectre** is hosted on a git repository on `c4science`_. To clone it, run
+*µ*\Spectre is hosted on a git repository on `c4science`_. To clone it, run
 
 .. code-block:: sh
 
@@ -22,10 +22,10 @@ The latter option requires you to have a user account on c4science (`create <htt
 .. _c4science: https://c4science.ch
 
 
-Building *µ*\Spectre**
-*********************
+Building *µ*\Spectre
+********************
 
-You can compile *µ*\Spectre** using  `CMake <https://cmake.org/>`_. The current (and possibly incomplete list of) dependencies are
+You can compile *µ*\Spectre using  `CMake <https://cmake.org/>`_. The current (and possibly incomplete list of) dependencies are
 
 - `Boost unit test framework <http://www.boost.org/doc/libs/1_66_0/libs/test/doc/html/index.html>`_
 - `FFTW <http://www.fftw.org>`_
@@ -33,7 +33,7 @@ You can compile *µ*\Spectre** using  `CMake <https://cmake.org/>`_. The current
 - `Mercurial <https://www.mercurial-scm.org/>`_
 - `git <https://git-scm.com/>`_
 
-*µ*\Spectre** requires a relatively modern compiler as it makes heavy use of C++14 features. It has successfully been compiled and tested using the following compilers under Linux
+*µ*\Spectre requires a relatively modern compiler as it makes heavy use of C++14 features. It has successfully been compiled and tested using the following compilers under Linux
 
 - gcc-7.2
 - gcc-6.4
@@ -67,10 +67,10 @@ Finally, compile the library and the tests by running
    When using the ``-j`` option to compile, be aware that compiling *µ*\Spectre uses quite a bit of RAM. If your machine start swapping at compile time, reduce the number of parallel compilations
 
 
-Running *µ*\Spectre**
-********************
+Running *µ*\Spectre
+*******************
 
-The easiest and intended way of using *µ*\Spectre** is through its Python bindings. The following simple example computes the response of a two-dimensional stretched periodic RVE cell. The cell consist of a soft matrix with a circular hard inclusion.
+The easiest and intended way of using *µ*\Spectre is through its Python bindings. The following simple example computes the response of a two-dimensional stretched periodic RVE cell. The cell consist of a soft matrix with a circular hard inclusion.
 
 .. literalinclude:: ../../../bin/tutorial_example.py
    :language: python
