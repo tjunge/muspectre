@@ -29,6 +29,13 @@
 #include "fft/fft_utils.hh"
 #include "mpi_test_projection.hh"
 
+#ifdef WITH_FFTWMPI
+#include "fft/fftwmpi_engine.hh"
+#endif
+#ifdef WITH_PFFT
+#include "fft/pfft_engine.hh"
+#endif
+
 #include <Eigen/Dense>
 
 namespace muSpectre {
@@ -37,23 +44,61 @@ namespace muSpectre {
 
   /* ---------------------------------------------------------------------- */
   using fixlist = boost::mpl::list<
+#ifdef WITH_FFTWMPI
     ProjectionFixture<twoD, twoD, Squares<twoD>,
-                      ProjectionFiniteStrain<twoD, twoD>>,
+                      ProjectionFiniteStrain<twoD, twoD>,
+                      FFTWMPIEngine<twoD, twoD>>,
     ProjectionFixture<threeD, threeD, Squares<threeD>,
-                      ProjectionFiniteStrain<threeD, threeD>>,
+                      ProjectionFiniteStrain<threeD, threeD>,
+                      FFTWMPIEngine<threeD, threeD>>,
     ProjectionFixture<twoD, twoD, Sizes<twoD>,
-                      ProjectionFiniteStrain<twoD, twoD>>,
+                      ProjectionFiniteStrain<twoD, twoD>,
+                      FFTWMPIEngine<twoD, twoD>>,
     ProjectionFixture<threeD, threeD, Sizes<threeD>,
-                      ProjectionFiniteStrain<threeD, threeD>>,
+                      ProjectionFiniteStrain<threeD, threeD>,
+                      FFTWMPIEngine<threeD, threeD>>,
 
     ProjectionFixture<twoD, twoD, Squares<twoD>,
-                      ProjectionFiniteStrainFast<twoD, twoD>>,
+                      ProjectionFiniteStrainFast<twoD, twoD>,
+                      FFTWMPIEngine<twoD, twoD>>,
     ProjectionFixture<threeD, threeD, Squares<threeD>,
-                      ProjectionFiniteStrainFast<threeD, threeD>>,
+                      ProjectionFiniteStrainFast<threeD, threeD>,
+                      FFTWMPIEngine<threeD, threeD>>,
     ProjectionFixture<twoD, twoD, Sizes<twoD>,
-                      ProjectionFiniteStrainFast<twoD, twoD>>,
+                      ProjectionFiniteStrainFast<twoD, twoD>,
+                      FFTWMPIEngine<twoD, twoD>>,
     ProjectionFixture<threeD, threeD, Sizes<threeD>,
-                      ProjectionFiniteStrainFast<threeD, threeD>>>;
+                      ProjectionFiniteStrainFast<threeD, threeD>,
+                      FFTWMPIEngine<threeD, threeD>>,
+#endif
+#ifdef WITH_PFFT
+    ProjectionFixture<twoD, twoD, Squares<twoD>,
+                      ProjectionFiniteStrain<twoD, twoD>,
+                      PFFTEngine<twoD, twoD>>,
+    ProjectionFixture<threeD, threeD, Squares<threeD>,
+                      ProjectionFiniteStrain<threeD, threeD>,
+                      PFFTEngine<threeD, threeD>>,
+    ProjectionFixture<twoD, twoD, Sizes<twoD>,
+                      ProjectionFiniteStrain<twoD, twoD>,
+                      PFFTEngine<twoD, twoD>>,
+    ProjectionFixture<threeD, threeD, Sizes<threeD>,
+                      ProjectionFiniteStrain<threeD, threeD>,
+                      PFFTEngine<threeD, threeD>>,
+
+    ProjectionFixture<twoD, twoD, Squares<twoD>,
+                      ProjectionFiniteStrainFast<twoD, twoD>,
+                      PFFTEngine<twoD, twoD>>,
+    ProjectionFixture<threeD, threeD, Squares<threeD>,
+                      ProjectionFiniteStrainFast<threeD, threeD>,
+                      PFFTEngine<threeD, threeD>>,
+    ProjectionFixture<twoD, twoD, Sizes<twoD>,
+                      ProjectionFiniteStrainFast<twoD, twoD>,
+                      PFFTEngine<twoD, twoD>>,
+    ProjectionFixture<threeD, threeD, Sizes<threeD>,
+                      ProjectionFiniteStrainFast<threeD, threeD>,
+                      PFFTEngine<threeD, threeD>>
+#endif
+  >;
 
   /* ---------------------------------------------------------------------- */
   BOOST_FIXTURE_TEST_CASE_TEMPLATE(constructor_test, fix, fixlist, fix) {

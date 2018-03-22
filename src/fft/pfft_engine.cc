@@ -71,8 +71,8 @@ namespace muSpectre {
       }
     }
 
-    for (auto && pixel: CcoordOps::Pixels<DimS, true>(this->fourier_resolutions,
-                                                      this->fourier_locations)) {
+    for (auto && pixel: CcoordOps::Pixels<DimS, false>(this->fourier_resolutions,
+                                                       this->fourier_locations)) {
       this->work_space_container.add_pixel(pixel);
     }
   }
@@ -128,7 +128,7 @@ namespace muSpectre {
                                             PFFT_DEFAULT_BLOCKS,
                                             in, out, this->comm.get_mpi_comm(),
                                             PFFT_FORWARD,
-                                            PFFT_TRANSPOSED_OUT | flags);
+                                            flags);
     if (this->plan_fft == nullptr) {
       throw std::runtime_error("r2c plan failed");
     }
@@ -144,7 +144,7 @@ namespace muSpectre {
                                              i_in, i_out,
                                              this->comm.get_mpi_comm(),
                                              PFFT_BACKWARD,
-                                             PFFT_TRANSPOSED_IN | flags);
+                                             flags);
     if (this->plan_ifft == nullptr) {
       throw std::runtime_error("c2r plan failed");
     }
