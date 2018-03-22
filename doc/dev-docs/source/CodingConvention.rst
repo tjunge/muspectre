@@ -187,6 +187,8 @@ You should include all the headers that define the symbols you rely upon, except
 Scoping
 =======
 
+.. _namespaces:
+
 Namespaces
 ----------
 
@@ -1459,6 +1461,7 @@ Use ``sizeof(varname)`` when you take the size of a particular variable. ``sizeo
 
 
 .. code-block:: c++
+
    Struct data;
    memset(&data, 0, sizeof(data));
 
@@ -1638,223 +1641,183 @@ Definition:
        return lookup_table[a] < lookup_table[b];
      });
 
-Lambdas were introduced in C++11 along with a set of utilities for working with function objects, such as the polymorphic wrapper std::function.
+  Lambdas were introduced in C++11 along with a set of utilities for working with function objects, such as the polymorphic wrapper ``std::function``.
 
-    Lambdas are much more concise than other ways of defining function objects to be passed to STL algorithms, which can be a readability improvement.
-    Appropriate use of default captures can remove redundancy and highlight important exceptions from the default.
-    Lambdas, std::function, and std::bind can be used in combination as a general purpose callback mechanism; they make it easy to write functions that take bound functions as arguments.
+Pros:
+  - Lambdas are much more concise than other ways of defining function objects to be passed to STL algorithms, which can be a readability improvement.
+  - Appropriate use of default captures can remove redundancy and highlight important exceptions from the default.
+  - Lambdas, ``std::function``, and ``std::bind`` can be used in combination as a general purpose callback mechanism; they make it easy to write functions that take bound functions as arguments.
 
-    Variable capture in lambdas can be a source of dangling-pointer bugs, particularly if a lambda escapes the current scope.
-    Default captures by value can be misleading because they do not prevent dangling-pointer bugs. Capturing a pointer by value doesn't cause a deep copy, so it often has the same lifetime issues as capture by reference. This is especially confusing when capturing 'this' by value, since the use of 'this' is often implicit.
-    It's possible for use of lambdas to get out of hand; very long nested anonymous functions can make code harder to understand.
+Cons:
+  - Variable capture in lambdas can be a source of dangling-pointer bugs, particularly if a lambda escapes the current scope.
+  - Default captures by value can be misleading because they do not prevent dangling-pointer bugs. Capturing a pointer by value doesn't cause a deep copy, so it often has the same lifetime issues as capture by reference. This is especially confusing when capturing ``this`` by value, since the use of ``this`` is often implicit.
+  - It's possible for use of lambdas to get out of hand; very long nested anonymous functions can make code harder to understand.
 
-    Use lambda expressions where appropriate, with formatting as described below.
-    Prefer explicit captures if the lambda may escape the current scope. For example, instead of:
+Decision:
+  - Use lambda expressions where appropriate, with formatting as described below.
+  - Use explicit captures if the lambda may escape the current scope. For example, instead of:
 
-    {
-      Foo foo;
-      ...
-      executor->Schedule([&] { Frobnicate(foo); })
-      ...
-    }
-    // BAD! The fact that the lambda makes use of a reference to `foo` and
-    // possibly `this` (if `Frobnicate` is a member function) may not be
-    // apparent on a cursory inspection. If the lambda is invoked after
-    // the function returns, that would be bad, because both `foo`
-    // and the enclosing object could have been destroyed.
+    .. code-block:: c++
+
+       {
+         Foo foo;
+         ...
+         executor->schedule([&] { frobnicate(foo); })
+         ...
+       }
+       // BAD! The fact that the lambda makes use of a reference to `foo` and
+       // possibly `this` (if `frobnicate` is a member function) may not be
+       // apparent on a cursory inspection. If the lambda is invoked after
+       // the function returns, that would be bad, because both `foo`
+       // and the enclosing object could have been destroyed.
 
     prefer to write:
 
-    {
-      Foo foo;
-      ...
-      executor->Schedule([&foo] { Frobnicate(foo); })
-      ...
-    }
-    // BETTER - The compile will fail if `Frobnicate` is a member
-    // function, and it's clearer that `foo` is dangerously captured by
-    // reference.
+    .. code-block:: c++
 
-    Use default capture by reference ([&]) only when the lifetime of the lambda is obviously shorter than any potential captures.
-    Use default capture by value ([=]) only as a means of binding a few variables for a short lambda, where the set of captured variables is obvious at a glance. Prefer not to write long or complex lambdas with default capture by value.
-    Keep unnamed lambdas short. If a lambda body is more than maybe five lines long, prefer to give the lambda a name, or to use a named function instead of a lambda.
-    Specify the return type of the lambda explicitly if that will make it more obvious to readers, as with auto.
+       {
+          Foo foo;
+          ...
+          executor->schedule([&foo] { frobnicate(foo); })
+          ...
+        }
+        // BETTER - The compile will fail if `frobnicate` is a member
+        // function, and it's clearer that `foo` is dangerously captured by
+        // reference.
+
+  - Do not usese default capture by reference (``[&]``).
+  - Do not use default capture by value (``[=]``).
+  - Keep unnamed lambdas short. If a lambda body is more than maybe five lines long, prefer to give the lambda a name, or to use a named function instead of a lambda.
+  - Specify the return type of the lambda explicitly if that will make it more obvious to readers, as with ``auto``.
 
 Template metaprogramming
 ------------------------
 
-Avoid complicated template programming.
+Template metaprogramming is our tool to obtain both generic and efficient code. It can be complicated, but efficiency is the top priority in the core of *µ*\Spectre.
 
-Template metaprogramming refers to a family of techniques that exploit the fact that the C++ template instantiation mechanism is Turing complete and can be used to perform arbitrary compile-time computation in the type domain.
+Definition:
+  Template metaprogramming refers to a family of techniques that exploit the fact that the C++ template instantiation mechanism is Turing complete and can be used to perform arbitrary compile-time computation in the type domain.
 
-Template metaprogramming allows extremely flexible interfaces that are type safe and high performance. Facilities like Google Test, std::tuple, std::function, and Boost.Spirit would be impossible without it.
+Pros:
+  Template metaprogramming allows extremely flexible interfaces that are type safe and high performance. Facilities like the `Boost unit test framework <http://www.boost.org/doc/libs/1_43_0/libs/test/doc/html/utf.html>`_, ``std::tuple``, ``std::function``, and ``Boost.Spirit`` would be impossible without it.
 
-The techniques used in template metaprogramming are often obscure to anyone but language experts. Code that uses templates in complicated ways is often unreadable, and is hard to debug or maintain.
+Cons:
+  The techniques used in template metaprogramming are often obscure to anyone but language experts. Code that uses templates in complicated ways is demanding to read, and is hard to debug.
 
-Template metaprogramming often leads to extremely poor compiler time error messages: even if an interface is simple, the complicated implementation details become visible when the user does something wrong.
+  Template metaprogramming often leads to extremely poor compiler time error messages: even if an interface is simple, the complicated implementation details become visible when the user does something wrong.
 
-Template metaprogramming interferes with large scale refactoring by making the job of refactoring tools harder. First, the template code is expanded in multiple contexts, and it's hard to verify that the transformation makes sense in all of them. Second, some refactoring tools work with an AST that only represents the structure of the code after template expansion. It can be difficult to automatically work back to the original source construct that needs to be rewritten.
+  Template metaprogramming interferes with large scale refactoring by making the job of refactoring tools harder. First, the template code is expanded in multiple contexts, and it's hard to verify that the transformation makes sense in all of them. Second, some refactoring tools work with an AST that only represents the structure of the code after template expansion. It can be difficult to automatically work back to the original source construct that needs to be rewritten.
 
-Template metaprogramming sometimes allows cleaner and easier-to-use interfaces than would be possible without it, but it's also often a temptation to be overly clever. It's best used in a small number of low level components where the extra maintenance burden is spread out over a large number of uses.
+Decision:
+  Template metaprogramming sometimes allows cleaner and easier-to-use interfaces than would be possible without it. It's best used in a small number of low level components where the extra maintenance burden is spread out over a large number of uses (i.e., the core of *µ*\Spectre, e.g. ``MaterialMuSpectre`` and the data structures).
 
-Think twice before using template metaprogramming or other complicated template techniques; think about whether the average member of your team will be able to understand your code well enough to maintain it after you switch to another project, or whether a non-C++ programmer or someone casually browsing the code base will be able to understand the error messages or trace the flow of a function they want to call. If you're using recursive template instantiations or type lists or metafunctions or expression templates, or relying on SFINAE or on the sizeof trick for detecting function overload resolution, then there's a good chance you've gone too far.
-
-If you use template metaprogramming, you should expect to put considerable effort into minimizing and isolating the complexity. You should hide metaprogramming as an implementation detail whenever possible, so that user-facing headers are readable, and you should make sure that tricky code is especially well commented. You should carefully document how the code is used, and you should say something about what the "generated" code looks like. Pay extra attention to the error messages that the compiler emits when users make mistakes. The error messages are part of your user interface, and your code should be tweaked as necessary so that the error messages are understandable and actionable from a user point of view.
+If you use template metaprogramming, you should expect to put considerable effort into minimising and isolating the complexity. You should hide metaprogramming as an implementation detail whenever possible, so that user-facing headers are readable, and you should make sure that tricky code is especially well commented. You should carefully document how the code is used, and you should say something about what the "generated" code looks like. Pay extra attention to the error messages that the compiler emits when users make mistakes. The error messages are part of your user interface, and your code should be tweaked as necessary so that the error messages are understandable and actionable from a user point of view.
 
 Boost
 -----
 
-Use only approved libraries from the Boost library collection.
+We try to depend on Boost as little as possible. The core library should not at all depend on Boost, while the tests use the `Boost unit test framework <http://www.boost.org/doc/libs/1_43_0/libs/test/doc/html/utf.html>`_. There is one exception: For users with ancient compilers, Boost is used to emulate ``std::optional``. Do not add Boost dependencies.
 
-The Boost library collection is a popular collection of peer-reviewed, free, open-source C++ libraries.
+Definition:
+  The `Boost library collection <https://www.boost.org/>`_ is a popular collection of peer-reviewed, free, open-source C++ libraries.
 
-Boost code is generally very high-quality, is widely portable, and fills many important gaps in the C++ standard library, such as type traits and better binders.
+Pros:
+  Boost code is generally very high-quality, is widely portable, and fills many important gaps in the C++ standard library, such as type traits and better binders.
 
-Some Boost libraries encourage coding practices which can hamper readability, such as metaprogramming and other advanced template techniques, and an excessively "functional" style of programming.
+Cons:
+  Boost can be tricky to install on certain systems
 
-In order to maintain a high level of readability for all contributors who might read and maintain code, we only allow an approved subset of Boost features. Currently, the following libraries are permitted:
-
-    Call Traits from boost/call_traits.hhpp
-    Compressed Pair from boost/compressed_pair.hhpp
-    The Boost Graph Library (BGL) from boost/graph, except serialization (adj_list_serialize.hhpp) and parallel/distributed algorithms and data structures (boost/graph/parallel/* and boost/graph/distributed/*).
-    Property Map from boost/property_map, except parallel/distributed property maps (boost/property_map/parallel/*).
-    Iterator from boost/iterator
-    The part of Polygon that deals with Voronoi diagram construction and doesn't depend on the rest of Polygon: boost/polygon/voronoi_builder.hhpp, boost/polygon/voronoi_diagram.hhpp, and boost/polygon/voronoi_geometry_type.hhpp
-    Bimap from boost/bimap
-    Statistical Distributions and Functions from boost/math/distributions
-    Special Functions from boost/math/special_functions
-    Multi-index from boost/multi_index
-    Heap from boost/heap
-    The flat containers from Container: boost/container/flat_map, and boost/container/flat_set
-    Intrusive from boost/intrusive.
-    The boost/sort library.
-    Preprocessor from boost/preprocessor.
-
-We are actively considering adding other Boost features to the list, so this list may be expanded in the future.
-
-The following libraries are permitted, but their use is discouraged because they've been superseded by standard libraries in C++11:
-
-    Array from boost/array.hhpp: use std::array instead.
-    Pointer Container from boost/ptr_container: use containers of std::unique_ptr instead.
-
-std::hash
----------
-
-Do not define specializations of std::hash.
-
-std::hash<T> is the function object that the C++11 hash containers use to hash keys of type T, unless the user explicitly specifies a different hash function. For example, std::unordered_map<int, string> is a hash map that uses std::hash<int> to hash its keys, whereas std::unordered_map<int, string, MyIntHash> uses MyIntHash.
-
-std::hash is defined for all integral, floating-point, pointer, and enum types, as well as some standard library types such as string and unique_ptr. Users can enable it to work for their own types by defining specializations of it for those types.
-
-std::hash is easy to use, and simplifies the code since you don't have to name it explicitly. Specializing std::hash is the standard way of specifying how to hash a type, so it's what outside resources will teach, and what new engineers will expect.
-
-std::hash is hard to specialize. It requires a lot of boilerplate code, and more importantly, it combines responsibility for identifying the hash inputs with responsibility for executing the hashing algorithm itself. The type author has to be responsible for the former, but the latter requires expertise that a type author usually doesn't have, and shouldn't need. The stakes here are high because low-quality hash functions can be security vulnerabilities, due to the emergence of hash flooding attacks.
-
-Even for experts, std::hash specializations are inordinately difficult to implement correctly for compound types, because the implementation cannot recursively call std::hash on data members. High-quality hash algorithms maintain large amounts of internal state, and reducing that state to the size_t bytes that std::hash returns is usually the slowest part of the computation, so it should not be done more than once.
-
-Due to exactly that issue, std::hash does not work with std::pair or std::tuple, and the language does not allow us to extend it to support them.
-
-You can use std::hash with the types that it supports "out of the box", but do not specialize it to support additional types. If you need a hash table with a key type that std::hash does not support, consider using legacy hash containers (e.g. hash_map) for now; they use a different default hasher, which is unaffected by this prohibition.
-
-If you want to use the standard hash containers anyway, you will need to specify a custom hasher for the key type, e.g.
-
-std::unordered_map<MyKeyType, Value, MyKeyTypeHasher> my_map;
-
-Consult with the type's owners to see if there is an existing hasher that you can use; otherwise work with them to provide one, or roll your own.
-
-We are planning to provide a hash function that can work with any type, using a new customization mechanism that doesn't have the drawbacks of std::hash.
-
-C++11
+C++14
 -----
 
-Use libraries and language extensions from C++11 when appropriate. Consider portability to other environments before using C++11 features in your project.
+Use libraries and language extensions from C++14 when appropriate.
 
-C++11 contains significant changes both to the language and libraries.
-
-C++11 was the official standard until august 2014, and is supported by most C++ compilers. It standardizes some common C++ extensions that we use already, allows shorthands for some operations, and has some performance and safety improvements.
-
-The C++11 standard is substantially more complex than its predecessor (1,300 pages versus 800 pages), and is unfamiliar to many developers. The long-term effects of some features on code readability and maintenance are unknown. We cannot predict when its various features will be implemented uniformly by tools that may be of interest, particularly in the case of projects that are forced to use older versions of tools.
-
-As with Boost, some C++11 extensions encourage coding practices that hamper readability—for example by removing checked redundancy (such as type names) that may be helpful to readers, or by encouraging template metaprogramming. Other extensions duplicate functionality available through existing mechanisms, which may lead to confusion and conversion costs.
-
-C++11 features may be used unless specified otherwise. In addition to what's described in the rest of the style guide, the following C++11 features may not be used:
-
-    Compile-time rational numbers (<ratio>), because of concerns that it's tied to a more template-heavy interface style.
-    The <cfenv> and <fenv.hh> headers, because many compilers do not support those features reliably.
-    Ref-qualifiers on member functions, such as void X::Foo() & or void X::Foo() &&, because of concerns that they're an overly obscure feature.
+C++14 contains significant improvements both to the language and libraries.
 
 Nonstandard Extensions
 ----------------------
 
-Nonstandard extensions to C++ may not be used unless otherwise specified.
+Nonstandard extensions to C++ may not be used unless needed to fix compiler bugs.
 
-Compilers support various extensions that are not part of standard C++. Such extensions include GCC's __attribute__, intrinsic functions such as __builtin_prefetch, designated initialisers (e.g. Foo f = {.field = 3}), inline assembly, __COUNTER__, __PRETTY_FUNCTION__, compound statement expressions (e.g. foo = ({ int x; Bar(&x); x }), variable-length arrays and alloca(), and the "Elvis Operator" a?:b.
+Compilers support various extensions that are not part of standard C++. Such extensions include GCC's ``__attribute__``.
 
-    Nonstandard extensions may provide useful features that do not exist in standard C++. For example, some people think that designated initialisers are more readable than standard C++ features like constructors.
-    Important performance guidance to the compiler can only be specified using extensions.
+Cons:
+  - Nonstandard extensions do not work in all compilers. Use of nonstandard extensions reduces portability of code.
+  - Even if they are supported in all targeted compilers, the extensions are often not well-specified, and there may be subtle behaviour differences between compilers.
+  - Nonstandard extensions add to the language features that a reader must know to understand the code.
 
-    Nonstandard extensions do not work in all compilers. Use of nonstandard extensions reduces portability of code.
-    Even if they are supported in all targeted compilers, the extensions are often not well-specified, and there may be subtle behavior differences between compilers.
-    Nonstandard extensions add to the language features that a reader must know to understand the code.
-
-Do not use nonstandard extensions. You may use portability wrappers that are implemented using nonstandard extensions, so long as those wrappers are provided by a designated project-wide portability header.
+Decision:
+  Do not use nonstandard extensions.
 
 Aliases
 -------
 
 Public aliases are for the benefit of an API's user, and should be clearly documented.
 
-There are several ways to create names that are aliases of other entities:
+Definition:
+  You can create names that are aliases of other entities:
 
-typedef Foo Bar;
-using Bar = Foo;
-using other_namespace::Foo;
+  .. code-block:: c++
 
-In new code, using is preferable to typedef, because it provides a more consistent syntax with the rest of C++ and works with templates.
+     template<class Param>
+     using Bar = Foo<Param>;
+     using other_namespace::Foo;
 
-Like other declarations, aliases declared in a header file are part of that header's public API unless they're in a function definition, in the private portion of a class, or in an explicitly-marked internal namespace. Aliases in such areas or in ``.cc`` files are implementation details (because client code can't refer to them), and are not restricted by this rule.
 
-    Aliases can improve readability by simplifying a long or complicated name.
-    Aliases can reduce duplication by naming in one place a type used repeatedly in an API, which might make it easier to change the type later.
+  In *µ*\Spectre, aliases are created with the ``using`` keyword and never with ``typedef``, because it provides a more consistent syntax with the rest of C++ and works with templates.
 
-    When placed in a header where client code can refer to them, aliases increase the number of entities in that header's API, increasing its complexity.
-    Clients can easily rely on unintended details of public aliases, making changes difficult.
-    It can be tempting to create a public alias that is only intended for use in the implementation, without considering its impact on the API, or on maintainability.
-    Aliases can create risk of name collisions
-    Aliases can reduce readability by giving a familiar construct an unfamiliar name
-    Type aliases can create an unclear API contract: it is unclear whether the alias is guaranteed to be identical to the type it aliases, to have the same API, or only to be usable in specified narrow ways
+  Like other declarations, aliases declared in a header file are part of that header's public API unless they're in a function definition, in the private portion of a class, or in an explicitly-marked internal namespace. Aliases in such areas or in ``.cc`` files are implementation details (because client code can't refer to them), and are not restricted by this rule.
 
-Don't put an alias in your public API just to save typing in the implementation; do so only if you intend it to be used by your clients.
+Pros:
+  - Aliases can improve readability by simplifying a long or complicated name.
+  - Aliases can reduce duplication by naming in one place a type used repeatedly in an API, which might make it easier to change the type later.
 
-When defining a public alias, document the intent of the new name, including whether it is guaranteed to always be the same as the type it's currently aliased to, or whether a more limited compatibility is intended. This lets the user know whether they can treat the types as substitutable or whether more specific rules must be followed, and can help the implementation retain some degree of freedom to change the alias.
+Cons:
+  - When placed in a header where client code can refer to them, aliases increase the number of entities in that header's API, increasing its complexity.
+  - Clients can easily rely on unintended details of public aliases, making changes difficult.
+  - It can be tempting to create a public alias that is only intended for use in the implementation, without considering its impact on the API, or on maintainability.
+  - Aliases can create risk of name collisions
+  - Aliases can reduce readability by giving a familiar construct an unfamiliar name
+  - Type aliases can create an unclear API contract: it is unclear whether the alias is guaranteed to be identical to the type it aliases, to have the same API, or only to be usable in specified narrow ways
 
-Don't put namespace aliases in your public API. (See also Namespaces).
+Decision:
+  Don't put an alias in your public API just to save typing in the implementation; do so only if you intend it to be used by your clients.
 
-For example, these aliases document how they are intended to be used in client code:
+  When defining a public alias, document the intent of the new name. This lets the user know whether they can treat the types as substitutable or whether more specific rules must be followed, and can help the implementation retain some degree of freedom to change the alias.
 
-namespace mynamespace {
-// Used to store field measurements. DataPoint may change from Bar* to some internal type.
-// Client code should treat it as an opaque pointer.
-using DataPoint = foo::Bar*;
+  Don't put namespace aliases in your public API. (See also :ref:`Namespaces <namespaces>`).
 
-// A set of measurements. Just an alias for user convenience.
-using TimeSeries = std::unordered_set<DataPoint, std::hash<DataPoint>, DataPointComparator>;
-}  // namespace mynamespace
+  For example, these aliases document how they are intended to be used in client code:
 
-These aliases don't document intended use, and half of them aren't meant for client use:
+  .. code-block:: c++
 
-namespace mynamespace {
-// Bad: none of these say how they should be used.
-using DataPoint = foo::Bar*;
-using std::unordered_set;  // Bad: just for local convenience
-using std::hash;           // Bad: just for local convenience
-typedef unordered_set<DataPoint, hash<DataPoint>, DataPointComparator> TimeSeries;
-}  // namespace mynamespace
+     namespace mynamespace {
+       // Used to store field measurements. DataPoint may change from Bar* to some internal type.
+       // Client code should treat it as an opaque pointer.
+       using DataPoint = foo::Bar*;
 
-However, local convenience aliases are fine in function definitions, private sections of classes, explicitly marked internal namespaces, and in ``.cc`` files:
+       // A set of measurements. Just an alias for user convenience.
+       using TimeSeries = std::unordered_set<DataPoint, std::hash<DataPoint>, DataPointComparator>;
+     }  // namespace mynamespace
 
-// In a ``.cc`` file
-using foo::Bar;
+  These aliases don't document intended use, and half of them aren't meant for client use:
+
+  .. code-block:: c++
+
+     namespace mynamespace {
+       // Bad: none of these say how they should be used.
+       using DataPoint = foo::Bar*;
+       using std::unordered_set;  // Bad: just for local convenience
+       using std::hash;           // Bad: just for local convenience
+       typedef unordered_set<DataPoint, hash<DataPoint>, DataPointComparator> TimeSeries;
+     }  // namespace mynamespace
+
+  However, local convenience aliases are fine in function definitions, private sections of classes, explicitly marked internal namespaces, and in ``.cc`` files:
+
+  .. code-block:: c++
+
+     // In a ``.cc`` file
+     using foo::Bar;
 
 Naming
 ======
@@ -1870,22 +1833,30 @@ Names should be descriptive; avoid abbreviation.
 
 Give as descriptive a name as possible, within reason. Do not worry about saving horizontal space as it is far more important to make your code immediately understandable by a new reader. Do not use abbreviations that are ambiguous or unfamiliar to readers outside your project, and do not abbreviate by deleting letters within a word. Abbreviations that would be familiar to someone outside your project with relevant domain knowledge are OK. As a rule of thumb, an abbreviation is probably OK if it's listed in Wikipedia.
 
-int price_count_reader;    // No abbreviation.
-int num_errors;            // "num" is a widespread convention.
-int num_dns_connections;   // Most people know what "DNS" stands for.
-int lstm_size;             // "LSTM" is a common machine learning abbreviation.
+A few good examples:
 
-int n;                     // Meaningless.
-int nerr;                  // Ambiguous abbreviation.
-int n_comp_conns;          // Ambiguous abbreviation.
-int wgc_connections;       // Only your group knows what this stands for.
-int pc_reader;             // Lots of things can be abbreviated "pc".
-int cstmr_id;              // Deletes internal letters.
-FooBarRequestInfo fbri;    // Not even a word.
+.. code-block:: c++
 
-Note that certain universally-known abbreviations are OK, such as i for an iteration variable and T for a template parameter.
+   int price_count_reader;    // No abbreviation.
+   int nb_params;             // "nb" is a widespread convention.
+   int nb_dns_connections;    // Most people know what "DNS" stands for.
+   int lstm_size;             // "LSTM" is a common machine learning abbreviation.
 
-For some symbols, this style guide recommends names to start with a capital letter and to have a capital letter for each new word (a.k.a. "Camel Case" or "Pascal case"). When abbreviations appear in such names, prefer to capitalize the abbreviations as single words (i.e. StartRpc(), not StartRPC()).
+A few bad examples
+
+.. code-block:: c++
+
+   int n;                     // Meaningless.
+   int nerr;                  // Ambiguous abbreviation.
+   int n_comp_conns;          // Ambiguous abbreviation.
+   int wgc_connections;       // Only your group knows what this stands for.
+   int pc_reader;             // Lots of things can be abbreviated "pc".
+   int cstmr_id;              // Deletes internal letters.
+   FooBarRequestInfo fbri;    // Not even a word.
+
+Note that certain universally-known abbreviations are OK, such as ``i`` for an iteration variable and ``T`` for a template parameter.
+
+For some symbols, this style guide recommends names to start with a capital letter and to have a capital letter for each new word (a.k.a. "CamelCase"). When abbreviations appear in such names, prefer to capitalize every letter of the abbreviation (i.e. ``FFTEngine``, not ``FftEngine``).
 
 Template parameters should follow the naming style for their category: type template parameters should follow the rules for type names, and non-type template parameters should follow the rules for variable names.
 
