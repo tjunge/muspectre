@@ -18,6 +18,8 @@ Objectives of the Convention
 
 Review of submitted code is the main mechanism to enforce the coding conventions.
 
+.. _structure:
+
 Structure
 *********
 This section contains planned features that are not yet implemented, but that need to be considered during the development effort.
@@ -1439,72 +1441,77 @@ The following usage pattern will avoid many problems with macros; if you use mac
 
 Exporting macros from headers (i.e. defining them in a header without #undefing them before the end of the header) is extremely strongly discouraged. If you do export a macro from a header, it must have a globally unique name. To achieve this, it must be named with a prefix consisting of your project's namespace name (but upper case).
 
-0 and nullptr/NULL
-------------------
+``0`` and ``nullptr``/``NULL``
+------------------------------
 
-Use 0 for integers, 0.0 for reals, nullptr for pointers, and '\0' for chars.
+Use ``0`` for integers, ``0.`` for reals, ``nullptr`` for pointers, and ``'\0'`` for chars.
 
-Use 0 for integers and 0.0 for reals.
+For pointers (address values), there is a choice between ``0``, ``NULL``, and ``nullptr``. *µ*\Spectre only accepts ``nullptr``, as this provides type-safety.
 
-For pointers (address values), there is a choice between 0, NULL, and nullptr. For projects that allow C++11 features, use nullptr, as this provides type-safety.
-
-For C++03 projects, prefer NULL to 0. While the values are equivalent, NULL looks more like a pointer to the reader, and some C++ compilers provide special definitions of NULL which enable them to give useful warnings.
-
-Use '\0' for the null character. Using the correct type makes the code more readable.
+Use ``'\0'`` for the null character. Using the correct type makes the code more readable.
 
 sizeof
 ------
 
-Prefer sizeof(varname) to sizeof(type).
+Prefer ``sizeof(varname)`` to ``sizeof(type)``.
 
-Use sizeof(varname) when you take the size of a particular variable. sizeof(varname) will update appropriately if someone changes the variable type either now or later. You may use sizeof(type) for code unrelated to any particular variable, such as code that manages an external or internal data format where a variable of an appropriate C++ type is not convenient.
+Use ``sizeof(varname)`` when you take the size of a particular variable. ``sizeof(varname)`` will update appropriately if someone changes the variable type either now or later. You may use ``sizeof(type)`` for code unrelated to any particular variable, such as code that manages an external or internal data format where a variable of an appropriate C++ type is not convenient.
 
-Struct data;
-memset(&data, 0, sizeof(data));
 
-memset(&data, 0, sizeof(Struct));
+.. code-block:: c++
+   Struct data;
+   memset(&data, 0, sizeof(data));
 
-if (raw_size < sizeof(int)) {
-  LOG(ERROR) << "compressed record not big enough for count: " << raw_size;
-  return false;
-}
+   memset(&data, 0, sizeof(Struct));
+
+   if (raw_size < sizeof(int)) {
+     LOG(ERROR) << "compressed record not big enough for count: " << raw_size;
+     return false;
+   }
 
 auto
 ----
 
-Use auto to avoid type names that are noisy, obvious, or unimportant - cases where the type doesn't aid in clarity for the reader. Continue to use manifest type declarations when it helps readability.
+Use auto to avoid type names that are noisy, obvious, or unimportant - cases where the type doesn't aid in clarity for the reader. Continue to use manifest type declarations only when it helps readability or you wish to override the type (important in the context of expression templates, see `Eigen C++11 and the auto keyword <http://eigen.tuxfamily.org/dox/TopicPitfalls.html>`_).
 
-    C++ type names can be long and cumbersome, especially when they involve templates or namespaces.
-    When a C++ type name is repeated within a single declaration or a small code region, the repetition may not be aiding readability.
-    It is sometimes safer to let the type be specified by the type of the initialisation expression, since that avoids the possibility of unintended copies or type conversions.
+Pros:
+  - C++ type names can be long and cumbersome, especially when they involve templates or namespaces.
+  - Long type names hinder readability.
+  - When a C++ type name is repeated within a single declaration or a small code region, the repetition hinders readability and breaks the :ref:`DRY <structure>` principle.
+  - It is sometimes safer to let the type be specified by the type of the initialisation expression, since that avoids the possibility of unintended copies or type conversions.
+  - Allows the use of universal references ``auto &&`` which allow to write efficient template expression code witout sacrificing readability.
 
-Sometimes code is clearer when types are manifest, especially when a variable's initialisation depends on things that were declared far away. In expressions like:
+Cons:
+  - Sometimes code is clearer when types are manifest, especially when a variable's initialisation depends on things that were declared far away. In expressions like:
 
-auto foo = x.add_foo();
-auto i = y.Find(key);
+    .. code-block:: c++
 
-it may not be obvious what the resulting types are if the type of y isn't very well known, or if y was declared many lines earlier.
+       auto foo = x.add_foo();
+       auto i = y.Find(key);
 
-Programmers have to understand the difference between auto and const auto& or they'll get copies when they didn't mean to.
+  - it may not be obvious what the resulting types are if the type of ``y`` isn't very well known, or if ``y`` was declared many lines earlier.
 
-If an auto variable is used as part of an interface, e.g. as a constant in a header, then a programmer might change its type while only intending to change its value, leading to a more radical API change than intended.
+  - Programmers have to understand the difference between ``auto`` and ``const auto&`` or they'll get copies when they didn't mean to.
 
-auto is permitted when it increases readability, particularly as described below. Never initialise an auto-typed variable with a braced initialiser list.
+Decision:
+  ``auto`` is highly encouraged when it increases readability and reduces redundant code repetitions, particularly as described below. Not using ``auto`` in these conditions is to be considered a bug. Never initialise an ``auto``-typed variable with a braced initialiser list.
 
-Specific cases where auto is allowed or encouraged:
+Typical example cases where ``auto`` is appropriate:
 
-    (Encouraged) For iterators and other long/cluttery type names, particularly when the type is clear from context (calls to find, begin, or end for instance).
-    (Allowed) When the type is clear from local context (in the same expression or within a few lines). Initialisation of a pointer or smart pointer with calls to new and std::make_unique commonly falls into this category, as does use of auto in a range-based loop over a container whose type is spelled out nearby.
-    (Allowed) When the type doesn't matter because it isn't being used for anything other than equality comparison.
-    (Encouraged) When iterating over a map with a range-based loop (because it is often assumed that the correct type is std::pair<KeyType, ValueType> whereas it is actually std::pair<const KeyType, ValueType>). This is particularly well paired with local key and value aliases for .first and .second (often const-ref).
+    - For iterators and other long/cluttery type names, particularly when the type is clear from context (calls to ``find``, ``begin``, or ``end`` for instance).
+    -  When the type is clear from local context (in the same expression or within a few lines). Initialisation of a pointer or smart pointer with calls to ``new`` and ``std::make_unique`` commonly falls into this category, as does use of ``auto`` in a range-based loop over a container whose type is spelled out nearby.
+    - When the type doesn't matter because it isn't being used for anything other than equality comparison.
+    -  When iterating over a map with a range-based loop (because it is often assumed that the correct type is ``std::pair<KeyType, ValueType>`` whereas it is actually ``std::pair<const KeyType, ValueType>``). This is particularly well paired with local key and value aliases for ``.first`` and ``.second`` (often const-ref).
 
-    for (const auto& item : some_map) {
-      const KeyType& key = item.first;
-      const ValType& value = item.second;
-      // The rest of the loop can now just refer to key and value,
-      // a reader can see the types in question, and we've avoided
-      // the too-common case of extra copies in this iteration.
-    }
+       .. code-block:: c++
+
+          for (const auto& item : some_map) {
+            const KeyType& key = item.first;
+            const ValType& value = item.second;
+            // The rest of the loop can now just refer to key and value,
+            // a reader can see the types in question, and we've avoided
+            // the too-common case of extra copies in this iteration.
+          }
 
 .. _`braced initialiser list`:
 
@@ -1515,103 +1522,121 @@ You may use braced initialiser lists.
 
 In C++03, aggregate types (arrays and structs with no constructor) could be initialised with braced initialiser lists.
 
-struct Point { int x; int y; };
-Point p = {1, 2};
+.. code-block:: c++
+
+   struct Point { int x; int y; };
+   Point p = {1, 2};
 
 In C++11, this syntax was generalized, and any object type can now be created with a braced initialiser list, known as a braced-init-list in the C++ grammar. Here are a few examples of its use.
 
-// Vector takes a braced-init-list of elements.
-std::vector<string> v{"foo", "bar"};
+.. code-block:: c++
 
-// Basically the same, ignoring some small technicalities.
-// You may choose to use either form.
-std::vector<string> v = {"foo", "bar"};
+   // Vector takes a braced-init-list of elements.
+   std::vector<string> v{"foo", "bar"};
 
-// Usable with 'new' expressions.
-auto p = new std::vector<string>{"foo", "bar"};
+   // Basically the same, ignoring some small technicalities.
+   // You may choose to use either form.
+   std::vector<string> v = {"foo", "bar"};
 
-// A map can take a list of pairs. Nested braced-init-lists work.
-std::map<int, string> m = {{1, "one"}, {2, "2"}};
+   // Usable with 'new' expressions.
+   auto p = new std::vector<string>{"foo", "bar"};
 
-// A braced-init-list can be implicitly converted to a return type.
-std::vector<int> test_function() { return {1, 2, 3}; }
+   // A map can take a list of pairs. Nested braced-init-lists work.
+   std::map<int, string> m = {{1, "one"}, {2, "2"}};
 
-// Iterate over a braced-init-list.
-for (int i : {-1, -2, -3}) {}
+   // A braced-init-list can be implicitly converted to a return type.
+   std::vector<int> test_function() { return {1, 2, 3}; }
 
-// Call a function using a braced-init-list.
-void TestFunction2(std::vector<int> v) {}
-TestFunction2({1, 2, 3});
+   // Iterate over a braced-init-list.
+   for (int i : {-1, -2, -3}) {}
 
-A user-defined type can also define a constructor and/or assignment operator that take std::initialiser_list<T>, which is automatically created from braced-init-list:
+   // Call a function using a braced-init-list.
+   void TestFunction2(std::vector<int> v) {}
+   TestFunction2({1, 2, 3});
 
-class MyType {
- public:
-  // std::initialiser_list references the underlying init list.
-  // It should be passed by value.
-  MyType(std::initialiser_list<int> init_list) {
-    for (int i : init_list) append(i);
-  }
-  MyType& operator=(std::initialiser_list<int> init_list) {
-    clear();
-    for (int i : init_list) append(i);
-  }
-};
-MyType m{2, 3, 5, 7};
+A user-defined type can also define a constructor and/or assignment operator that take ``std::initialiser_list<T>``, which is automatically created from braced-init-list:
 
-Finally, brace initialisation can also call ordinary constructors of data types, even if they do not have std::initialiser_list<T> constructors.
+.. code-block:: c++
 
-double d{1.23};
-// Calls ordinary constructor as long as MyOtherType has no
-// std::initialiser_list constructor.
-class MyOtherType {
- public:
-  explicit MyOtherType(string);
-  MyOtherType(int, string);
-};
-MyOtherType m = {1, "b"};
-// If the constructor is explicit, you can't use the "= {}" form.
-MyOtherType m{"b"};
+   class MyType {
+    public:
+     // std::initialiser_list references the underlying init list.
+     // It should be passed by value.
+     MyType(std::initialiser_list<int> init_list) {
+       for (int i : init_list) append(i);
+     }
+     MyType& operator=(std::initialiser_list<int> init_list) {
+       clear();
+       for (int i : init_list) append(i);
+     }
+   };
+   MyType m{2, 3, 5, 7};
 
-Never assign a braced-init-list to an auto local variable. In the single element case, what this means can be confusing.
+Finally, brace initialisation can also call ordinary constructors of data types, even if they do not have ``std::initialiser_list<T>`` constructors.
 
-auto d = {1.23};        // d is a std::initialiser_list<double>
+.. code-block:: c++
 
-auto d = double{1.23};  // Good -- d is a double, not a std::initialiser_list.
+   double d{1.23};
+   // Calls ordinary constructor as long as MyOtherType has no
+   // std::initialiser_list constructor.
+   class MyOtherType {
+    public:
+     explicit MyOtherType(string);
+     MyOtherType(int, string);
+   };
+   MyOtherType m = {1, "b"};
+   // If the constructor is explicit, you can't use the "= {}" form.
+   MyOtherType m{"b"};
 
-See Braced_Initialiser_List_Format for formatting.
+Never assign a braced-init-list to an ``auto`` local variable. In the single element case, what this means can be confusing.
+
+.. code-block:: c++
+
+   auto d = {1.23};        // d is a std::initialiser_list<double>
+
+   auto d = double{1.23};  // Good but weird -- d is a double, not a std::initialiser_list.
+
+See :ref:`braced initialiser list format` for formatting.
 
 .. _`lambda expressions`:
 
 Lambda expressions
 ------------------
 
-Use lambda expressions where appropriate. Prefer explicit captures when the lambda will escape the current scope.
+Use lambda expressions where appropriate. Use explicit captures.
 
-Lambda expressions are a concise way of creating anonymous function objects. They're often useful when passing functions as arguments. For example:
+Definition:
+  Lambda expressions are a concise way of creating anonymous function objects. They're often useful when passing functions as arguments. For example:
 
-std::sort(v.begin(), v.end(), [](int x, int y) {
-  return Weight(x) < Weight(y);
-});
+  .. code-block:: c++
 
-They further allow capturing variables from the enclosing scope either explicitly by name, or implicitly using a default capture. Explicit captures require each variable to be listed, as either a value or reference capture:
+     std::sort(v.begin(), v.end(), [](int x, int y) {
+       return Weight(x) < Weight(y);
+     });
 
-int weight = 3;
-int sum = 0;
-// Captures `weight` by value and `sum` by reference.
-std::for_each(v.begin(), v.end(), [weight, &sum](int x) {
-  sum += weight * x;
-});
+  They further allow capturing variables from the enclosing scope either explicitly by name, or implicitly using a default capture. Explicit captures require each variable to be listed, as either a value or reference capture:
 
-Default captures implicitly capture any variable referenced in the lambda body, including this if any members are used:
 
-const std::vector<int> lookup_table = ...;
-std::vector<int> indices = ...;
-// Captures `lookup_table` by reference, sorts `indices` by the value
-// of the associated element in `lookup_table`.
-std::sort(indices.begin(), indices.end(), [&](int a, int b) {
-  return lookup_table[a] < lookup_table[b];
-});
+  .. code-block:: c++
+
+     int weight{3};
+     int sum{0};
+     // Captures `weight` by value and `sum` by reference.
+     std::for_each(v.begin(), v.end(), [weight, &sum](int x) {
+       sum += weight * x;
+     });
+
+  Default captures implicitly capture any variable referenced in the lambda body, including this if any members are used:
+
+  .. code-block:: c++
+
+     const std::vector<int> lookup_table = ...;
+     std::vector<int> indices = ...;
+     // Captures `lookup_table` by reference, sorts `indices` by the value
+     // of the associated element in `lookup_table`.
+     std::sort(indices.begin(), indices.end(), [&](int a, int b) {
+       return lookup_table[a] < lookup_table[b];
+     });
 
 Lambdas were introduced in C++11 along with a set of utilities for working with function objects, such as the polymorphic wrapper std::function.
 
@@ -2468,6 +2493,7 @@ my_widget.Transform(x1, x2, x3,
                     y1, y2, y3,
                     z1, z2, z3);
 
+.. _`braced initialiser list format`
 Braced Initialiser List Format
 ------------------------------
 
