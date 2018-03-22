@@ -95,3 +95,7 @@ target_include_directories(muSpectre INTERFACE ${muSpectre_INCLUDES})
 target_link_libraries(muSpectre ${muSpectre_LIBRARIES})
 
 set_property(TARGET muSpectre PROPERTY PUBLIC_HEADER ${_headers})
+
+install(TARGETS muSpectre
+        LIBRARY DESTINATION lib
+        PUBLIC_HEADER DESTINATION include)
