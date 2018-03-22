@@ -81,5 +81,5 @@ def Cell(resolutions, lengths, formulation=Formulation.finite_strain,
     else:
         if communicator is not None:
             raise ValueError("FFT engine '{}' does not support parallel "
-                             "execution.")
+                             "execution.".format(fft))
         return factory(resolutions, lengths, formulation)
