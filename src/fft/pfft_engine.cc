@@ -41,6 +41,8 @@ namespace muSpectre {
     if (!this->nb_engines) pfft_init();
     this->nb_engines++;
 
+    // FIXME! Code presently always use a one-dimensional process mesh but
+    // should use a two-dimensional process mesh for three-dimensional data.
     std::array<ptrdiff_t, DimS> narr;
     std::copy(this->domain_resolutions.begin(), this->domain_resolutions.end(),
               narr.begin());
@@ -56,6 +58,8 @@ namespace muSpectre {
     std::copy(loc, loc+DimS, this->locations.begin());
     std::copy(fres, fres+DimS, this->fourier_resolutions.begin());
     std::copy(floc, floc+DimS, this->fourier_locations.begin());
+    std::swap(this->fourier_resolutions[0], this->fourier_resolutions[1]);
+    std::swap(this->fourier_locations[0], this->fourier_locations[1]);
 
     for (auto & n: this->resolutions) {
       if (n == 0) {
@@ -71,8 +75,8 @@ namespace muSpectre {
       }
     }
 
-    for (auto && pixel: CcoordOps::Pixels<DimS, false>(this->fourier_resolutions,
-                                                       this->fourier_locations)) {
+    for (auto && pixel: CcoordOps::Pixels<DimS, true>(this->fourier_resolutions,
+                                                      this->fourier_locations)) {
       this->work_space_container.add_pixel(pixel);
     }
   }
@@ -128,7 +132,7 @@ namespace muSpectre {
                                             PFFT_DEFAULT_BLOCKS,
                                             in, out, this->comm.get_mpi_comm(),
                                             PFFT_FORWARD,
-                                            flags);
+                                            PFFT_TRANSPOSED_OUT | flags);
     if (this->plan_fft == nullptr) {
       throw std::runtime_error("r2c plan failed");
     }
@@ -144,7 +148,7 @@ namespace muSpectre {
                                              i_in, i_out,
                                              this->comm.get_mpi_comm(),
                                              PFFT_BACKWARD,
-                                             flags);
+                                             PFFT_TRANSPOSED_IN | flags);
     if (this->plan_ifft == nullptr) {
       throw std::runtime_error("c2r plan failed");
     }
