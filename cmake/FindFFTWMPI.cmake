@@ -17,8 +17,8 @@
 #
 
 #If environment variable FFTWMPIDIR is specified, it has same effect as FFTWMPI_ROOT
-if( NOT FFTWMPI_ROOT AND ENV{FFTWMPIDIR} )
-  set( FFTWMPI_ROOT $ENV{FFTWMPIDIR} )
+if( NOT FFTWMPI_ROOT AND ENV{FFTWDIR} )
+  set( FFTWMPI_ROOT $ENV{FFTWDIR} )
 endif()
 
 # Check if we can use PkgConfig
@@ -106,7 +106,11 @@ else()
 
 endif( FFTWMPI_ROOT )
 
-set(FFTWMPI_LIBRARIES ${FFTWMPI_LIB} ${FFTWMPIF_LIB})
+set(FFTWMPI_LIBRARIES ${FFTWMPI_LIB})
+
+if(FFTWMPIF_LIB)
+  set(FFTWMPI_LIBRARIES ${FFTWMPIF_LIB})
+endif()
 
 if(FFTWMPIL_LIB)
   set(FFTWMPI_LIBRARIES ${FFTWMPI_LIBRARIES} ${FFTWMPIL_LIB})
