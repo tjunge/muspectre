@@ -74,8 +74,12 @@ namespace muSpectre {
       }
     }
 
-    for (auto && pixel: CcoordOps::Pixels<DimS, true>(this->fourier_resolutions,
-                                                      this->fourier_locations)) {
+    for (auto && pixel:
+         std::conditional_t<
+           DimS==2,
+           CcoordOps::Pixels<DimS, 1, 0>,
+           CcoordOps::Pixels<DimS, 1, 0, 2>
+         >(this->fourier_resolutions, this->fourier_locations)) {
            this->work_space_container.add_pixel(pixel);
     }
   }

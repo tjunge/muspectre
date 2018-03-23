@@ -44,7 +44,8 @@ namespace muSpectre {
     int size{comm.size()};
     int dimx{size};
     int dimy{1};
-    if (DimS > 2) {
+    //if (DimS > 2) {
+    if (false) {
       dimy = int(sqrt(size));
       while ((size/dimy)*dimy != size)  dimy--;
       dimx = size/dimy;
@@ -52,7 +53,8 @@ namespace muSpectre {
 
     std::cout << "PFFT process mesh: " << dimx << "x" << dimy << std::endl;
 
-    if (DimS > 2) {
+    //if (DimS > 2) {
+    if (false) {
       if (pfft_create_procmesh_2d(this->comm.get_mpi_comm(), dimx, dimy,
                                   &this->mpi_comm)) {
         throw std::runtime_error("Failed to create 2d PFFT process mesh.");
@@ -79,7 +81,8 @@ namespace muSpectre {
     std::copy(loc, loc+DimS, this->locations.begin());
     std::copy(fres, fres+DimS, this->fourier_resolutions.begin());
     std::copy(floc, floc+DimS, this->fourier_locations.begin());
-    for (int i = 0; i < DimS-1; i++) {
+    //for (int i = 0; i < DimS-1; i++) {
+    for (int i = 0; i < 1; i++) {
       std::swap(this->fourier_resolutions[i], this->fourier_resolutions[i+1]);
       std::swap(this->fourier_locations[i], this->fourier_locations[i+1]);
     }
@@ -98,8 +101,12 @@ namespace muSpectre {
       }
     }
 
-    for (auto && pixel: CcoordOps::Pixels<DimS, true>(this->fourier_resolutions,
-                                                      this->fourier_locations)) {
+    for (auto && pixel:
+         std::conditional_t<
+         DimS==2,
+         CcoordOps::Pixels<DimS, 1, 0>,
+         CcoordOps::Pixels<DimS, 1, 0, 2>
+         >(this->fourier_resolutions, this->fourier_locations)) {
       this->work_space_container.add_pixel(pixel);
     }
   }
