@@ -41,6 +41,27 @@ namespace muSpectre {
     if (!this->nb_engines) pfft_init();
     this->nb_engines++;
 
+    int size{comm.size()};
+    int dimx{size};
+    int dimy{1};
+    if (DimS > 2) {
+      dimy = int(sqrt(size));
+      while ((size/dimy)*dimy != size)  dimy--;
+      dimx = size/dimy;
+    }
+
+    std::cout << "PFFT process mesh: " << dimx << "x" << dimy << std::endl;
+
+    if (DimS > 2) {
+      if (pfft_create_procmesh_2d(this->comm.get_mpi_comm(), dimx, dimy,
+                                  &this->mpi_comm)) {
+        throw std::runtime_error("Failed to create 2d PFFT process mesh.");
+      }
+    }
+    else {
+      this->mpi_comm = this->comm.get_mpi_comm();
+    }
+
     // FIXME! Code presently always use a one-dimensional process mesh but
     // should use a two-dimensional process mesh for three-dimensional data.
     std::array<ptrdiff_t, DimS> narr;
@@ -51,15 +72,17 @@ namespace muSpectre {
       pfft_local_size_many_dft_r2c(DimS, narr.data(), narr.data(), narr.data(),
                                    Field_t::nb_components,
                                    PFFT_DEFAULT_BLOCK, PFFT_DEFAULT_BLOCKS,
-                                   this->comm.get_mpi_comm(),
+                                   this->mpi_comm,
                                    PFFT_TRANSPOSED_OUT,
                                    res, loc, fres, floc);
     std::copy(res, res+DimS, this->resolutions.begin());
     std::copy(loc, loc+DimS, this->locations.begin());
     std::copy(fres, fres+DimS, this->fourier_resolutions.begin());
     std::copy(floc, floc+DimS, this->fourier_locations.begin());
-    std::swap(this->fourier_resolutions[0], this->fourier_resolutions[1]);
-    std::swap(this->fourier_locations[0], this->fourier_locations[1]);
+    for (int i = 0; i < DimS-1; i++) {
+      std::swap(this->fourier_resolutions[i], this->fourier_resolutions[i+1]);
+      std::swap(this->fourier_locations[i], this->fourier_locations[i+1]);
+    }
 
     for (auto & n: this->resolutions) {
       if (n == 0) {
@@ -130,7 +153,7 @@ namespace muSpectre {
                                             narr.data(), Field_t::nb_components,
                                             PFFT_DEFAULT_BLOCKS,
                                             PFFT_DEFAULT_BLOCKS,
-                                            in, out, this->comm.get_mpi_comm(),
+                                            in, out, this->mpi_comm,
                                             PFFT_FORWARD,
                                             PFFT_TRANSPOSED_OUT | flags);
     if (this->plan_fft == nullptr) {
@@ -146,7 +169,7 @@ namespace muSpectre {
                                              PFFT_DEFAULT_BLOCKS,
                                              PFFT_DEFAULT_BLOCKS,
                                              i_in, i_out,
-                                             this->comm.get_mpi_comm(),
+                                             this->mpi_comm,
                                              PFFT_BACKWARD,
                                              PFFT_TRANSPOSED_IN | flags);
     if (this->plan_ifft == nullptr) {
@@ -161,6 +184,9 @@ namespace muSpectre {
     if (this->real_workspace != nullptr) pfft_free(this->real_workspace);
     if (this->plan_fft != nullptr) pfft_destroy_plan(this->plan_fft);
     if (this->plan_ifft != nullptr) pfft_destroy_plan(this->plan_ifft);
+    if (this->mpi_comm != this->comm.get_mpi_comm()) {
+      MPI_Comm_free(&this->mpi_comm);
+    }
     this->nb_engines--;
     if (!this->nb_engines) pfft_cleanup();
   }
