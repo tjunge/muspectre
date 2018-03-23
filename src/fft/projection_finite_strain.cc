@@ -82,7 +82,9 @@ namespace muSpectre {
       //   }
       // }
     }
-    this->Ghat[0].setZero();
+    if (this->get_locations() == Ccoord{}) {
+      this->Ghat[0].setZero();
+    }
   }
 
   template class ProjectionFiniteStrain<twoD,   twoD>;

@@ -36,7 +36,7 @@ namespace muSpectre {
   template <Dim_t DimS, Dim_t DimM>
   FFTWMPIEngine<DimS, DimM>::FFTWMPIEngine(Ccoord resolutions, Rcoord lengths,
                                            Communicator comm)
-    :Parent{resolutions, lengths, comm}, real_workspace{nullptr}
+    :Parent{resolutions, lengths, comm}
   {
     if (!this->nb_engines) fftw_mpi_init();
     this->nb_engines++;
@@ -60,8 +60,26 @@ namespace muSpectre {
     this->fourier_resolutions[0] = res_y;
     this->fourier_locations[0] = loc_y;
 
-    for (auto && pixel: CcoordOps::Pixels<DimS, true>(this->fourier_resolutions,
-                                                      this->fourier_locations)) {
+    for (auto & n: this->resolutions) {
+      if (n == 0) {
+        throw std::runtime_error("FFTW MPI planning returned zero resolution. "
+                                 "You may need to run on fewer processes.");
+      }
+    }
+    for (auto & n: this->fourier_resolutions) {
+      if (n == 0) {
+        throw std::runtime_error("FFTW MPI planning returned zero Fourier "
+                                 "resolution. You may need to run on fewer "
+                                 "processes.");
+      }
+    }
+
+    for (auto && pixel:
+         std::conditional_t<
+           DimS==2,
+           CcoordOps::Pixels<DimS, 1, 0>,
+           CcoordOps::Pixels<DimS, 1, 0, 2>
+         >(this->fourier_resolutions, this->fourier_locations)) {
            this->work_space_container.add_pixel(pixel);
     }
   }
@@ -118,8 +136,6 @@ namespace muSpectre {
     if (this->plan_fft == nullptr) {
       throw std::runtime_error("r2c plan failed");
     }
-
-    fftw_mpi_execute_dft_r2c(this->plan_fft, in, out);
 
     fftw_complex * i_in = reinterpret_cast<fftw_complex*>(this->work.data());
     Real * i_out = this->real_workspace;

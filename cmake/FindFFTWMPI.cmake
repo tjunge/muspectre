@@ -27,6 +27,9 @@ find_package(PkgConfig)
 #Determine from PKG
 if( PKG_CONFIG_FOUND AND NOT FFTWMPI_ROOT )
   pkg_check_modules( PKG_FFTWMPI QUIET "fftw3_mpi" )
+  if (PKG_FFTWMPI_FOUND)
+    set(FFTWMPI_ROOT ${PKG_FFTWMPI_PREFIX})
+  endif()
 endif()
 
 #Check whether to search static or dynamic libs

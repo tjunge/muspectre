@@ -63,6 +63,14 @@ namespace muSpectre {
       return res;
     }
 
+    //! get total number of processes
+    int size() const {
+      if (&comm == MPI_COMM_NULL) return 1;
+      int res;
+      MPI_Comm_size(&this->comm, &res);
+      return res;
+    }
+
     //! sum reduction on scalar types
     template<typename T>
     T sum(const T &arg) const {
@@ -87,13 +95,18 @@ namespace muSpectre {
     ~Communicator() {};
 
     //! get rank of present process
-    int rank() {
+    int rank() const {
       return 0;
+    }
+
+    //! get total number of processes
+    int size() const {
+      return 1;
     }
 
     //! sum reduction on scalar types
     template<typename T>
-    T sum(const T &arg) { return arg; }
+    T sum(const T &arg) const { return arg; }
   };
 
 #endif
