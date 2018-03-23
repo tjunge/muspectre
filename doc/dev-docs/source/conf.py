@@ -50,8 +50,8 @@ print("muspectre_path = '{}'".format(muspectre_path))
 subprocess.call('ls; pwd', shell=True)
 subprocess.call("cd {} && doxygen".format(muspectre_path), shell=True)
 
-#breathe_projects = {"µSpectre": os.path.join(muspectre_path, "doxygenxml")}
-#breathe_default_project = "µSpectre"
+breathe_projects = {"µSpectre": os.path.join(muspectre_path, "doxygenxml")}
+breathe_default_project = "µSpectre"
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['_templates']

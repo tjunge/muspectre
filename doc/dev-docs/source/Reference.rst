@@ -4,4 +4,4 @@ Reference
 ---------
 
 .. doxygenindex::
-   :project: *µ*\Spectre
+   :project: µSpectre
