@@ -38,11 +38,10 @@ namespace muSpectre {
   MaterialLinearElastic4(std::string name)
     :Parent{name},
      lambda_field{make_field<Field_t>("local first Lame constant",
-				      this->internal_fields)},
+                  this->internal_fields)},
      mu_field{make_field<Field_t>("local second Lame constant(shear modulus)",
-				  this->internal_fields)},
-     internal_variables(lambda_field.get_const_map(),
-			mu_field.get_const_map())
+              this->internal_fields)},
+     internal_variables{lambda_field.get_const_map(), mu_field.get_const_map()}
     {}
 
   /* ---------------------------------------------------------------------- */

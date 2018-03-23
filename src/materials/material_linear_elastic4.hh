@@ -65,11 +65,12 @@ namespace muSpectre {
     constexpr static auto stress_measure{StressMeasure::PK2};
 
     //! local field_collections used for internals
-    using LFieldColl_t = LocalFieldCollection<oneD>; //DimS to oneD
+    using LFieldColl_t = LocalFieldCollection<DimS>; //DimS to oneD
     //! local Lame constant type
     using LLameConstantMap_t = ScalarFieldMap<LFieldColl_t, Real, true>;
     //! elasticity without internal variables
-    using InternalVariables = std::tuple<LLameConstantMap_t>;
+    using InternalVariables = std::tuple<LLameConstantMap_t,
+                                         LLameConstantMap_t>;
 
   };
 
@@ -136,8 +137,8 @@ namespace muSpectre {
      */
     template <class s_t>
     inline decltype(auto) evaluate_stress(s_t && E,
-					  const Real && Poisson_ratio,
-					  const Real && Youngs_modulus);
+                                          const Real && Poisson_ratio,
+                                          const Real && Youngs_modulus);
 
     /**
      * evaluates both second Piola-Kirchhoff stress and stiffness given
@@ -147,9 +148,8 @@ namespace muSpectre {
      */
     template <class s_t>
     inline decltype(auto) evaluate_stress_tangent(s_t &&  E,
-						  const Real && Poisson_ratio,
-						  const Real && Youngs_modulus);
-
+                                                  const Real && Poisson_ratio,
+                                                  const Real && Youngs_modulus);
 
     /**
      * return the empty internals tuple
@@ -171,7 +171,7 @@ namespace muSpectre {
   protected:
     //! storage for first Lame constant 'lambda'
     //! and second Lame constant(shear modulus) 'mu'
-    using Field_t = MatrixField<LocalFieldCollection<oneD>, Real, oneD, oneD>;
+    using Field_t = MatrixField<LocalFieldCollection<DimS>, Real, oneD, oneD>;
     Field_t & lambda_field;
     Field_t & mu_field;
     //! tuple for iterable eigen_field
