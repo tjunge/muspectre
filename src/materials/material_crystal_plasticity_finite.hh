@@ -119,6 +119,10 @@ namespace muSpectre {
     //! Type in which slip directions and normals are given
     using SlipVecs = Eigen::Matrix<Real, nb_slip, DimM>;
     using SlipVecs_ref = Eigen::Ref<SlipVecs>;
+    //! Type for second rank tensors
+    using T2_t = Eigen::Matrix<Real, DimM, DimM>;
+    //! Type for fourth rank tensors
+    using T4_t = T4Mat<Real, DimM>;
     
     //! Default constructor
     MaterialCrystalPlasticityFinite() = delete;
@@ -170,12 +174,13 @@ namespace muSpectre {
      * overload add_pixel to write into eigenstrain
      */
     void add_pixel(const Ccoord_t<DimS> & pixel,
-                   const Eigen::Ref<Eigen::Array<Real, (DimM==3) ? 3 : 1, 1>> Euler);
+                   const Eigen::Ref<Eigen::Array<Real, nb_euler, 1>> Euler);
 
   protected:
+    constexpr static Int nb_euler{(DimM==3) ? 3 : 1};
     //! Storage for Fp
     using FpField_t =
-      TensorField<typename traits::LFieldColl_t, Real, secondOrder, DimM>;
+      StateField<TensorField<typename traits::LFieldColl_t, Real, secondOrder, DimM>>;
     FpField_t & FpField;
     //! Storage for gammadot
     using GammadotField_t =
@@ -188,6 +193,9 @@ namespace muSpectre {
     using GammaField_t =
       MatrixField<typename traits::LFieldColl_t, Real, nb_slip, 1>;
     GammaField_t & GammaField;
+    using EulerField_t =
+      ArrayField<typename traits::LFieldColl_t, Real, nb_euler, 1>;
+    EulerField_t & EulerField;
     //! bulk modulus
     Real bulk_m;
     Real shear_m;
@@ -202,7 +210,8 @@ namespace muSpectre {
     alignas(16) Eigen::Matrix<Real, nb_slip, DimM> Slip0;
     //! Storage for slip plane normals
     alignas(16) Eigen::Matrix<Real, nb_slip, DimM> Normal0;
-     
+    T4_t C_el;
+    
     //! tuple for iterable eigen_field
     InternalVariables internal_variables;
   private:
@@ -210,11 +219,34 @@ namespace muSpectre {
   
   /* ---------------------------------------------------------------------- */
   template <Dim_t DimS, Dim_t DimM, Int nb_slip>
-  template <class s_t, class eigen_s_t>
+  template <class s_t>
   decltype(auto)
   MaterialCrystalPlasticityFinite<DimS, DimM, nb_slip>::
-  evaluate_stress(s_t && E, eigen_s_t && E_eig) {
-    return this->material.evaluate_stress(E-E_eig);
+  evaluate_stress(s_t && F, Fp_ref Fp, Gammadot_ref Gammadot, Tauy_ref Tauy, Gamma_ref Gamma, Euler_ref Euler) {
+    Rotator<DimM> Rot(Euler);
+    T2_t Floc{Rot.glob_to_loc(F)};
+    std::array<T2_t, nb_slip> SchmidT;
+    for (Int i{0}; i < nb_slip; ++i) {
+      SchmidT[i]=this->Slip0.col(i)*this->Normal0.col(i).transpose();
+    }
+
+    // trial elastic deformation
+    T2_t Fe_star{Floc*Fp.old().inverse()};
+    T2_t CGe_star{Fe_star.transpose()*Fe_star};
+    T2_t GLe_star{.5*(CGe_star - T2_t::Identity())};
+    T2_t SPK_star{Matrices::tensmult(C_el,GLe_star)};
+
+    std::array<Real, nb_slip> tau_star;
+    // pl_corr is the plastic corrector
+    std::array<T2_t, nb_slip> pl_corr;
+    Eigen::Matrix<Real, nb_slip, nb_slip> pl_corr_proj;
+    for (Int i{0}; i < nb_slip; ++i) {
+      tau_star[i]=(CGe_star*SPK_star*SchmidT[i].transpose()).trace();
+      pl_corr[i]=tensmult(C_el,.5*(CGe_star*SchmidT[i]+SchmidT[i].transpose()*CGe_star));
+      for (Int j{0}; j < nb_slip; ++j) {
+	pl_corr_proj(i,j)=(C_el*pl_corr[i]*SchmidT[j].transpose()).trace();
+	}
+    }
   }
 
   /* ---------------------------------------------------------------------- */

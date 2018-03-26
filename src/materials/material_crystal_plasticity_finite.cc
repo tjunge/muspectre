@@ -38,8 +38,31 @@ namespace muSpectre {
       GammadotField("Plastic slip rates dγᵅ/dt",this->internal_fields),
       TauyField("Critical resolved shear stress τᵅy(t)",this->internal_fields),
       GammaField("Accumulated slips γᵅ(t)",this->internal_fields),
+      EulerField("Euler angles", this->internal_fields),
       bulk_m{bulk_m}, shear_m{shear_m}, gammadot_0{gammadot_0}, m_par{m_par}, tauy0{tauy0}, h0{h0},
-      s_infty{s_infty}, a_par{a_par}, q_n{q_n}, Slip0{Slip0}, Normal0{Normal0};
-  {}
+      s_infty{s_infty}, a_par{a_par}, q_n{q_n}, Slip0{Slip0}, Normal0{Normal0}
+  {
+    // Enforce n_0 and s_0 to be unit vectors!
+    Real lambda{Converter<ElasticModulus::Lambda,ElasticModulus::Bulk,ElasticModulus::Shear>::compute(bulk_m,shear_m)};
+    this->C_el=Hooke::compute_C_T4(lambda,shear_m);
+  }
+  
+  template <Dim_t DimS, Dim_t DimM, Int nb_slip>
+  void MaterialCrystalPlasticityFinite<DimS, DimM, nb_slip>::
+  add_pixel(const Ccoord_t<DimS> & pixel) {
+    throw std::runtime_error
+      ("this material needs pixels with matrix of Euler angles");
+  }
+
+  template <Dim_t DimS, Dim_t DimM, Int nb_slip>
+  void MaterialCrystalPlasticityFinite<DimS, DimM, nb_slip>::
+  add_pixel(const Ccoord_t<DimS> & pixel,
+	    const Eigen::Ref<Eigen::Array<Real, nb_euler, 1>> Euler){
+    this->internal_fields.add_pixel(pixel);
+    this->EulerField.push_back(Euler);
+  }
+
+  
+  
   
 } // muSpectre
