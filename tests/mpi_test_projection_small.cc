@@ -61,7 +61,7 @@ namespace muSpectre {
                       ProjectionSmallStrain<threeD, threeD>,
                       FFTWMPIEngine<threeD, threeD>>,
 #endif
-#ifdef WITH_FFTWMPI
+#ifdef WITH_PFFT
     ProjectionFixture<twoD, twoD, Squares<twoD>,
                       ProjectionSmallStrain<twoD, twoD>,
                       PFFTEngine<twoD, twoD>>,
