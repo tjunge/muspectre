@@ -25,27 +25,60 @@
  * Boston, MA 02111-1307, USA.
  */
 
+#define BOOST_MPL_CFG_NO_PREPROCESSED_HEADERS
+#define BOOST_MPL_LIMIT_LIST_SIZE 50
+
 #include "fft/projection_small_strain.hh"
 #include "mpi_test_projection.hh"
 #include "fft/fft_utils.hh"
 
-#include <Eigen/Dense>
+#include "fft/fftw_engine.hh"
+#ifdef WITH_FFTWMPI
+#include "fft/fftwmpi_engine.hh"
+#endif
+#ifdef WITH_PFFT
+#include "fft/pfft_engine.hh"
+#endif
 
-#if 0
+#include <Eigen/Dense>
 
 namespace muSpectre {
 
   BOOST_AUTO_TEST_SUITE(mpi_projection_small_strain);
 
   using fixlist = boost::mpl::list<
+#ifdef WITH_FFTWMPI
     ProjectionFixture<twoD, twoD, Squares<twoD>,
-                      ProjectionSmallStrain<twoD, twoD>>,
+                      ProjectionSmallStrain<twoD, twoD>,
+                      FFTWMPIEngine<twoD, twoD>>,
     ProjectionFixture<threeD, threeD, Squares<threeD>,
-                      ProjectionSmallStrain<threeD, threeD>>,
+                      ProjectionSmallStrain<threeD, threeD>,
+                      FFTWMPIEngine<threeD, threeD>>,
     ProjectionFixture<twoD, twoD, Sizes<twoD>,
-                      ProjectionSmallStrain<twoD, twoD>>,
+                      ProjectionSmallStrain<twoD, twoD>,
+                      FFTWMPIEngine<twoD, twoD>>,
     ProjectionFixture<threeD, threeD, Sizes<threeD>,
-                      ProjectionSmallStrain<threeD, threeD>>>;
+                      ProjectionSmallStrain<threeD, threeD>,
+                      FFTWMPIEngine<threeD, threeD>>,
+#endif
+#ifdef WITH_FFTWMPI
+    ProjectionFixture<twoD, twoD, Squares<twoD>,
+                      ProjectionSmallStrain<twoD, twoD>,
+                      PFFTEngine<twoD, twoD>>,
+    ProjectionFixture<threeD, threeD, Squares<threeD>,
+                      ProjectionSmallStrain<threeD, threeD>,
+                      PFFTEngine<threeD, threeD>>,
+    ProjectionFixture<twoD, twoD, Sizes<twoD>,
+                      ProjectionSmallStrain<twoD, twoD>,
+                      PFFTEngine<twoD, twoD>>,
+    ProjectionFixture<threeD, threeD, Sizes<threeD>,
+                      ProjectionSmallStrain<threeD, threeD>,
+                      PFFTEngine<threeD, threeD>>,
+#endif
+    ProjectionFixture<twoD, twoD, Squares<twoD>,
+                      ProjectionSmallStrain<twoD, twoD>,
+                      FFTWEngine<twoD, twoD>>
+  >;
 
   /* ---------------------------------------------------------------------- */
   BOOST_FIXTURE_TEST_CASE_TEMPLATE(constructor_test, fix, fixlist, fix) {
@@ -73,7 +106,8 @@ namespace muSpectre {
     FieldMap grad(f_grad);
     FieldMap var(f_var);
 
-    fields.initialise(fix::projector.get_resolutions());
+    fields.initialise(fix::projector.get_resolutions(),
+                      fix::projector.get_locations());
 
     Vector k;
     for (Dim_t i = 0; i < dim; ++i) {
@@ -128,4 +162,3 @@ namespace muSpectre {
 
 }  // muSpectre
 
-#endif

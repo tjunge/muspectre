@@ -24,11 +24,16 @@
  * Free Software Foundation, Inc., 59 Temple Place - Suite 330,
  * Boston, MA 02111-1307, USA.
  */
+
+#define BOOST_MPL_CFG_NO_PREPROCESSED_HEADERS
+#define BOOST_MPL_LIMIT_LIST_SIZE 50
+
 #include "fft/projection_finite_strain.hh"
 #include "fft/projection_finite_strain_fast.hh"
 #include "fft/fft_utils.hh"
 #include "mpi_test_projection.hh"
 
+#include "fft/fftw_engine.hh"
 #ifdef WITH_FFTWMPI
 #include "fft/fftwmpi_engine.hh"
 #endif
@@ -96,8 +101,11 @@ namespace muSpectre {
                       PFFTEngine<twoD, twoD>>,
     ProjectionFixture<threeD, threeD, Sizes<threeD>,
                       ProjectionFiniteStrainFast<threeD, threeD>,
-                      PFFTEngine<threeD, threeD>>
+                      PFFTEngine<threeD, threeD>>,
 #endif
+    ProjectionFixture<twoD, twoD, Squares<twoD>,
+                      ProjectionFiniteStrain<twoD, twoD>,
+                      FFTWEngine<twoD, twoD>>
   >;
 
   /* ---------------------------------------------------------------------- */
