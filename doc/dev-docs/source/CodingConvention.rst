@@ -88,7 +88,7 @@ Avoid constructs that our average C++ programmer would find tricky or hard to ma
     C++ has features that may not be generally appropriate because of the complexity they introduce to the code. In the core library, where we make heavy use of template metaprogramming and expression templates for efficiency, it totally fine to use trickier language constructs, because any benefits of more complex implementation are multiplied widely by usage, and the cost in understanding the complexity does not need to be paid by the average contributor who writes a new material or solver. When in doubt, waivers to rules of this type can be sought by asking on the `discussion forum <https://c4science.ch/Z81>`_.
 
 Concede to optimisation when necessary
-    Performance is the overwhelming priority in the core library. If performance optimisation is in conflict with other principles in this document, optimise.
+    Performance is the overwhelming priority in the **core library** (i.e., data structures and low level algorithms that the typical user relies on often, but rarely uses directly). If performance optimisation is in conflict with other principles in this document, optimise. 
 
 Header Files
 ============
@@ -318,7 +318,7 @@ Format unnamed namespaces like named namespaces. In the terminating comment, lea
 Nonmember, Static Member, and Global Functions
 ----------------------------------------------
 
-Prefer placing nonmember functions in a namespace; use completely global functions rarely. Do not use a class simply to group static functions, unless they are function templates which need to be partially specialised. Otherwise, static methods of a class should generally be closely related to instances of the class or the class's static data.
+Prefer placing nonmember functions in a namespace; use completely global functions rarely. Note: placing functions in a namespace keeps them globally accessible, the goal of this is not to suppress the use of non-member functions but rather to avoid polluting the global and ``muSpectre`` namespace by grouping them together in thematic namespaces, see for instance the namespace ``MatTB`` in ``materials/materials_toolbox.cc``. Do not use a class simply to group static functions, unless they are function templates which need to be partially specialised. Otherwise, static methods of a class should generally be closely related to instances of the class or the class's static data.
 
 Pros:
   Nonmember and static member functions can be useful in some situations. Putting nonmember functions in a namespace avoids polluting the global namespace.
@@ -1903,11 +1903,8 @@ The names of all types — classes, structs, type aliases, enums, and type templ
    class UrlTableTester { ...
    struct UrlTableProperties { ...
 
-   // typedefs
-   typedef hash_map<UrlTableProperties *, string> PropertiesMap;
-
    // using aliases
-   using PropertiesMap = hash_map<UrlTableProperties *, string>;
+   using PropertiesMap_t = hash_map<UrlTableProperties *, string>;
 
    // enums
    enum UrlTableErrors { ...
