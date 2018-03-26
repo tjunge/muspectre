@@ -44,6 +44,7 @@ namespace muSpectre {
     int size{comm.size()};
     int dimx{size};
     int dimy{1};
+    // TODO: Enable this to enable 2d process mesh. This does not pass tests.
     //if (DimS > 2) {
     if (false) {
       dimy = int(sqrt(size));
@@ -51,8 +52,7 @@ namespace muSpectre {
       dimx = size/dimy;
     }
 
-    std::cout << "PFFT process mesh: " << dimx << "x" << dimy << std::endl;
-
+    // TODO: Enable this to enable 2d process mesh. This does not pass tests.
     //if (DimS > 2) {
     if (false) {
       if (pfft_create_procmesh_2d(this->comm.get_mpi_comm(), dimx, dimy,
@@ -61,8 +61,6 @@ namespace muSpectre {
       }
     }
 
-    // FIXME! Code presently always use a one-dimensional process mesh but
-    // should use a two-dimensional process mesh for three-dimensional data.
     std::array<ptrdiff_t, DimS> narr;
     std::copy(this->domain_resolutions.begin(), this->domain_resolutions.end(),
               narr.begin());
@@ -70,7 +68,7 @@ namespace muSpectre {
     this->workspace_size =
       pfft_local_size_many_dft_r2c(DimS, narr.data(), narr.data(), narr.data(),
                                    Field_t::nb_components,
-                                   PFFT_DEFAULT_BLOCK, PFFT_DEFAULT_BLOCKS,
+                                   PFFT_DEFAULT_BLOCKS, PFFT_DEFAULT_BLOCKS,
                                    this->mpi_comm,
                                    PFFT_TRANSPOSED_OUT,
                                    res, loc, fres, floc);
@@ -78,12 +76,13 @@ namespace muSpectre {
     std::copy(loc, loc+DimS, this->locations.begin());
     std::copy(fres, fres+DimS, this->fourier_resolutions.begin());
     std::copy(floc, floc+DimS, this->fourier_locations.begin());
-    //for (int i = 0; i < DimS-1; i++) {
-    for (int i = 0; i < 1; i++) {
+    // TODO: Enable this to enable 2d process mesh. This does not pass tests.
+    //for (int i = 0; i < DimS-1; ++i) {
+    for (int i = 0; i < 1; ++i) {
       std::swap(this->fourier_resolutions[i], this->fourier_resolutions[i+1]);
       std::swap(this->fourier_locations[i], this->fourier_locations[i+1]);
     }
-
+    
     for (auto & n: this->resolutions) {
       if (n == 0) {
         throw std::runtime_error("PFFT planning returned zero resolution. "
@@ -102,6 +101,9 @@ namespace muSpectre {
          std::conditional_t<
          DimS==2,
          CcoordOps::Pixels<DimS, 1, 0>,
+         // TODO: This should be the correct order of dimension for a 2d
+         // process mesh, but tests don't pass.
+         //CcoordOps::Pixels<DimS, 1, 2, 0>
          CcoordOps::Pixels<DimS, 1, 0, 2>
          >(this->fourier_resolutions, this->fourier_locations)) {
       this->work_space_container.add_pixel(pixel);
