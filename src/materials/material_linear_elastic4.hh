@@ -28,8 +28,8 @@
  * Boston, MA 02111-1307, USA.
  */
 
-#ifndef MATERIAL_LINEAR_ELASTIC_RANDOM_STIFFNESS_H
-#define MATERIAL_LINEAR_ELASTIC_RANDOM_STIFFNESS_H
+#ifndef MATERIAL_LINEAR_ELASTIC_RANDOM_STIFFNESS_2_H
+#define MATERIAL_LINEAR_ELASTIC_RANDOM_STIFFNESS_2_H
 
 #include "materials/material_linear_elastic1.hh"
 #include "common/field.hh"
@@ -137,8 +137,8 @@ namespace muSpectre {
      */
     template <class s_t>
     inline decltype(auto) evaluate_stress(s_t && E,
-                                          const Real && Poisson_ratio,
-                                          const Real && Youngs_modulus);
+                                          const Real & Poisson_ratio,
+                                          const Real & Youngs_modulus);
 
     /**
      * evaluates both second Piola-Kirchhoff stress and stiffness given
@@ -148,8 +148,8 @@ namespace muSpectre {
      */
     template <class s_t>
     inline decltype(auto) evaluate_stress_tangent(s_t &&  E,
-                                                  const Real && Poisson_ratio,
-                                                  const Real && Youngs_modulus);
+                                                  const Real & Poisson_ratio,
+                                                  const Real & Youngs_modulus);
 
     /**
      * return the empty internals tuple
@@ -184,12 +184,12 @@ namespace muSpectre {
   template <class s_t>
   decltype(auto)
   MaterialLinearElastic4<DimS, DimM>::
-  evaluate_stress(s_t && E, const Real && Poisson_ratio, const Real && Youngs_modulus) {
+  evaluate_stress(s_t && E, const Real & Poisson_ratio, const Real & Youngs_modulus) {
     // probably it is better to read out lambda and mu from the LocalField,
     // than compute it again. Same for evaluate_stress_tangent...
     Real lambda = Hooke::compute_lambda(Youngs_modulus, Poisson_ratio);
     Real mu     = Hooke::compute_mu(Youngs_modulus, Poisson_ratio);
-    auto C = Hooke::compute_C(lambda, mu);
+    auto C = Hooke::compute_C_T4(lambda, mu);
     return Matrices::tensmult(C, E);
   }
 
@@ -198,16 +198,16 @@ namespace muSpectre {
   template <class s_t>
   decltype(auto)
   MaterialLinearElastic4<DimS, DimM>::
-  evaluate_stress_tangent(s_t && E, const Real && Poisson_ratio,
-			  const Real && Youngs_modulus)
+  evaluate_stress_tangent(s_t && E, const Real & Poisson_ratio,
+			  const Real & Youngs_modulus)
   {
     Real lambda = Hooke::compute_lambda(Youngs_modulus, Poisson_ratio);
     Real mu     = Hooke::compute_mu(Youngs_modulus, Poisson_ratio);
-    auto C = Hooke::compute_C(lambda, mu);
+    auto C = Hooke::compute_C_T4(lambda, mu);
     return std::make_tuple(Matrices::tensmult(C, E), C);
   }
 
 
 }  // muSpectre
 
-#endif /* MATERIAL_LINEAR_ELASTIC_RANDOM_STIFFNESS_H */
+#endif /* MATERIAL_LINEAR_ELASTIC_RANDOM_STIFFNESS_2_H */
