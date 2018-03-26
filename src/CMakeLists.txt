@@ -57,6 +57,8 @@ std::experimental::optional<double> A{};
 }"
     HAS_STD_OPTIONAL)
 
+add_definitions(-DBAR)
+
 if( NOT HAS_STD_OPTIONAL)
   add_definitions(-DNO_EXPERIMENTAL)
 endif()
@@ -93,5 +95,8 @@ if(FFTWMPI_FOUND OR PFFT_FOUND)
 endif()
 target_include_directories(muSpectre INTERFACE ${muSpectre_INCLUDES})
 target_link_libraries(muSpectre ${muSpectre_LIBRARIES})
+
+target_link_libraries(muSpectre Eigen3::Eigen ${FFTW_LIBRARIES})
+target_compile_definitions(muSpectre PRIVATE  ${-DNO_EXPERIMENTAL})
 
 set_property(TARGET muSpectre PROPERTY PUBLIC_HEADER ${_headers})
