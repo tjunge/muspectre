@@ -77,17 +77,26 @@ namespace muSpectre {
 #endif
     ProjectionFixture<twoD, twoD, Squares<twoD>,
                       ProjectionSmallStrain<twoD, twoD>,
-                      FFTWEngine<twoD, twoD>>
+                      FFTWEngine<twoD, twoD>,
+                      false>
   >;
 
   /* ---------------------------------------------------------------------- */
   BOOST_FIXTURE_TEST_CASE_TEMPLATE(constructor_test, fix, fixlist, fix) {
-    BOOST_CHECK_NO_THROW(fix::projector.initialise(FFT_PlanFlags::estimate));
+    if (fix::is_parallel || fix::projector.get_communicator().size() == 1) {
+      BOOST_CHECK_NO_THROW(fix::projector.initialise(FFT_PlanFlags::estimate));
+    } else {
+      BOOST_CHECK_THROW(fix::projector.initialise(FFT_PlanFlags::estimate),
+                        std::runtime_error);
+    }
   }
 
   /* ---------------------------------------------------------------------- */
   BOOST_FIXTURE_TEST_CASE_TEMPLATE(Gradient_preservation_test,
                                    fix, fixlist, fix) {
+    if (!fix::is_parallel || fix::projector.get_communicator().size() > 1) {
+      return;
+    }
     // create a gradient field with a zero mean gradient and verify
     // that the projection preserves it
     constexpr Dim_t dim{fix::sdim}, sdim{fix::sdim}, mdim{fix::mdim};
