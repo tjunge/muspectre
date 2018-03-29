@@ -37,6 +37,8 @@
 
 #include <Eigen/Dense>
 
+#include <iostream>//remove this later
+
 namespace muSpectre {
 
   template <Dim_t DimS, Dim_t DimM>
@@ -65,7 +67,7 @@ namespace muSpectre {
     constexpr static auto stress_measure{StressMeasure::PK2};
 
     //! local field_collections used for internals
-    using LFieldColl_t = LocalFieldCollection<DimS>; //DimS to oneD
+    using LFieldColl_t = LocalFieldCollection<DimS>;
     //! local Lame constant type
     using LLameConstantMap_t = ScalarFieldMap<LFieldColl_t, Real, true>;
     //! elasticity without internal variables
@@ -190,7 +192,15 @@ namespace muSpectre {
     Real lambda = Hooke::compute_lambda(Youngs_modulus, Poisson_ratio);
     Real mu     = Hooke::compute_mu(Youngs_modulus, Poisson_ratio);
     auto C = Hooke::compute_C_T4(lambda, mu);
-    return Matrices::tensmult(C, E);
+    T4MatMap<Real, DimM> Cmap{C.data()};//do I need this step or can I use C? both works?
+    std::cout << "\nevaluate stiffness mat4 output";
+    std::cout << "\nC of mat4\n" << C;
+    std::cout << "\ncmap of mat4\n" << Cmap;
+    std::cout << "\napplied strain\n" << E;
+    std::cout << "\nDimS " << DimS << " , DimM " << DimM;
+    std::cout << "\nlambda " << lambda << " , mu " << mu;
+    std::cout << "\nstress\n" << Matrices::tensmult(Cmap, E) << "\n";
+    return Matrices::tensmult(Cmap, E);
   }
 
   /* ---------------------------------------------------------------------- */
@@ -204,7 +214,10 @@ namespace muSpectre {
     Real lambda = Hooke::compute_lambda(Youngs_modulus, Poisson_ratio);
     Real mu     = Hooke::compute_mu(Youngs_modulus, Poisson_ratio);
     auto C = Hooke::compute_C_T4(lambda, mu);
-    return std::make_tuple(Matrices::tensmult(C, E), C);
+    // probably it is necessary to convert C before one can calculate tensmult()
+    // see evaluate_stress()
+    T4MatMap<Real, DimM> Cmap{C.data()};//do I need this step or can I use C? both works?
+    return std::make_tuple(Matrices::tensmult(Cmap, E), Cmap);
   }
 
 
