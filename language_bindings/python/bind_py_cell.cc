@@ -57,6 +57,7 @@ void add_parallel_cell_factory_helper(py::module & mod,
   using Ccoord = Ccoord_t<dim>;
   using Rcoord = Rcoord_t<dim>;
 
+#ifdef WITH_MPI
   mod.def
     (name,
      [](Ccoord res, Rcoord lens, Formulation form, size_t comm) {
@@ -68,7 +69,19 @@ void add_parallel_cell_factory_helper(py::module & mod,
      "resolutions"_a,
      "lengths"_a=CcoordOps::get_cube<dim>(1.),
      "formulation"_a=Formulation::finite_strain,
-     "communicator"_a=size_t(MPI_COMM_NULL));
+     "communicator"_a=size_t(MPI_COMM_SELF));
+#else
+  mod.def
+  (name,
+   [](Ccoord res, Rcoord lens, Formulation form) {
+     return make_parallel_cell
+     <dim, dim, CellBase<dim, dim>, FFTEngine>
+     (std::move(res), std::move(lens), std::move(form));
+   },
+   "resolutions"_a,
+   "lengths"_a=CcoordOps::get_cube<dim>(1.),
+   "formulation"_a=Formulation::finite_strain);
+#endif
 }
 
 /**

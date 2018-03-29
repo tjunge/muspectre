@@ -1,11 +1,11 @@
 #
-# @file   __init__.py
+# @file   fft.py
 #
 # @author Lars Pastewka <lars.pastewka@imtek.uni-freiburg.de>
 #
-# @date   21 Mar 2018
+# @date   27 Mar 2018
 #
-# @brief  Main entry point for muSpectre Python module
+# @brief  Wrapper for muSpectre's FFT engines
 #
 # Copyright © 2018 Till Junge
 #
@@ -28,21 +28,17 @@
 import mpi4py
 
 import _muSpectre
-from _muSpectre import (get_domain_ccoord, get_domain_index,
-                        get_hermitian_sizes, material, solvers, Formulation)
-import muSpectre.fft
 
 _factories = {
-    'fftw': ('CellFactory', False),
-    'fftwmpi': ('FFTWMPICellFactory', True),
-    'pfft': ('PFFTCellFactory', True),
-    'p3dfft': ('P3DFFTCellFactory', True),
+    'fftw': ('FFTW_2d', 'FFTW_3d', False),
+    'fftwmpi': ('FFTWMPI_2d', 'FFTWMPI_3d', True),
+    'pfft': ('PFFT_2d', 'PFFT_3d', True),
+    'p3dfft': ('P3DFFT_2d', 'P3DFFT_3d', True),
     }
 
-def Cell(resolutions, lengths, formulation=Formulation.finite_strain,
-         fft='fftw', communicator=None):
+def FFT(resolutions, lengths, fft='fftw', communicator=None):
     """
-    Instantiate a muSpectre Cell class.
+    Instantiate a muSpectre FFT class.
 
     Parameters
     ----------
@@ -50,10 +46,6 @@ def Cell(resolutions, lengths, formulation=Formulation.finite_strain,
         Grid resolutions in the Cartesian directions.
     lengths: list
         Physical size of the cell in the Cartesian directions.
-    formulation: Formulation
-        Formulation for strains and stresses used by the solver. Options are
-        `Formulation.finite_strain` and `Formulation.small_strain`. Finite
-        strain formulation is the default.
     fft: string
         FFT engine to use. Options are 'fftw', 'fftwmpi', 'pfft' and 'p3dfft'.
         Default is 'fftw'.
@@ -67,22 +59,32 @@ def Cell(resolutions, lengths, formulation=Formulation.finite_strain,
     cell: object
         Return a muSpectre Cell object.
     """
+    if len(resolutions) != len(lengths):
+        raise ValueError("'resolutions' and 'lengths' must have identical "
+                         "lengths.")
     try:
-        factory_name, is_parallel = _factories[fft]
+        factory_name_2d, factory_name_3d, is_parallel = _factories[fft]
     except KeyError:
         raise KeyError("Unknown FFT engine '{}'.".format(fft))
+    if len(resolutions) == 2:
+        factory_name = factory_name_2d
+    elif len(resolutions) == 3:
+        factory_name = factory_name_3d
+    else:
+        raise ValueError('{}-d transforms are not supported'
+                         .format(len(resolutions)))
     try:
-        factory = _muSpectre.__dict__[factory_name]
+        factory = _muSpectre.fft.__dict__[factory_name]
     except KeyError:
         raise KeyError("FFT engine '{}' has not been compiled into the "
                        "muSpectre library.".format(fft))
     if is_parallel:
         if communicator is None:
             communicator = mpi4py.MPI.COMM_SELF
-        return factory(resolutions, lengths, formulation,
+        return factory(resolutions, lengths,
                        mpi4py.MPI._handleof(communicator))
     else:
         if communicator is not None:
             raise ValueError("FFT engine '{}' does not support parallel "
                              "execution.".format(fft))
-        return factory(resolutions, lengths, formulation)
+        return factory(resolutions, lengths)
