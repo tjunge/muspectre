@@ -156,8 +156,10 @@ namespace muSpectre {
     if (this->real_workspace != nullptr) fftw_free(this->real_workspace);
     if (this->plan_fft != nullptr) fftw_destroy_plan(this->plan_fft);
     if (this->plan_ifft != nullptr) fftw_destroy_plan(this->plan_ifft);
-    this->nb_engines--;
-    if (!this->nb_engines) fftw_mpi_cleanup();
+    // TODO: We cannot run fftw_mpi_cleanup since also calls fftw_cleanup
+    // and any running FFTWEngine will fail afterwards.
+    //this->nb_engines--;
+    //if (!this->nb_engines) fftw_mpi_cleanup();
   }
 
   /* ---------------------------------------------------------------------- */

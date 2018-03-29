@@ -116,7 +116,9 @@ namespace muSpectre {
   FFTWEngine<DimS, DimM>::~FFTWEngine<DimS, DimM>() noexcept {
     fftw_destroy_plan(this->plan_fft);
     fftw_destroy_plan(this->plan_ifft);
-    fftw_cleanup();
+    // TODO: We cannot run fftw_cleanup since subsequent FFTW calls will fail
+    // but multiple FFT engines can be active at the same time.
+    //fftw_cleanup();
   }
 
   /* ---------------------------------------------------------------------- */

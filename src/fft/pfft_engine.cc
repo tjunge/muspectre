@@ -44,6 +44,10 @@ namespace muSpectre {
     int size{comm.size()};
     int dim_x{size};
     int dim_y{1};
+    // Note: All TODOs below don't affect the function of the PFFT engine. It
+    // presently uses slab decompositions, the TODOs are what needs to be done
+    // to get stripe decomposition to work - but it does not work yet. Slab
+    // vs stripe decomposition may have an impact on how the code scales.
     // TODO: Enable this to enable 2d process mesh. This does not pass tests.
     //if (DimS > 2) {
     if (false) {
@@ -193,8 +197,10 @@ namespace muSpectre {
     if (this->mpi_comm != this->comm.get_mpi_comm()) {
       MPI_Comm_free(&this->mpi_comm);
     }
-    this->nb_engines--;
-    if (!this->nb_engines) pfft_cleanup();
+    // TODO: We cannot run fftw_mpi_cleanup since also calls fftw_cleanup
+    // and any running FFTWEngine will fail afterwards.
+    //this->nb_engines--;
+    //if (!this->nb_engines) pfft_cleanup();
   }
 
   /* ---------------------------------------------------------------------- */
