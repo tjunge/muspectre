@@ -192,15 +192,13 @@ namespace muSpectre {
     Real lambda = Hooke::compute_lambda(Youngs_modulus, Poisson_ratio);
     Real mu     = Hooke::compute_mu(Youngs_modulus, Poisson_ratio);
     auto C = Hooke::compute_C_T4(lambda, mu);
-    T4MatMap<Real, DimM> Cmap{C.data()};//do I need this step or can I use C? both works?
     std::cout << "\nevaluate stiffness mat4 output";
     std::cout << "\nC of mat4\n" << C;
-    std::cout << "\ncmap of mat4\n" << Cmap;
     std::cout << "\napplied strain\n" << E;
     std::cout << "\nDimS " << DimS << " , DimM " << DimM;
     std::cout << "\nlambda " << lambda << " , mu " << mu;
-    std::cout << "\nstress\n" << Matrices::tensmult(Cmap, E) << "\n";
-    return Matrices::tensmult(Cmap, E);
+    std::cout << "\nstress\n" << Matrices::tensmult(C, E) << "\n";
+    return Matrices::tensmult(C, E);
   }
 
   /* ---------------------------------------------------------------------- */
@@ -214,10 +212,13 @@ namespace muSpectre {
     Real lambda = Hooke::compute_lambda(Youngs_modulus, Poisson_ratio);
     Real mu     = Hooke::compute_mu(Youngs_modulus, Poisson_ratio);
     auto C = Hooke::compute_C_T4(lambda, mu);
-    // probably it is necessary to convert C before one can calculate tensmult()
-    // see evaluate_stress()
-    T4MatMap<Real, DimM> Cmap{C.data()};//do I need this step or can I use C? both works?
-    return std::make_tuple(Matrices::tensmult(Cmap, E), Cmap);
+    std::cout << "\nevaluate stiffness mat4 output";
+    std::cout << "\nC of mat4\n" << C;
+    std::cout << "\napplied strain\n" << E;
+    std::cout << "\nDimS " << DimS << " , DimM " << DimM;
+    std::cout << "\nlambda " << lambda << " , mu " << mu;
+    std::cout << "\nstress\n" << Matrices::tensmult(C, E) << "\n";
+    return std::make_tuple(Matrices::tensmult(C, E), C);
   }
 
 
