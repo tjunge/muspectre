@@ -136,22 +136,24 @@ namespace muSpectre {
      * evaluates second Piola-Kirchhoff stress given the Green-Lagrange
      * strain (or Cauchy stress if called with a small strain tensor)
      * and the two Lame constants, 'Poisson_ratio' and 'Youngs_modulus'.
+     * TODO: fix doc string
      */
     template <class s_t>
     inline decltype(auto) evaluate_stress(s_t && E,
-                                          const Real & Poisson_ratio,
-                                          const Real & Youngs_modulus);
+                                          const Real & lambda,
+                                          const Real & mu);
 
     /**
      * evaluates both second Piola-Kirchhoff stress and stiffness given
      * the Green-Lagrange strain (or Cauchy stress and stiffness if
      * called with a small strain tensor) and the two Lame constants,
      * 'Poisson_ratio' and 'Youngs_modulus'.
+     * TODO: fix doc string
      */
     template <class s_t>
     inline decltype(auto) evaluate_stress_tangent(s_t &&  E,
-                                                  const Real & Poisson_ratio,
-                                                  const Real & Youngs_modulus);
+                                                  const Real & lambda,
+                                                  const Real & mu);
 
     /**
      * return the empty internals tuple
@@ -186,11 +188,9 @@ namespace muSpectre {
   template <class s_t>
   decltype(auto)
   MaterialLinearElastic4<DimS, DimM>::
-  evaluate_stress(s_t && E, const Real & Poisson_ratio, const Real & Youngs_modulus) {
+  evaluate_stress(s_t && E, const Real & lambda, const Real & mu) {
     // probably it is better to read out lambda and mu from the LocalField,
     // than compute it again. Same for evaluate_stress_tangent...
-    Real lambda = Hooke::compute_lambda(Youngs_modulus, Poisson_ratio);
-    Real mu     = Hooke::compute_mu(Youngs_modulus, Poisson_ratio);
     auto C = Hooke::compute_C_T4(lambda, mu);
     std::cout << "\nevaluate stiffness mat4 output";
     std::cout << "\nC of mat4\n" << C;
@@ -206,11 +206,9 @@ namespace muSpectre {
   template <class s_t>
   decltype(auto)
   MaterialLinearElastic4<DimS, DimM>::
-  evaluate_stress_tangent(s_t && E, const Real & Poisson_ratio,
-			  const Real & Youngs_modulus)
+  evaluate_stress_tangent(s_t && E, const Real & lambda,
+			  const Real & mu)
   {
-    Real lambda = Hooke::compute_lambda(Youngs_modulus, Poisson_ratio);
-    Real mu     = Hooke::compute_mu(Youngs_modulus, Poisson_ratio);
     auto C = Hooke::compute_C_T4(lambda, mu);
     std::cout << "\nevaluate stiffness mat4 output";
     std::cout << "\nC of mat4\n" << C;

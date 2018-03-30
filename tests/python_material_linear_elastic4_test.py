@@ -57,7 +57,7 @@ class MaterialLinearElastic4_Check(unittest.TestCase):
         Poisson_ratio  = 0.3
 
         for i, pixel in enumerate(self.sys):
-            self.mat.add_pixel(pixel, Poisson_ratio, Youngs_modulus)
+            self.mat.add_pixel(pixel, Youngs_modulus, Poisson_ratio)
 
         self.sys.initialise()
         tol = 1e-6
@@ -78,8 +78,9 @@ class MaterialLinearElastic4_Check(unittest.TestCase):
         mu = (Youngs_modulus/(2*(1+Poisson_ratio)))
         stress = 2*mu*Del0
 
-        print('trivially by hand computed stress\n', stress.reshape(-1,1))
+        print('trivially by hand computed stress =', stress.reshape(1,-1))
         lam = (Youngs_modulus*Poisson_ratio)/((1+Poisson_ratio)*(1-2*Poisson_ratio))
         print('lambda ', lam, ', mu ', mu)
+        print('µSpectre computed stress=', r.stress[:,0])
 
         self.assertLess(np.linalg.norm(r.stress-stress.reshape(-1,1)), 1e-8)

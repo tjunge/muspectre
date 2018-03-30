@@ -63,14 +63,11 @@ namespace muSpectre {
 
   BOOST_FIXTURE_TEST_CASE_TEMPLATE(test_response, Fix, mat_list, Fix) {
     constexpr Dim_t Dim{Fix::Material_t::Parent::Parent::mdim()}; //sdim() -> mdim() is this also a Problem im material_linear_elastic3 ?? correct this ??
+    /* comment by junge; it should be mdim(), the *m*aterial *dim*ension)*/
     Eigen::Matrix<Real, Dim, Dim> E;
     E.setZero();
     E(0,0) = 0.001;
     E(1,0) = E(0,1) = 0.005;
-    Eigen::Matrix<Real, Dim, Dim> stress = Fix::mat.
-      evaluate_stress(E, Fix::Poisson_ratio, Fix::Youngs_modulus);
-
-    std::cout << "\nevalueated stress from test_mat4.cc\n " << stress;
 
     using Hooke = MatTB::
       Hooke<Dim, Eigen::Matrix<Real, Dim, Dim>, T4Mat<Real, Dim> >;
@@ -78,6 +75,12 @@ namespace muSpectre {
       compute_lambda(Fix::Youngs_modulus, Fix::Poisson_ratio);
     Real mu     = Hooke::
       compute_mu(Fix::Youngs_modulus, Fix::Poisson_ratio);
+
+    Eigen::Matrix<Real, Dim, Dim> stress = Fix::mat.
+      evaluate_stress(E, lambda, mu);
+
+    std::cout << "\nevalueated stress from test_mat4.cc\n " << stress;
+
 
     Real sigma00 = lambda*E(0,0) + 2*mu*E(0,0);
     Real sigma01 = 2*mu*E(0,1);
@@ -88,11 +91,11 @@ namespace muSpectre {
     BOOST_CHECK_LT( std::abs(stress(1,1)- sigma11), tol);
     if (Dim == threeD){
       for (int i=0; i<Dim-1 ; ++i){
-	BOOST_CHECK_LT( std::abs(stress(2,i)), tol );
-	BOOST_CHECK_LT( std::abs(stress(i,2)), tol );
+        BOOST_CHECK_LT( std::abs(stress(2,i)), tol );
+        BOOST_CHECK_LT( std::abs(stress(i,2)), tol );
       }
       BOOST_CHECK_LT( std::abs(stress(2,2) - sigma11), tol );
-      }
+    }
   };
 
   BOOST_AUTO_TEST_SUITE_END();
