@@ -33,8 +33,8 @@ namespace muSpectre {
   /* ---------------------------------------------------------------------- */
   template <Dim_t DimS, Dim_t DimM>
   ProjectionSmallStrain<DimS, DimM>::
-  ProjectionSmallStrain(FFTEngine_ptr engine)
-    : Parent{std::move(engine), Formulation::small_strain}
+  ProjectionSmallStrain(FFTEngine_ptr engine, Rcoord lengths)
+    : Parent{std::move(engine), lengths, Formulation::small_strain}
   {
     for (auto res: this->fft_engine->get_domain_resolutions()) {
       if (res % 2 == 0) {
@@ -50,7 +50,7 @@ namespace muSpectre {
     Parent::initialise(flags);
 
     FFT_freqs<DimS> fft_freqs(this->fft_engine->get_domain_resolutions(),
-                              this->fft_engine->get_lengths());
+                              this->lengths);
     for (auto && tup: akantu::zip(*this->fft_engine, this->Ghat)) {
       const auto & ccoord = std::get<0> (tup);
       auto & G = std::get<1>(tup);

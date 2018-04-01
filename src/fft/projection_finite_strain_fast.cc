@@ -34,8 +34,8 @@ namespace muSpectre {
   /* ---------------------------------------------------------------------- */
   template <Dim_t DimS, Dim_t DimM>
   ProjectionFiniteStrainFast<DimS, DimM>::
-  ProjectionFiniteStrainFast(FFTEngine_ptr engine)
-    :Parent{std::move(engine), Formulation::finite_strain},
+  ProjectionFiniteStrainFast(FFTEngine_ptr engine, Rcoord lengths)
+    :Parent{std::move(engine), lengths, Formulation::finite_strain},
      xiField{make_field<Proj_t>("Projection Operator",
                                 this->projection_container)},
      xis(xiField)
@@ -54,7 +54,7 @@ namespace muSpectre {
   initialise(FFT_PlanFlags flags) {
     Parent::initialise(flags);
     FFT_freqs<DimS> fft_freqs(this->fft_engine->get_domain_resolutions(),
-                              this->fft_engine->get_lengths());
+                              this->lengths);
     for (auto && tup: akantu::zip(*this->fft_engine, this->xis)) {
       const auto & ccoord = std::get<0> (tup);
       auto & xi = std::get<1>(tup);

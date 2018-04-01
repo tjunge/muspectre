@@ -60,8 +60,7 @@ namespace muSpectre {
     constexpr static Ccoord_t<sdim> res() {
       return CcoordOps::get_cube<sdim>(box_resolution);
     }
-    FFTW_fixture(): engine(res(), CcoordOps::get_cube<sdim>(box_length),
-                           MPIContext::get_context().comm) {}
+    FFTW_fixture(): engine(res(), MPIContext::get_context().comm) {}
     Engine engine;
   };
 
@@ -73,7 +72,7 @@ namespace muSpectre {
     constexpr static Dim_t mdim{twoD};
     constexpr static Ccoord_t<sdim> res() {return {6, 4};}
     FFTW_fixture_python_segfault():
-      engine{res(), {3., 3}, MPIContext::get_context().comm} {}
+      engine{res(), MPIContext::get_context().comm} {}
     Engine engine;
   };
 
