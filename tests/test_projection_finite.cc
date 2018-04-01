@@ -64,10 +64,9 @@ namespace muSpectre {
   BOOST_AUTO_TEST_CASE(even_grid_test) {
     using Engine = FFTWEngine<twoD, twoD>;
     using proj = ProjectionFiniteStrainFast<twoD, twoD>;
-    auto engine = std::make_unique<Engine>(Ccoord_t<twoD>{2, 2},
-					   Rcoord_t<twoD>{4.3, 4.3});
-    BOOST_CHECK_THROW(proj (std::move(engine)),
-		      std::runtime_error);
+    auto engine = std::make_unique<Engine>(Ccoord_t<twoD>{2, 2});
+    BOOST_CHECK_THROW(proj(std::move(engine), Rcoord_t<twoD>{4.3, 4.3}),
+                      std::runtime_error);
   }
 
   /* ---------------------------------------------------------------------- */

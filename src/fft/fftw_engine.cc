@@ -31,9 +31,8 @@
 namespace muSpectre {
 
   template <Dim_t DimS, Dim_t DimM>
-  FFTWEngine<DimS, DimM>::FFTWEngine(Ccoord resolutions, Rcoord lengths,
-                                     Communicator comm)
-    :Parent{resolutions, lengths, comm}
+  FFTWEngine<DimS, DimM>::FFTWEngine(Ccoord resolutions, Communicator comm)
+    :Parent{resolutions, comm}
   {
     for (auto && pixel: CcoordOps::Pixels<DimS>(this->fourier_resolutions)) {
       this->work_space_container.add_pixel(pixel);

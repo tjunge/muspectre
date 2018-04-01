@@ -46,8 +46,6 @@ namespace muSpectre {
     constexpr static Dim_t mdim{DimM}; //!< material dimension of the cell
     //! cell coordinates type
     using Ccoord = Ccoord_t<DimS>;
-    //! spatial coordinates type
-    using Rcoord = std::array<Real, DimS>;
     //! global FieldCollection
     using GFieldCollection_t = GlobalFieldCollection<DimS>;
     //! local FieldCollection (for Fourier-space pixels)
@@ -68,8 +66,7 @@ namespace muSpectre {
     FFTEngineBase() = delete;
 
     //! Constructor with cell resolutions
-    FFTEngineBase(Ccoord resolutions, Rcoord lengths,
-                  Communicator comm=Communicator());
+    FFTEngineBase(Ccoord resolutions, Communicator comm=Communicator());
 
     //! Copy constructor
     FFTEngineBase(const FFTEngineBase &other) = delete;
@@ -122,8 +119,6 @@ namespace muSpectre {
     const Ccoord & get_fourier_locations() const {return this->fourier_locations;}
     //! returns the resolutions of the cell
     const Ccoord & get_domain_resolutions() const {return this->domain_resolutions;}
-    //! returns the physical sizes of the cell
-    const Rcoord & get_lengths() const {return this->lengths;}
 
     //! only required for testing and debugging
     LFieldCollection_t & get_field_collection() {
@@ -152,7 +147,6 @@ namespace muSpectre {
     Ccoord fourier_resolutions; //!< resolutions of the process-local (subdomain) portion of the Fourier transformed data
     Ccoord fourier_locations; // !< location of the process-local (subdomain) portion of the Fourier transformed data
     const Ccoord domain_resolutions; //!< resolutions of the full domain of the cell
-    const Rcoord lengths; //!< physical sizes of the cell
     Workspace_t & work; //!< field to store the Fourier transform of P
     const Real norm_factor; //!< normalisation coefficient of fourier transform
   private:

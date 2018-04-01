@@ -31,12 +31,11 @@ namespace muSpectre {
 
   /* ---------------------------------------------------------------------- */
   template <Dim_t DimS, Dim_t DimM>
-  FFTEngineBase<DimS, DimM>::FFTEngineBase(Ccoord resolutions, Rcoord lengths,
+  FFTEngineBase<DimS, DimM>::FFTEngineBase(Ccoord resolutions,
                                            Communicator comm)
     :comm{comm}, resolutions{resolutions}, locations{},
      fourier_resolutions{CcoordOps::get_hermitian_sizes(resolutions)},
      fourier_locations{}, domain_resolutions{resolutions},
-     lengths{lengths},
      work{make_field<Workspace_t>("work space", work_space_container)},
      norm_factor{1./CcoordOps::get_size(domain_resolutions)}
   {}

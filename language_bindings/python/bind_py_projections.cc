@@ -88,8 +88,8 @@ void add_proj_helper(py::module & mod, std::string name_start) {
 
   py::class_<Proj>(mod, name.str().c_str())
     .def(py::init([](Ccoord res, Rcoord lengths) {
-          auto engine = std::make_unique<Engine>(res, lengths);
-          return Proj(std::move(engine));
+          auto engine = std::make_unique<Engine>(res);
+          return Proj(std::move(engine), lengths);
         }))
     .def("initialise", &Proj::initialise,
          "flags"_a=FFT_PlanFlags::estimate,

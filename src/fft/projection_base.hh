@@ -68,7 +68,7 @@ namespace muSpectre {
     //! cell coordinates type
     using Ccoord = typename FFTEngine::Ccoord;
     //! spatial coordinates type
-    using Rcoord = typename FFTEngine::Rcoord;
+    using Rcoord = std::array<Real, DimS>;
     //! global FieldCollection
     using GFieldCollection_t = typename FFTEngine::GFieldCollection_t;
     //! local FieldCollection (for Fourier-space pixels)
@@ -87,7 +87,7 @@ namespace muSpectre {
     ProjectionBase() = delete;
 
     //! Constructor with cell sizes
-    ProjectionBase(FFTEngine_ptr engine, Formulation form);
+    ProjectionBase(FFTEngine_ptr engine, Rcoord lengths, Formulation form);
 
     //! Copy constructor
     ProjectionBase(const ProjectionBase &other) = delete;
@@ -120,8 +120,7 @@ namespace muSpectre {
     const Ccoord & get_domain_resolutions() const {
       return this->fft_engine->get_domain_resolutions();}
     //! returns the physical sizes of the cell
-    const Rcoord & get_lengths() const {
-      return this->fft_engine->get_lengths();}
+    const Rcoord & get_lengths() const {return this->lengths;}
 
     /**
      * return the `muSpectre::Formulation` that is used in solving
@@ -143,6 +142,7 @@ namespace muSpectre {
   protected:
     //! handle on the fft_engine used
     FFTEngine_ptr fft_engine;
+    const Rcoord lengths; //!< physical sizes of the cell
     /**
      * formulation this projection can be applied to (determines
      * whether the projection enforces gradients, small strain tensor

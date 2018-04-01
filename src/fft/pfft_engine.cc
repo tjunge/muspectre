@@ -34,9 +34,8 @@ namespace muSpectre {
   int PFFTEngine<DimsS, DimM>::nb_engines{0};
 
   template <Dim_t DimS, Dim_t DimM>
-  PFFTEngine<DimS, DimM>::PFFTEngine(Ccoord resolutions, Rcoord lengths,
-                                     Communicator comm)
-    :Parent{resolutions, lengths, comm}, mpi_comm{comm.get_mpi_comm()}
+  PFFTEngine<DimS, DimM>::PFFTEngine(Ccoord resolutions, Communicator comm)
+    :Parent{resolutions, comm}, mpi_comm{comm.get_mpi_comm()}
   {
     if (!this->nb_engines) pfft_init();
     this->nb_engines++;

@@ -45,20 +45,17 @@ using namespace pybind11::literals;
 template <Dim_t dim, class Engine>
 void add_engine_helper(py::module & mod, std::string name) {
   using Ccoord = Ccoord_t<dim>;
-  using Rcoord = Rcoord_t<dim>;
   using ArrayXXc = Eigen::Array<Complex, Eigen::Dynamic,
                                 Eigen::Dynamic>;
   py::class_<Engine>(mod, name.c_str())
 #ifdef WITH_MPI
-    .def(py::init([](Ccoord res, Rcoord lengths, size_t comm) {
-           return new Engine(res, lengths,
-                             std::move(Communicator(MPI_Comm(comm))));
+    .def(py::init([](Ccoord res, size_t comm) {
+           return new Engine(res, std::move(Communicator(MPI_Comm(comm))));
          }),
          "resolutions"_a,
-         "lengths"_a,
          "communicator"_a=size_t(MPI_COMM_SELF))
 #else
-    .def(py::init<Ccoord, Rcoord>())
+    .def(py::init<Ccoord>())
 #endif
     .def("fft",
          [](Engine & eng, py::EigenDRef<Eigen::ArrayXXd> v) {
