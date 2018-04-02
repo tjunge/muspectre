@@ -73,11 +73,10 @@ public:
   }
 };
 
-template <class Proj, Dim_t DimS, Dim_t DimM=DimS>
+template <class Proj, class Engine, Dim_t DimS, Dim_t DimM=DimS>
 void add_proj_helper(py::module & mod, std::string name_start) {
   using Ccoord = Ccoord_t<DimS>;
   using Rcoord = Rcoord_t<DimS>;
-  using Engine = FFTWEngine<DimS, DimM>;
   using Field_t = typename Proj::Field_t;
 
   static_assert(DimS == DimM,
@@ -113,23 +112,29 @@ void add_proj_helper(py::module & mod, std::string name_start) {
 void add_proj_dispatcher(py::module & mod) {
   add_proj_helper<
     ProjectionSmallStrain<  twoD,   twoD>,
+    FFTWEngine           <  twoD,   twoD>,
     twoD>(mod, "ProjectionSmallStrain");
   add_proj_helper<
     ProjectionSmallStrain<threeD, threeD>,
+    FFTWEngine           <threeD, threeD>,
     threeD>(mod, "ProjectionSmallStrain");
 
   add_proj_helper<
     ProjectionFiniteStrain<  twoD,   twoD>,
+    FFTWEngine            <  twoD,   twoD>,
     twoD>(mod, "ProjectionFiniteStrain");
   add_proj_helper<
     ProjectionFiniteStrain<threeD, threeD>,
+    FFTWEngine            <threeD, threeD>,
     threeD>(mod, "ProjectionFiniteStrain");
 
   add_proj_helper<
     ProjectionFiniteStrainFast<  twoD,   twoD>,
+    FFTWEngine                <  twoD,   twoD>,
     twoD>(mod, "ProjectionFiniteStrainFast");
   add_proj_helper<
     ProjectionFiniteStrainFast<threeD, threeD>,
+    FFTWEngine                <threeD, threeD>,
     threeD>(mod, "ProjectionFiniteStrainFast");
 
 }
