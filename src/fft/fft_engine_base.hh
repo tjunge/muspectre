@@ -110,9 +110,11 @@ namespace muSpectre {
     const Communicator & get_communicator() const {return this->comm;}
     
     //! returns the process-local resolutions of the cell
-    const Ccoord & get_resolutions() const {return this->resolutions;}
+    const Ccoord & get_subdomain_resolutions() const {
+      return this->subdomain_resolutions;}
     //! returns the process-local locations of the cell
-    const Ccoord & get_locations() const {return this->locations;}
+    const Ccoord & get_subdomain_locations() const {
+      return this->subdomain_locations;}
     //! returns the process-local resolutions of the cell in Fourier space
     const Ccoord & get_fourier_resolutions() const {return this->fourier_resolutions;}
     //! returns the process-local locations of the cell in Fourier space
@@ -142,8 +144,8 @@ namespace muSpectre {
      */
     Communicator comm; //!< communicator
     LFieldCollection_t work_space_container{};
-    Ccoord resolutions; //!< resolutions of the process-local (subdomain) portion of the cell
-    Ccoord locations; // !< location of the process-local (subdomain) portion of the cell
+    Ccoord subdomain_resolutions; //!< resolutions of the process-local (subdomain) portion of the cell
+    Ccoord subdomain_locations; // !< location of the process-local (subdomain) portion of the cell
     Ccoord fourier_resolutions; //!< resolutions of the process-local (subdomain) portion of the Fourier transformed data
     Ccoord fourier_locations; // !< location of the process-local (subdomain) portion of the Fourier transformed data
     const Ccoord domain_resolutions; //!< resolutions of the full domain of the cell

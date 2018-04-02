@@ -90,14 +90,14 @@ namespace muSpectre {
     FieldMap grad(f_grad);
     FieldMap var(f_var);
 
-    fields.initialise(fix::projector.get_resolutions(),
-                      fix::projector.get_locations());
+    fields.initialise(fix::projector.get_subdomain_resolutions(),
+                      fix::projector.get_subdomain_locations());
     FFT_freqs<dim> freqs{fix::projector.get_domain_resolutions(),
-        fix::projector.get_lengths()};
+        fix::projector.get_domain_lengths()};
     Vector k; for (Dim_t i = 0; i < dim; ++i) {
       // the wave vector has to be such that it leads to an integer
       // number of periods in each length of the domain
-      k(i) = (i+1)*2*pi/fix::projector.get_lengths()[i]; ;
+      k(i) = (i+1)*2*pi/fix::projector.get_domain_lengths()[i]; ;
     }
 
     for (auto && tup: akantu::zip(fields, grad, var)) {
@@ -105,8 +105,8 @@ namespace muSpectre {
       auto & g = std::get<1>(tup);
       auto & v = std::get<2>(tup);
       Vector vec = CcoordOps::get_vector(ccoord,
-                                         fix::projector.get_lengths()/
-                                         fix::projector.get_resolutions());
+                                         fix::projector.get_domain_lengths()/
+                                         fix::projector.get_domain_resolutions());
       g.row(0) = k.transpose() * cos(k.dot(vec));
       v.row(0) = g.row(0);
     }
@@ -119,8 +119,8 @@ namespace muSpectre {
       auto & g = std::get<1>(tup);
       auto & v = std::get<2>(tup);
       Vector vec = CcoordOps::get_vector(ccoord,
-                                         fix::projector.get_lengths()/
-                                         fix::projector.get_resolutions());
+                                         fix::projector.get_domain_lengths()/
+                                         fix::projector.get_domain_resolutions());
       Real error = (g-v).norm();
       BOOST_CHECK_LT(error, tol);
       if (error >=tol) {

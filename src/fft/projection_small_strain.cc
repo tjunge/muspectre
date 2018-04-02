@@ -50,7 +50,7 @@ namespace muSpectre {
     Parent::initialise(flags);
 
     FFT_freqs<DimS> fft_freqs(this->fft_engine->get_domain_resolutions(),
-                              this->lengths);
+                              this->domain_lengths);
     for (auto && tup: akantu::zip(*this->fft_engine, this->Ghat)) {
       const auto & ccoord = std::get<0> (tup);
       auto & G = std::get<1>(tup);
@@ -73,7 +73,7 @@ namespace muSpectre {
         }
       }
     }
-    if (this->get_locations() == Ccoord{}) {
+    if (this->get_subdomain_locations() == Ccoord{}) {
       this->Ghat[0].setZero();
     }
   }

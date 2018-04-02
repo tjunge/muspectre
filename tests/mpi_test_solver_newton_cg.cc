@@ -64,7 +64,7 @@ namespace muSpectre {
     auto& Material_hard = Mat_t::make(sys, "hard", 10*Young, Poisson);
     auto& Material_soft = Mat_t::make(sys, "soft",    Young, Poisson);
 
-    auto& loc = sys.get_locations();
+    auto& loc = sys.get_subdomain_locations();
     for (auto && tup: akantu::enumerate(sys)) {
       auto && pixel = std::get<1>(tup);
       if (loc == Ccoord_t<threeD>{0, 0} && std::get<0>(tup) == 0) {
