@@ -190,7 +190,7 @@ namespace muSpectre {
     const Ccoord & get_domain_resolutions() const {
       return this->domain_resolutions;}
     //! return the sizes of the cell
-    const Rcoord & get_lengths() const {return this->lengths;}
+    const Rcoord & get_domain_lengths() const {return this->domain_lengths;}
 
     /**
      * formulation is hard set by the choice of the projection class
@@ -229,7 +229,7 @@ namespace muSpectre {
     const Ccoord & subdomain_locations; //!< the cell's subdomain resolutions
     const Ccoord & domain_resolutions; //!< the cell's domain resolutions
     CcoordOps::Pixels<DimS> pixels; //!< helper to iterate over the pixels
-    const Rcoord & lengths; //!< the cell's lengths
+    const Rcoord & domain_lengths; //!< the cell's lengths
     Collection_ptr fields; //!< handle for the global fields of the cell
     StrainField_t & F; //!< ref to strain field
     StressField_t & P; //!< ref to stress field

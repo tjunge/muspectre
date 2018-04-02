@@ -43,7 +43,7 @@ namespace muSpectre {
      subdomain_locations{projection_->get_subdomain_locations()},
      domain_resolutions{projection_->get_domain_resolutions()},
      pixels(subdomain_resolutions, subdomain_locations),
-     lengths{projection_->get_lengths()},
+     domain_lengths{projection_->get_domain_lengths()},
      fields{std::make_unique<FieldCollection_t>()},
      F{make_field<StrainField_t>("Gradient", *this->fields)},
      P{make_field<StressField_t>("Piola-Kirchhoff-1", *this->fields)},

@@ -87,7 +87,7 @@ namespace muSpectre {
     ProjectionBase() = delete;
 
     //! Constructor with cell sizes
-    ProjectionBase(FFTEngine_ptr engine, Rcoord lengths, Formulation form);
+    ProjectionBase(FFTEngine_ptr engine, Rcoord domain_lengths, Formulation form);
 
     //! Copy constructor
     ProjectionBase(const ProjectionBase &other) = delete;
@@ -120,7 +120,7 @@ namespace muSpectre {
     const Ccoord & get_domain_resolutions() const {
       return this->fft_engine->get_domain_resolutions();}
     //! returns the physical sizes of the cell
-    const Rcoord & get_lengths() const {return this->lengths;}
+    const Rcoord & get_domain_lengths() const {return this->domain_lengths;}
 
     /**
      * return the `muSpectre::Formulation` that is used in solving
@@ -142,7 +142,7 @@ namespace muSpectre {
   protected:
     //! handle on the fft_engine used
     FFTEngine_ptr fft_engine;
-    const Rcoord lengths; //!< physical sizes of the cell
+    const Rcoord domain_lengths; //!< physical sizes of the cell
     /**
      * formulation this projection can be applied to (determines
      * whether the projection enforces gradients, small strain tensor

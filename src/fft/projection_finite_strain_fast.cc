@@ -54,7 +54,7 @@ namespace muSpectre {
   initialise(FFT_PlanFlags flags) {
     Parent::initialise(flags);
     FFT_freqs<DimS> fft_freqs(this->fft_engine->get_domain_resolutions(),
-                              this->lengths);
+                              this->domain_lengths);
     for (auto && tup: akantu::zip(*this->fft_engine, this->xis)) {
       const auto & ccoord = std::get<0> (tup);
       auto & xi = std::get<1>(tup);
