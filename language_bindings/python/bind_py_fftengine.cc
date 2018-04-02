@@ -85,7 +85,12 @@ void add_engine_helper(py::module & mod, std::string name) {
          "array"_a)
     .def("initialise", &Engine::initialise,
          "flags"_a=FFT_PlanFlags::estimate)
-    .def("normalisation", &Engine::normalisation);
+    .def("normalisation", &Engine::normalisation)
+    .def("get_subdomain_resolutions", &Engine::get_subdomain_resolutions)
+    .def("get_subdomain_locations", &Engine::get_subdomain_locations)
+    .def("get_fourier_resolutions", &Engine::get_fourier_resolutions)
+    .def("get_fourier_locations", &Engine::get_fourier_locations)
+    .def("get_domain_resolutions", &Engine::get_domain_resolutions);
 }
 
 void add_fft_engines(py::module & mod) {
