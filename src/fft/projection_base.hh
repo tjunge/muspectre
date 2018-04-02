@@ -111,11 +111,11 @@ namespace muSpectre {
     virtual void apply_projection(Field_t & field) = 0;
 
     //! returns the process-local resolutions of the cell
-    const Ccoord & get_resolutions() const {
-      return this->fft_engine->get_resolutions();}
+    const Ccoord & get_subdomain_resolutions() const {
+      return this->fft_engine->get_subdomain_resolutions();}
     //! returns the process-local locations of the cell
-    const Ccoord & get_locations() const {
-      return this->fft_engine->get_locations();}
+    const Ccoord & get_subdomain_locations() const {
+      return this->fft_engine->get_subdomain_locations();}
     //! returns the resolutions of the cell
     const Ccoord & get_domain_resolutions() const {
       return this->fft_engine->get_domain_resolutions();}

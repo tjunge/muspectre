@@ -144,8 +144,8 @@ namespace muSpectre {
     FieldMap grad(f_grad);
     FieldMap var(f_var);
 
-    fields.initialise(fix::projector.get_resolutions(),
-                      fix::projector.get_locations());
+    fields.initialise(fix::projector.get_subdomain_resolutions(),
+                      fix::projector.get_subdomain_locations());
     Vector k; for (Dim_t i = 0; i < dim; ++i) {
       // the wave vector has to be such that it leads to an integer
       // number of periods in each length of the domain

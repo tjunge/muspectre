@@ -56,10 +56,13 @@ namespace muSpectre {
     const int & rank = DimS;
     std::array<int, DimS> narr;
     const int * const n = &narr[0];
-    std::copy(this->resolutions.begin(), this->resolutions.end(), narr.begin());
+    std::copy(this->subdomain_resolutions.begin(),
+              this->subdomain_resolutions.end(),
+              narr.begin());
     int howmany = Field_t::nb_components;
     //temporary buffer for plan
-    size_t alloc_size = CcoordOps::get_size(this->resolutions) *howmany;
+    size_t alloc_size = (CcoordOps::get_size(this->subdomain_resolutions)*
+                         howmany);
     Real * r_work_space = fftw_alloc_real(alloc_size);
     Real * in = r_work_space;
     const int * const inembed = nullptr;//nembed are tricky: they refer to physical layout
@@ -127,7 +130,7 @@ namespace muSpectre {
     if (this->plan_fft == nullptr) {
       throw std::runtime_error("fft plan not initialised");
     }
-    if (field.size() != CcoordOps::get_size(this->resolutions)) {
+    if (field.size() != CcoordOps::get_size(this->subdomain_resolutions)) {
       throw std::runtime_error("size mismatch");
     }
     fftw_execute_dft_r2c(this->plan_fft,
@@ -143,7 +146,7 @@ namespace muSpectre {
     if (this->plan_ifft == nullptr) {
       throw std::runtime_error("ifft plan not initialised");
     }
-    if (field.size() != CcoordOps::get_size(this->resolutions)) {
+    if (field.size() != CcoordOps::get_size(this->subdomain_resolutions)) {
       throw std::runtime_error("size mismatch");
     }
     fftw_execute_dft_c2r(this->plan_ifft,

@@ -82,7 +82,7 @@ namespace muSpectre {
       //   }
       // }
     }
-    if (this->get_locations() == Ccoord{}) {
+    if (this->get_subdomain_locations() == Ccoord{}) {
       this->Ghat[0].setZero();
     }
   }

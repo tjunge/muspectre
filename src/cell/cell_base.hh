@@ -181,9 +181,11 @@ namespace muSpectre {
     size_t size() const {return pixels.size();}
 
     //! return the subdomain resolutions of the cell
-    const Ccoord & get_resolutions() const {return this->resolutions;}
+    const Ccoord & get_subdomain_resolutions() const {
+      return this->subdomain_resolutions;}
     //! return the subdomain locations of the cell
-    const Ccoord & get_locations() const {return this->locations;}
+    const Ccoord & get_subdomain_locations() const {
+      return this->subdomain_locations;}
     //! return the domain resolutions of the cell
     const Ccoord & get_domain_resolutions() const {
       return this->domain_resolutions;}
@@ -223,8 +225,8 @@ namespace muSpectre {
     //! make sure that every pixel is assigned to one and only one material
     void check_material_coverage();
 
-    const Ccoord & resolutions; //!< the cell's subdomain resolutions
-    const Ccoord & locations; //!< the cell's subdomain resolutions
+    const Ccoord & subdomain_resolutions; //!< the cell's subdomain resolutions
+    const Ccoord & subdomain_locations; //!< the cell's subdomain resolutions
     const Ccoord & domain_resolutions; //!< the cell's domain resolutions
     CcoordOps::Pixels<DimS> pixels; //!< helper to iterate over the pixels
     const Rcoord & lengths; //!< the cell's lengths
