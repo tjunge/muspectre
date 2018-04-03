@@ -34,26 +34,35 @@ namespace muSpectre {
   /* ---------------------------------------------------------------------- */
   template <Dim_t DimS, Dim_t DimM>
   ProjectionFiniteStrainFast<DimS, DimM>::
-  ProjectionFiniteStrainFast(FFTEngine_ptr engine)
-    :Parent{std::move(engine), Formulation::finite_strain},
+  ProjectionFiniteStrainFast(FFTEngine_ptr engine, Rcoord lengths)
+    :Parent{std::move(engine), lengths, Formulation::finite_strain},
      xiField{make_field<Proj_t>("Projection Operator",
                                 this->projection_container)},
      xis(xiField)
-  {}
+  {
+    for (auto res: this->fft_engine->get_domain_resolutions()) {
+      if (res % 2 == 0) {
+      	throw ProjectionError
+	  ("Only an odd number of gridpoints in each direction is supported");
+      }
+    }
+  }
 
   /* ---------------------------------------------------------------------- */
   template <Dim_t DimS, Dim_t DimM>
   void ProjectionFiniteStrainFast<DimS, DimM>::
   initialise(FFT_PlanFlags flags) {
     Parent::initialise(flags);
-    FFT_freqs<DimS> fft_freqs(this->fft_engine->get_resolutions(),
-                              this->fft_engine->get_lengths());
+    FFT_freqs<DimS> fft_freqs(this->fft_engine->get_domain_resolutions(),
+                              this->domain_lengths);
     for (auto && tup: akantu::zip(*this->fft_engine, this->xis)) {
       const auto & ccoord = std::get<0> (tup);
       auto & xi = std::get<1>(tup);
       xi = fft_freqs.get_unit_xi(ccoord);
     }
-    this->xis[0].setZero();
+    if (this->get_subdomain_locations() == Ccoord{}) {
+      this->xis[0].setZero();
+    }
   }
 
 

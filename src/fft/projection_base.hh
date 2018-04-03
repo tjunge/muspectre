@@ -37,6 +37,19 @@
 
 namespace muSpectre {
 
+  /**
+   * base class for projection related exceptions
+   */
+  class ProjectionError: public std::runtime_error {
+  public:
+    //! constructor
+    explicit ProjectionError(const std::string& what)
+      :std::runtime_error(what){}
+    //! constructor
+    explicit ProjectionError(const char * what)
+      :std::runtime_error(what){}
+  };
+
   template<class Projection>
   struct Projection_traits {
   };
@@ -55,7 +68,7 @@ namespace muSpectre {
     //! cell coordinates type
     using Ccoord = typename FFTEngine::Ccoord;
     //! spatial coordinates type
-    using Rcoord = typename FFTEngine::Rcoord;
+    using Rcoord = Rcoord_t<DimS>;
     //! global FieldCollection
     using GFieldCollection_t = typename FFTEngine::GFieldCollection_t;
     //! local FieldCollection (for Fourier-space pixels)
@@ -74,7 +87,7 @@ namespace muSpectre {
     ProjectionBase() = delete;
 
     //! Constructor with cell sizes
-    ProjectionBase(FFTEngine_ptr engine, Formulation form);
+    ProjectionBase(FFTEngine_ptr engine, Rcoord domain_lengths, Formulation form);
 
     //! Copy constructor
     ProjectionBase(const ProjectionBase &other) = delete;
@@ -97,12 +110,17 @@ namespace muSpectre {
     //! apply the projection operator to a field
     virtual void apply_projection(Field_t & field) = 0;
 
+    //! returns the process-local resolutions of the cell
+    const Ccoord & get_subdomain_resolutions() const {
+      return this->fft_engine->get_subdomain_resolutions();}
+    //! returns the process-local locations of the cell
+    const Ccoord & get_subdomain_locations() const {
+      return this->fft_engine->get_subdomain_locations();}
     //! returns the resolutions of the cell
-    const Ccoord & get_resolutions() const {
-      return this->fft_engine->get_resolutions();}
+    const Ccoord & get_domain_resolutions() const {
+      return this->fft_engine->get_domain_resolutions();}
     //! returns the physical sizes of the cell
-    const Rcoord & get_lengths() const {
-      return this->fft_engine->get_lengths();}
+    const Rcoord & get_domain_lengths() const {return this->domain_lengths;}
 
     /**
      * return the `muSpectre::Formulation` that is used in solving
@@ -116,9 +134,15 @@ namespace muSpectre {
     //! regular use
     virtual Eigen::Map<Eigen::ArrayXXd> get_operator() = 0;
 
+    //! return the communicator object
+    const Communicator & get_communicator() const {
+      return this->fft_engine->get_communicator();
+    }
+
   protected:
     //! handle on the fft_engine used
     FFTEngine_ptr fft_engine;
+    const Rcoord domain_lengths; //!< physical sizes of the cell
     /**
      * formulation this projection can be applied to (determines
      * whether the projection enforces gradients, small strain tensor

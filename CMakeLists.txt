@@ -67,6 +67,13 @@ elseif ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "MSVC")
   # using Visual Studio C++
 endif()
 
+# Do not trust old gcc. the std::optional has memory bugs
+if(${CMAKE_COMPILER_IS_GNUCC})
+  if(${CMAKE_CXX_COMPILER_VERSION} VERSION_LESS 6.0.0)
+    add_definitions(-DNO_EXPERIMENTAL)
+  endif()
+endif()
+
 
 add_external_package(Eigen3 VERSION 3.3 CONFIG)
 add_external_package(pybind11 VERSION 2.2 CONFIG)
@@ -77,9 +84,27 @@ include_directories(
   ${CMAKE_SOURCE_DIR}
   )
 
-#find_package(MPI REQUIRED)
-find_package(FFTW REQUIRED)
-#find_package(FFTWMPI REQUIRED)
+if(APPLE)
+  include_directories(${CMAKE_INSTALL_PREFIX}/include ${Boost_INCLUDE_DIRS})
+endif()
+
+find_package(MPI)
+find_package(FFTWMPI)
+find_package(PFFT)
+if(MPI_FOUND)
+  add_definitions(-DWITH_MPI)
+  include_directories(SYSTEM ${MPI_C_INCLUDE_PATH})
+endif()
+if (FFTWMPI_FOUND)
+  add_definitions(-DWITH_FFTWMPI)
+endif()
+if (PFFT_FOUND)
+  add_definitions(-DWITH_PFFT)
+  include_directories(SYSTEM ${PFFT_INCLUDES})
+endif()
+if (P3DFFT_FOUND)
+  add_definitions(-DWITH_P3DFFT)
+endif()
 
 
 #build tests (these are before we add -Werror to the compile options)
@@ -102,7 +127,16 @@ if (${MAKE_TEST_TARGETS})
       COPYONLY)
   endforeach(pytest ${PY_TEST_SRCS})
   add_test(python_binding_test python_binding_tests.py)
-endif()
+
+if(MPI_FOUND)
+  file( GLOB TEST_SRCS "${CMAKE_SOURCE_DIR}/tests/mpi_test_*.cc")
+
+  add_executable(mpi_main_test_suite tests/mpi_main_test_suite.cc ${TEST_SRCS})
+  target_link_libraries(mpi_main_test_suite ${Boost_LIBRARIES} muSpectre)
+  add_test(mpi_main_test_suite1 ${MPIEXEC_EXECUTABLE} ${MPIEXEC_PREFLAGS} ${MPIEXEC_NUMPROC_FLAG} 1 mpi_main_test_suite --report_level=detailed --build_info=TRUE)
+  add_test(mpi_main_test_suite2 ${MPIEXEC_EXECUTABLE} ${MPIEXEC_PREFLAGS} ${MPIEXEC_NUMPROC_FLAG} 2 mpi_main_test_suite --report_level=detailed --build_info=TRUE)
+endif(MPI_FOUND)
+endif(${MAKE_TEST_TARGETS})
 
 
 # compile the library
@@ -149,3 +183,16 @@ foreach(benchmark ${benchmarks})
   target_link_libraries(${benchmark_name} ${BOOST_LIBRARIES} muSpectre)
 endforeach(benchmark ${benchmark})
 
+
+# copy python test
+#build tests
+file( GLOB PY_TEST_SRCS "${CMAKE_SOURCE_DIR}/tests/python_*.py")
+
+foreach(pytest ${PY_TEST_SRCS})
+  get_filename_component(pytest_name ${pytest} NAME)
+  configure_file(
+    ${pytest}
+    "${CMAKE_BINARY_DIR}/${pytest_name}"
+    COPYONLY)
+endforeach(pytest ${PY_TEST_SRCS})
+add_test(python_binding_test python_binding_tests.py)

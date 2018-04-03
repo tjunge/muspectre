@@ -33,17 +33,24 @@ namespace muSpectre {
   /* ---------------------------------------------------------------------- */
   template <Dim_t DimS, Dim_t DimM>
   ProjectionSmallStrain<DimS, DimM>::
-  ProjectionSmallStrain(FFTEngine_ptr engine)
-    : Parent{std::move(engine), Formulation::small_strain}
-  {}
+  ProjectionSmallStrain(FFTEngine_ptr engine, Rcoord lengths)
+    : Parent{std::move(engine), lengths, Formulation::small_strain}
+  {
+    for (auto res: this->fft_engine->get_domain_resolutions()) {
+      if (res % 2 == 0) {
+      	throw ProjectionError
+	  ("Only an odd number of gridpoints in each direction is supported");
+      }
+    }
+  }
 
   /* ---------------------------------------------------------------------- */
   template <Dim_t DimS, Dim_t DimM>
   void ProjectionSmallStrain<DimS, DimM>::initialise(FFT_PlanFlags flags) {
     Parent::initialise(flags);
 
-    FFT_freqs<DimS> fft_freqs(this->fft_engine->get_resolutions(),
-                              this->fft_engine->get_lengths());
+    FFT_freqs<DimS> fft_freqs(this->fft_engine->get_domain_resolutions(),
+                              this->domain_lengths);
     for (auto && tup: akantu::zip(*this->fft_engine, this->Ghat)) {
       const auto & ccoord = std::get<0> (tup);
       auto & G = std::get<1>(tup);
@@ -66,7 +73,9 @@ namespace muSpectre {
         }
       }
     }
-    this->Ghat[0].setZero();
+    if (this->get_subdomain_locations() == Ccoord{}) {
+      this->Ghat[0].setZero();
+    }
   }
 
   template class ProjectionSmallStrain<twoD,   twoD>;

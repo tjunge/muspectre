@@ -43,8 +43,10 @@ namespace muSpectre {
            Real equil_tol,
            Dim_t verbose) {
     using Field_t = typename MaterialBase<DimS, DimM>::StrainField_t;
+    const Communicator & comm = cell.get_communicator();
     auto solver_fields{std::make_unique<GlobalFieldCollection<DimS>>()};
-    solver_fields->initialise(cell.get_resolutions());
+    solver_fields->initialise(cell.get_subdomain_resolutions(),
+                              cell.get_subdomain_locations());
 
     // Corresponds to symbol δF or δε
     auto & incrF{make_field<Field_t>("δF", *solver_fields)};
@@ -65,7 +67,7 @@ namespace muSpectre {
     size_t count_width{};
     const auto form{cell.get_formulation()};
     std::string strain_symb{};
-    if (verbose > 0) {
+    if (verbose > 0 && comm.rank() == 0) {
       //setup of algorithm 5.2 in Nocedal, Numerical Optimization (p. 111)
       std::cout << "de Geus-" << solver.name() << " for ";
       switch (form) {
@@ -162,7 +164,7 @@ namespace muSpectre {
         if (newt_iter == 0) {
           DeltaF.get_map() = -(delF-previous_grad); // neg sign because rhs
           tangent_effect(DeltaF, rhs);
-          stressNorm = rhs.eigen().matrix().norm();
+          stressNorm = std::sqrt(comm.sum(rhs.eigen().matrix().squaredNorm()));
           if (convergence_test()) {
             break;
           }
@@ -171,7 +173,7 @@ namespace muSpectre {
         } else {
           rhs.eigen() = -P.eigen();
           cell.project(rhs);
-          stressNorm = rhs.eigen().matrix().norm();
+          stressNorm = std::sqrt(comm.sum(rhs.eigen().matrix().squaredNorm()));
           if (convergence_test()) {
             break;
           }
@@ -181,9 +183,9 @@ namespace muSpectre {
 
         F.eigen() += incrF.eigen();
 
-        incrNorm = incrF.eigen().matrix().norm();
-        gradNorm = F.eigen().matrix().norm();
-        if (verbose>0) {
+        incrNorm = std::sqrt(comm.sum(incrF.eigen().matrix().squaredNorm()));
+        gradNorm = std::sqrt(comm.sum(F.eigen().matrix().squaredNorm()));
+        if (verbose > 0 && comm.rank() == 0) {
           std::cout << "at Newton step " << std::setw(count_width) << newt_iter
                     << ", |δ" << strain_symb << "|/|Δ" << strain_symb
                     << "| = " << std::setw(17) << incrNorm/gradNorm
@@ -241,8 +243,10 @@ namespace muSpectre {
              Real equil_tol,
              Dim_t verbose) {
     using Field_t = typename MaterialBase<DimS, DimM>::StrainField_t;
+    const Communicator & comm = cell.get_communicator();
     auto solver_fields{std::make_unique<GlobalFieldCollection<DimS>>()};
-    solver_fields->initialise(cell.get_resolutions());
+    solver_fields->initialise(cell.get_subdomain_resolutions(),
+                              cell.get_subdomain_locations());
 
     // Corresponds to symbol δF or δε
     auto & incrF{make_field<Field_t>("δF", *solver_fields)};
@@ -259,7 +263,7 @@ namespace muSpectre {
     size_t count_width{};
     const auto form{cell.get_formulation()};
     std::string strain_symb{};
-    if (verbose > 0) {
+    if (verbose > 0 && comm.rank() == 0) {
       //setup of algorithm 5.2 in Nocedal, Numerical Optimization (p. 111)
       std::cout << "Newton-" << solver.name() << " for ";
       switch (form) {
@@ -353,7 +357,7 @@ namespace muSpectre {
 
         rhs.eigen() = -P.eigen();
         cell.project(rhs);
-        stressNorm = rhs.eigen().matrix().norm();
+        stressNorm = std::sqrt(comm.sum(rhs.eigen().matrix().squaredNorm()));
         if (convergence_test()) {
           break;
         }
@@ -364,9 +368,9 @@ namespace muSpectre {
 
         F.eigen() += incrF.eigen();
 
-        incrNorm = incrF.eigen().matrix().norm();
-        gradNorm = F.eigen().matrix().norm();
-        if (verbose > 0) {
+        incrNorm = std::sqrt(comm.sum(incrF.eigen().matrix().squaredNorm()));
+        gradNorm = std::sqrt(comm.sum(F.eigen().matrix().squaredNorm()));
+        if (verbose > 0 && comm.rank() == 0) {
           std::cout << "at Newton step " << std::setw(count_width) << newt_iter
                     << ", |δ" << strain_symb << "|/|Δ" << strain_symb
                     << "| = " << std::setw(17) << incrNorm/gradNorm

@@ -31,11 +31,10 @@
 namespace muSpectre {
 
   template <Dim_t DimS, Dim_t DimM>
-  FFTWEngine<DimS, DimM>::FFTWEngine(Ccoord resolutions, Rcoord lengths)
-    :Parent{resolutions, lengths},
-     hermitian_resolutions{CcoordOps::get_hermitian_sizes(resolutions)}
+  FFTWEngine<DimS, DimM>::FFTWEngine(Ccoord resolutions, Communicator comm)
+    :Parent{resolutions, comm}
   {
-    for (auto && pixel: CcoordOps::Pixels<DimS>(this->hermitian_resolutions)) {
+    for (auto && pixel: CcoordOps::Pixels<DimS>(this->fourier_resolutions)) {
       this->work_space_container.add_pixel(pixel);
     }
   }
@@ -44,6 +43,11 @@ namespace muSpectre {
   /* ---------------------------------------------------------------------- */
   template <Dim_t DimS, Dim_t DimM>
   void FFTWEngine<DimS, DimM>::initialise(FFT_PlanFlags plan_flags) {
+    if (this->comm.size() > 1) {
+      throw std::runtime_error("Attempting to run in parallel, but standard "
+                               "FFTW engine does not support parallel "
+                               "execution.");
+    }
     if (this->initialised) {
       throw std::runtime_error("double initialisation, will leak memory");
     }
@@ -52,10 +56,13 @@ namespace muSpectre {
     const int & rank = DimS;
     std::array<int, DimS> narr;
     const int * const n = &narr[0];
-    std::copy(this->resolutions.begin(), this->resolutions.end(), narr.begin());
+    std::copy(this->subdomain_resolutions.begin(),
+              this->subdomain_resolutions.end(),
+              narr.begin());
     int howmany = Field_t::nb_components;
     //temporary buffer for plan
-    size_t alloc_size = CcoordOps::get_size(this->resolutions) *howmany;
+    size_t alloc_size = (CcoordOps::get_size(this->subdomain_resolutions)*
+                         howmany);
     Real * r_work_space = fftw_alloc_real(alloc_size);
     Real * in = r_work_space;
     const int * const inembed = nullptr;//nembed are tricky: they refer to physical layout
@@ -111,13 +118,21 @@ namespace muSpectre {
   FFTWEngine<DimS, DimM>::~FFTWEngine<DimS, DimM>() noexcept {
     fftw_destroy_plan(this->plan_fft);
     fftw_destroy_plan(this->plan_ifft);
-    fftw_cleanup();
+    // TODO: We cannot run fftw_cleanup since subsequent FFTW calls will fail
+    // but multiple FFT engines can be active at the same time.
+    //fftw_cleanup();
   }
 
   /* ---------------------------------------------------------------------- */
   template <Dim_t DimS, Dim_t DimM>
   typename FFTWEngine<DimS, DimM>::Workspace_t &
   FFTWEngine<DimS, DimM>::fft (Field_t & field) {
+    if (this->plan_fft == nullptr) {
+      throw std::runtime_error("fft plan not initialised");
+    }
+    if (field.size() != CcoordOps::get_size(this->subdomain_resolutions)) {
+      throw std::runtime_error("size mismatch");
+    }
     fftw_execute_dft_r2c(this->plan_fft,
                          field.data(),
                          reinterpret_cast<fftw_complex*>(this->work.data()));
@@ -128,7 +143,10 @@ namespace muSpectre {
   template <Dim_t DimS, Dim_t DimM>
   void
   FFTWEngine<DimS, DimM>::ifft (Field_t & field) const {
-    if (field.size() != CcoordOps::get_size(this->resolutions)) {
+    if (this->plan_ifft == nullptr) {
+      throw std::runtime_error("ifft plan not initialised");
+    }
+    if (field.size() != CcoordOps::get_size(this->subdomain_resolutions)) {
       throw std::runtime_error("size mismatch");
     }
     fftw_execute_dft_c2r(this->plan_ifft,

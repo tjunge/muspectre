@@ -57,13 +57,17 @@ void add_get_hermitian_helper(py::module & mod) {
 
 template <Dim_t dim>
 void add_get_ccoord_helper(py::module & mod) {
+  using Ccoord = Ccoord_t<dim>;
   mod.def
-    ("get_ccoord", &CcoordOps::get_ccoord<dim>,
+    ("get_domain_ccoord", [](Ccoord resolutions, Dim_t index){
+      return CcoordOps::get_ccoord<dim>(resolutions, Ccoord{}, index);
+      },
      "resolutions"_a,
      "i"_a,
      "return the cell coordinate corresponding to the i'th cell in a grid of "
      "shape resolutions");
 }
+
 
 void add_get_cube(py::module & mod) {
   add_get_cube_helper<twoD, Dim_t>(mod);
@@ -80,7 +84,11 @@ void add_get_cube(py::module & mod) {
 
 template <Dim_t dim>
 void add_get_index_helper(py::module & mod) {
-  mod.def("get_index", &CcoordOps::get_index<dim>, "sizes"_a, "ccoord"_a,
+  using Ccoord = Ccoord_t<dim>;
+  mod.def("get_domain_index",
+          [](Ccoord sizes, Ccoord ccoord){
+            return CcoordOps::get_index<dim>(sizes, Ccoord{}, ccoord);},
+          "sizes"_a, "ccoord"_a,
           "return the linear index corresponding to grid point 'ccoord' in a "
           "grid of size 'sizes'");
 }

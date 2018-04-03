@@ -27,6 +27,9 @@
 # Boston, MA 02111-1307, USA.
 # =============================================================================
 
+find_package(FFTWMPI)
+find_package(PFFT)
+
 set (fft_engine_SRC
   ${CMAKE_CURRENT_SOURCE_DIR}/fft_utils.cc
   ${CMAKE_CURRENT_SOURCE_DIR}/fft_engine_base.cc
@@ -37,6 +40,20 @@ set (fft_engine_SRC
   ${CMAKE_CURRENT_SOURCE_DIR}/projection_small_strain.cc
   ${CMAKE_CURRENT_SOURCE_DIR}/projection_finite_strain_fast.cc
   )
+
+if(FFTWMPI_FOUND)
+  set(fft_engine_SRC
+    ${fft_engine_SRC}
+    ${CMAKE_CURRENT_SOURCE_DIR}/fftwmpi_engine.cc
+    )
+endif()
+
+if (PFFT_FOUND)
+  set(fft_engine_SRC
+    ${fft_engine_SRC}
+    ${CMAKE_CURRENT_SOURCE_DIR}/pfft_engine.cc
+    )
+endif()
 
 set (muSpectre_SRC
   ${muSpectre_SRC}

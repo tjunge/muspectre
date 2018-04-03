@@ -31,10 +31,13 @@ namespace muSpectre {
 
   /* ---------------------------------------------------------------------- */
   template <Dim_t DimS, Dim_t DimM>
-  FFTEngineBase<DimS, DimM>::FFTEngineBase(Ccoord resolutions, Rcoord lengths)
-    :resolutions{resolutions}, lengths{lengths},
+  FFTEngineBase<DimS, DimM>::FFTEngineBase(Ccoord resolutions,
+                                           Communicator comm)
+    :comm{comm}, subdomain_resolutions{resolutions}, subdomain_locations{},
+     fourier_resolutions{CcoordOps::get_hermitian_sizes(resolutions)},
+     fourier_locations{}, domain_resolutions{resolutions},
      work{make_field<Workspace_t>("work space", work_space_container)},
-     norm_factor{1./CcoordOps::get_size(resolutions)}
+     norm_factor{1./CcoordOps::get_size(domain_resolutions)}
   {}
 
   /* ---------------------------------------------------------------------- */
@@ -46,7 +49,7 @@ namespace muSpectre {
   /* ---------------------------------------------------------------------- */
   template <Dim_t DimS, Dim_t DimM>
   size_t FFTEngineBase<DimS, DimM>::size() const {
-    return CcoordOps::get_size(this->resolutions);
+    return CcoordOps::get_size(this->subdomain_resolutions);
   }
 
   /* ---------------------------------------------------------------------- */

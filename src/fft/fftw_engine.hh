@@ -44,7 +44,6 @@ namespace muSpectre {
   public:
     using Parent = FFTEngineBase<DimS, DimM>; //!< base class
     using Ccoord = typename Parent::Ccoord; //!< cell coordinates type
-    using Rcoord = typename Parent::Rcoord; //!< spatial coordinates type
     //! field for Fourier transform of second-order tensor
     using Workspace_t = typename Parent::Workspace_t;
     //! real-valued second-order tensor
@@ -53,7 +52,7 @@ namespace muSpectre {
     FFTWEngine() = delete;
 
     //! Constructor with cell resolutions
-    FFTWEngine(Ccoord resolutions, Rcoord lengths);
+    FFTWEngine(Ccoord resolutions, Communicator comm=Communicator());
 
     //! Copy constructor
     FFTWEngine(const FFTWEngine &other) = delete;
@@ -80,7 +79,6 @@ namespace muSpectre {
     virtual void ifft(Field_t & field) const override;
 
   protected:
-    Ccoord hermitian_resolutions; //!< resolutions of Fourier-space grid
     fftw_plan plan_fft{}; //!< holds the plan for forward fourier transform
     fftw_plan plan_ifft{}; //!< holds the plan for inverse fourier transform
     bool initialised{false}; //!< to prevent double initialisation

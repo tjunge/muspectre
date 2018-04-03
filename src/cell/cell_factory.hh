@@ -35,6 +35,11 @@
 #include "fft/projection_small_strain.hh"
 #include "fft/fftw_engine.hh"
 
+#ifdef WITH_MPI
+#include "common/communicator.hh"
+#include "fft/fftwmpi_engine.hh"
+#endif
+
 #include <memory>
 
 namespace muSpectre {
@@ -51,17 +56,17 @@ namespace muSpectre {
   cell_input(Ccoord_t<DimS> resolutions,
                Rcoord_t<DimS> lengths,
                Formulation form) {
-    auto fft_ptr{std::make_unique<FFTEngine>(resolutions, lengths)};
+    auto fft_ptr{std::make_unique<FFTEngine>(resolutions)};
     switch (form)
       {
       case Formulation::finite_strain: {
         using Projection = ProjectionFiniteStrainFast<DimS, DimM>;
-        return std::make_unique<Projection>(std::move(fft_ptr));
+        return std::make_unique<Projection>(std::move(fft_ptr), lengths);
         break;
       }
       case Formulation::small_strain: {
         using Projection = ProjectionSmallStrain<DimS, DimM>;
-        return std::make_unique<Projection>(std::move(fft_ptr));
+        return std::make_unique<Projection>(std::move(fft_ptr), lengths);
         break;
       }
       default: {
@@ -81,13 +86,71 @@ namespace muSpectre {
             typename FFTEngine=FFTWEngine<DimS, DimM>>
   inline
   Cell make_cell(Ccoord_t<DimS> resolutions,
-                     Rcoord_t<DimS> lengths,
-                     Formulation form) {
+                 Rcoord_t<DimS> lengths,
+                 Formulation form) {
 
-    auto && input = cell_input<DimS, DimM, FFTEngine>(resolutions, lengths, form);
+    auto && input = cell_input<DimS, DimM, FFTEngine>(resolutions, lengths,
+                                                      form);
     auto cell{Cell{std::move(input)}};
     return cell;
   }
+  
+#ifdef WITH_MPI
+
+  /**
+   * Create a unique ptr to a parallel Projection operator (with appropriate
+   * FFT_engine) to be used in a cell constructor
+   */
+  template <Dim_t DimS, Dim_t DimM,
+  typename FFTEngine=FFTWMPIEngine<DimS, DimM>>
+  inline
+  std::unique_ptr<ProjectionBase<DimS, DimM>>
+  parallel_cell_input(Ccoord_t<DimS> resolutions,
+                      Rcoord_t<DimS> lengths,
+                      Formulation form,
+                      const Communicator & comm) {
+    auto fft_ptr{std::make_unique<FFTEngine>(resolutions, comm)};
+    switch (form)
+    {
+      case Formulation::finite_strain: {
+        using Projection = ProjectionFiniteStrainFast<DimS, DimM>;
+        return std::make_unique<Projection>(std::move(fft_ptr), lengths);
+        break;
+      }
+      case Formulation::small_strain: {
+        using Projection = ProjectionSmallStrain<DimS, DimM>;
+        return std::make_unique<Projection>(std::move(fft_ptr), lengths);
+        break;
+      }
+      default: {
+        throw std::runtime_error("unknown formulation");
+        break;
+      }
+    }
+  }
+
+  
+  /**
+   * convenience function to create a parallel cell (avoids having to build
+   * and move the chain of unique_ptrs
+   */
+  template <size_t DimS, size_t DimM=DimS,
+  typename Cell=CellBase<DimS, DimM>,
+  typename FFTEngine=FFTWMPIEngine<DimS, DimM>>
+  inline
+  Cell make_parallel_cell(Ccoord_t<DimS> resolutions,
+                          Rcoord_t<DimS> lengths,
+                          Formulation form,
+                          const Communicator & comm) {
+    
+    auto && input = parallel_cell_input<DimS, DimM, FFTEngine>(resolutions,
+                                                               lengths,
+                                                               form, comm);
+    auto cell{Cell{std::move(input)}};
+    return cell;
+  }
+
+#endif /* WITH_MPI */
 
 }  // muSpectre
 

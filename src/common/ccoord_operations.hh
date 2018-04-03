@@ -143,27 +143,41 @@ namespace muSpectre {
     //----------------------------------------------------------------------------//
     //! get the i-th pixel in a grid of size sizes
     template <size_t dim>
-    constexpr Ccoord_t<dim> get_ccoord(const Ccoord_t<dim> & sizes, Dim_t index) {
+    constexpr Ccoord_t<dim> get_ccoord(const Ccoord_t<dim> & resolutions,
+                                       const Ccoord_t<dim> & locations,
+                                       Dim_t index) {
       Ccoord_t<dim> retval{{0}};
       Dim_t factor{1};
       for (Dim_t i = dim-1; i >=0; --i) {
-        retval[i] = index/factor%sizes[i];
+        retval[i] = index/factor%resolutions[i] + locations[i];
         if (i != 0 ) {
-          factor *= sizes[i];
+          factor *= resolutions[i];
         }
       }
       return retval;
     }
 
     //----------------------------------------------------------------------------//
+    //! get the i-th pixel in a grid of size sizes
+    template <size_t dim, size_t... I>
+    constexpr Ccoord_t<dim> get_ccoord(const Ccoord_t<dim> & resolutions,
+                                       const Ccoord_t<dim> & locations,
+                                       Dim_t index,
+                                       std::index_sequence<I...>) {
+      Ccoord_t<dim> ccoord{get_ccoord<dim>(resolutions, locations, index)};
+      return Ccoord_t<dim>({ccoord[I]...});
+    }
+
+    //----------------------------------------------------------------------------//
     //! get the linear index of a pixel in a given grid
     template <size_t dim>
     constexpr Dim_t get_index(const Ccoord_t<dim> & sizes,
+                              const Ccoord_t<dim> & locations,
                               const Ccoord_t<dim> & ccoord) {
       Dim_t retval{0};
       Dim_t factor{1};
       for (Dim_t i = dim-1; i >=0; --i) {
-        retval += ccoord[i]*factor;
+        retval += (ccoord[i]-locations[i])*factor;
         if (i != 0) {
           factor *= sizes[i];
         }
@@ -206,14 +220,20 @@ namespace muSpectre {
 
     /* ---------------------------------------------------------------------- */
     /**
-     * centralises iterating over square (or cubic) discretisation grids
+     * centralises iterating over square (or cubic) discretisation
+     * grids.  The optional parameter pack `dmap` can be used to
+     * specify the order of the axes in which to iterate over the
+     * dimensions (i.e., dmap = 0, 1, 2 is rowmajor, and 0, 2, 1 would
+     * be a custom order in which the second and third dimension are
+     * transposed
      */
-    template <size_t dim>
+    template <size_t dim, int ...dmap>
     class Pixels {
     public:
       //! constructor
-      Pixels(const Ccoord_t<dim> & resolutions=Ccoord_t<dim>{})
-        :resolutions{resolutions}{};
+      Pixels(const Ccoord_t<dim> & resolutions=Ccoord_t<dim>{},
+             const Ccoord_t<dim> & locations=Ccoord_t<dim>{})
+        :resolutions{resolutions}, locations{locations}{};
       //! copy constructor
       Pixels(const Pixels & other) = default;
       //! assignment operator
@@ -256,40 +276,44 @@ namespace muSpectre {
       //! stl conformance
       inline size_t size() const {return get_size(this->resolutions);}
     protected:
-      Ccoord_t<dim>  resolutions; //!< resolutions of cell
+      Ccoord_t<dim> resolutions; //!< resolutions of this domain
+      Ccoord_t<dim> locations; //!< locations of this domain
     };
 
     /* ---------------------------------------------------------------------- */
-    template <size_t dim>
-    Pixels<dim>::iterator::iterator(const Pixels & pixels, bool begin)
+    template <size_t dim, int ...dmap>
+    Pixels<dim, dmap...>::iterator::iterator(const Pixels & pixels, bool begin)
       :pixels{pixels}, index{begin? 0: get_size(pixels.resolutions)}
     {}
 
     /* ---------------------------------------------------------------------- */
-    template <size_t dim>
-    typename Pixels<dim>::iterator::value_type
-    Pixels<dim>::iterator::operator*() const {
-      return get_ccoord(pixels.resolutions, this->index);
+    template <size_t dim, int ...dmap>
+    typename Pixels<dim, dmap...>::iterator::value_type
+    Pixels<dim, dmap...>::iterator::operator*() const {
+      return get_ccoord(pixels.resolutions, pixels.locations, this->index,
+                        std::conditional_t<sizeof...(dmap) == 0,
+                                           std::make_index_sequence<dim>,
+                                           std::index_sequence<dmap...>>{});
     }
 
     /* ---------------------------------------------------------------------- */
-    template <size_t dim>
+    template <size_t dim, int ...dmap>
     bool
-    Pixels<dim>::iterator::operator!=(const iterator &other) const {
+    Pixels<dim, dmap...>::iterator::operator!=(const iterator &other) const {
       return (this->index != other.index) || (&this->pixels != &other.pixels);
     }
 
     /* ---------------------------------------------------------------------- */
-    template <size_t dim>
+    template <size_t dim, int ...dmap>
     bool
-    Pixels<dim>::iterator::operator==(const iterator &other) const {
+    Pixels<dim, dmap...>::iterator::operator==(const iterator &other) const {
       return !(*this!= other);
     }
 
     /* ---------------------------------------------------------------------- */
-    template <size_t dim>
-    typename Pixels<dim>::iterator&
-    Pixels<dim>::iterator::operator++() {
+    template <size_t dim, int ...dmap>
+    typename Pixels<dim, dmap...>::iterator&
+    Pixels<dim, dmap...>::iterator::operator++() {
       ++this->index;
       return *this;
     }

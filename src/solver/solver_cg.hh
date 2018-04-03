@@ -31,6 +31,7 @@
 #define SOLVER_CG_H
 
 #include "solver/solver_base.hh"
+#include "common/communicator.hh"
 #include "common/field.hh"
 
 #include <functional>
@@ -69,7 +70,7 @@ namespace muSpectre {
     SolverCG() = delete;
 
     //! Constructor with domain resolutions, etc,
-    SolverCG(Cell_t& cell, Real tol, Uint maxiter=0, bool verbose =false);
+    SolverCG(Cell_t& cell, Real tol, Uint maxiter=0, bool verbose=false);
 
     //! Copy constructor
     SolverCG(const SolverCG &other) = delete;
