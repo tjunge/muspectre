@@ -61,23 +61,13 @@ elseif ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "MSVC")
   # using Visual Studio C++
 endif()
 
-<<<<<<< HEAD
 # Do not trust old gcc. the std::optional has memory bugs
 if(${CMAKE_COMPILER_IS_GNUCC})
   if(${CMAKE_CXX_COMPILER_VERSION} VERSION_LESS 6.0.0)
-=======
-#Do not trust old gcc. the std::optional has memory bugs
-if(${CMAKE_COMPILER_IS_GNUCC})
-  if (${CMAKE_CXX_COMPILER_VERSION} VERSION_LESS 6.0.0)
->>>>>>> feat/store_Lame_consts_per_pixle_T1920
     add_definitions(-DNO_EXPERIMENTAL)
   endif()
 endif()
 
-<<<<<<< HEAD
-
-=======
->>>>>>> feat/store_Lame_consts_per_pixle_T1920
 find_package(Boost COMPONENTS unit_test_framework REQUIRED)
 
 add_external_package(Eigen3 VERSION 3.3 CONFIG)
@@ -124,8 +114,8 @@ if(MPI_FOUND)
 
   add_executable(mpi_main_test_suite tests/mpi_main_test_suite.cc ${TEST_SRCS})
   target_link_libraries(mpi_main_test_suite ${Boost_LIBRARIES} muSpectre)
-  add_test(mpi_main_test_suite1 ${MPIEXEC_EXECUTABLE} ${MPIEXEC_PREFLAGS} ${MPIEXEC_NUMPROC_FLAG} 1 mpi_main_test_suite --report_level=detailed --build_info=TRUE)
-  add_test(mpi_main_test_suite2 ${MPIEXEC_EXECUTABLE} ${MPIEXEC_PREFLAGS} ${MPIEXEC_NUMPROC_FLAG} 2 mpi_main_test_suite --report_level=detailed --build_info=TRUE)
+  add_test(mpi_main_test_suite1 ${MPIEXEC} ${MPIEXEC_PREFLAGS} ${MPIEXEC_NUMPROC_FLAG} 1 mpi_main_test_suite --report_level=detailed --build_info=TRUE)
+  add_test(mpi_main_test_suite2 ${MPIEXEC} ${MPIEXEC_PREFLAGS} ${MPIEXEC_NUMPROC_FLAG} 2 mpi_main_test_suite --report_level=detailed --build_info=TRUE)
 endif()
 
 
