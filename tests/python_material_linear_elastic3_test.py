@@ -69,12 +69,8 @@ class MaterialLinearElastic3_Check(unittest.TestCase):
         r = µ.solvers.newton_cg(self.sys, Del0,
                                 solver, tol, tol, verbose)
 
-        print('computed stress by mat3\n', r.stress)
-
         #compare the computed stress with the trivial by hand computed stress
         mu = (Young/(2*(1+Poisson)))
         stress = 2*mu*Del0
-
-        print('trivially by hand computed stress\n', stress.reshape(-1,1))
 
         self.assertLess(np.linalg.norm(r.stress-stress.reshape(-1,1)), 1e-8)

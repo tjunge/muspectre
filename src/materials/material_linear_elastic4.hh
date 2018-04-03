@@ -37,8 +37,6 @@
 
 #include <Eigen/Dense>
 
-#include <iostream>//remove this later
-
 namespace muSpectre {
 
   template <Dim_t DimS, Dim_t DimM>
@@ -134,9 +132,8 @@ namespace muSpectre {
 
     /**
      * evaluates second Piola-Kirchhoff stress given the Green-Lagrange
-     * strain (or Cauchy stress if called with a small strain tensor)
-     * and the two Lame constants, 'Poisson_ratio' and 'Youngs_modulus'.
-     * TODO: fix doc string
+     * strain (or Cauchy stress if called with a small strain tensor), the first
+     * Lame constant (lambda) and the second Lame constant (shear modulus/mu).
      */
     template <class s_t>
     inline decltype(auto) evaluate_stress(s_t && E,
@@ -146,9 +143,8 @@ namespace muSpectre {
     /**
      * evaluates both second Piola-Kirchhoff stress and stiffness given
      * the Green-Lagrange strain (or Cauchy stress and stiffness if
-     * called with a small strain tensor) and the two Lame constants,
-     * 'Poisson_ratio' and 'Youngs_modulus'.
-     * TODO: fix doc string
+     * called with a small strain tensor), the first Lame constant (lambda) and
+     * the second Lame constant (shear modulus/mu).
      */
     template <class s_t>
     inline decltype(auto) evaluate_stress_tangent(s_t &&  E,
@@ -189,15 +185,7 @@ namespace muSpectre {
   decltype(auto)
   MaterialLinearElastic4<DimS, DimM>::
   evaluate_stress(s_t && E, const Real & lambda, const Real & mu) {
-    // probably it is better to read out lambda and mu from the LocalField,
-    // than compute it again. Same for evaluate_stress_tangent...
     auto C = Hooke::compute_C_T4(lambda, mu);
-    std::cout << "\nevaluate stiffness mat4 output";
-    std::cout << "\nC of mat4\n" << C;
-    std::cout << "\napplied strain\n" << E;
-    std::cout << "\nDimS " << DimS << " , DimM " << DimM;
-    std::cout << "\nlambda " << lambda << " , mu " << mu;
-    std::cout << "\nstress\n" << Matrices::tensmult(C, E) << "\n";
     return Matrices::tensmult(C, E);
   }
 
@@ -210,12 +198,6 @@ namespace muSpectre {
 			  const Real & mu)
   {
     auto C = Hooke::compute_C_T4(lambda, mu);
-    std::cout << "\nevaluate stiffness mat4 output";
-    std::cout << "\nC of mat4\n" << C;
-    std::cout << "\napplied strain\n" << E;
-    std::cout << "\nDimS " << DimS << " , DimM " << DimM;
-    std::cout << "\nlambda " << lambda << " , mu " << mu;
-    std::cout << "\nstress\n" << Matrices::tensmult(C, E) << "\n";
     return std::make_tuple(Matrices::tensmult(C, E), C);
   }
 

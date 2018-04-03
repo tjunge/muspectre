@@ -35,8 +35,6 @@
 
 #include <Eigen/Dense>
 
-#include <iostream>
-
 namespace muSpectre {
 
   template <Dim_t DimS, Dim_t DimM>
@@ -179,9 +177,6 @@ namespace muSpectre {
   decltype(auto)
   MaterialLinearElastic3<DimS, DimM>::
   evaluate_stress(s_t && E, stiffness_t && C) {
-    std::cout << "\nevaluated stiffness mat3 C\n" << C << "\n";
-    std::cout << "applied strain\n" << E;
-    std::cout << "\nstress\n" << Matrices::tensmult(C, E);
     return Matrices::tensmult(C, E);
   }
 

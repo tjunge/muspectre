@@ -66,21 +66,12 @@ class MaterialLinearElastic4_Check(unittest.TestCase):
         maxiter = 100
         verbose = 1
 
-        print('\n\n doing the pyhton test for mat4!!! \n\n')
-
         solver=µ.solvers.SolverCG(self.sys, tol, maxiter, verbose)
         r = µ.solvers.newton_cg(self.sys, Del0,
                                 solver, tol, tol, verbose)
 
-        print('computed stress by mat4\n', r.stress)
-
         #compare the computed stress with the trivial by hand computed stress
         mu = (Youngs_modulus/(2*(1+Poisson_ratio)))
         stress = 2*mu*Del0
-
-        print('trivially by hand computed stress =', stress.reshape(1,-1))
-        lam = (Youngs_modulus*Poisson_ratio)/((1+Poisson_ratio)*(1-2*Poisson_ratio))
-        print('lambda ', lam, ', mu ', mu)
-        print('µSpectre computed stress=', r.stress[:,0])
 
         self.assertLess(np.linalg.norm(r.stress-stress.reshape(-1,1)), 1e-8)
