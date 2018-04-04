@@ -38,7 +38,7 @@ _factories = {'fftw': ('FFTW_2d', 'FFTW_3d', False),
               'p3dfft': ('P3DFFT_2d', 'P3DFFT_3d', True)}
 
 
-def FFT(resolutions, lengths, fft='fftw', communicator=None):
+def FFT(resolutions, fft='fftw', communicator=None):
     """
     Instantiate a muSpectre FFT class.
 
@@ -46,8 +46,6 @@ def FFT(resolutions, lengths, fft='fftw', communicator=None):
     ----------
     resolutions: list
         Grid resolutions in the Cartesian directions.
-    lengths: list
-        Physical size of the cell in the Cartesian directions.
     fft: string
         FFT engine to use. Options are 'fftw', 'fftwmpi', 'pfft' and 'p3dfft'.
         Default is 'fftw'.
@@ -61,9 +59,6 @@ def FFT(resolutions, lengths, fft='fftw', communicator=None):
     cell: object
         Return a muSpectre Cell object.
     """
-    if len(resolutions) != len(lengths):
-        raise ValueError("'resolutions' and 'lengths' must have identical "
-                         "lengths.")
     try:
         factory_name_2d, factory_name_3d, is_parallel = _factories[fft]
     except KeyError:
@@ -85,11 +80,18 @@ def FFT(resolutions, lengths, fft='fftw', communicator=None):
             raise RuntimeError('Parallel solver requested but mpi4py could'
                                ' not be imported.')
         if communicator is None:
+#<<<<<<< HEAD
+#            communicator = MPI.COMM_SELF
+#        return factory(resolutions, lengths,
+#                       MPI._handleof(communicator))
+#=======
+#            communicator = mpi4py.MPI.COMM_SELF
+#        return factory(resolutions, mpi4py.MPI._handleof(communicator))
+#>>>>>>> 6acade5140d1e3e1d35ec7b90b7edb79976d0a08
             communicator = MPI.COMM_SELF
-        return factory(resolutions, lengths,
-                       MPI._handleof(communicator))
+        return factory(resolutions, MPI._handleof(communicator))
     else:
         if communicator is not None:
             raise ValueError("FFT engine '{}' does not support parallel "
                              "execution.".format(fft))
-        return factory(resolutions, lengths)
+        return factory(resolutions)
