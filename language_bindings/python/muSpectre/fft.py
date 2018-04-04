@@ -80,14 +80,6 @@ def FFT(resolutions, fft='fftw', communicator=None):
             raise RuntimeError('Parallel solver requested but mpi4py could'
                                ' not be imported.')
         if communicator is None:
-#<<<<<<< HEAD
-#            communicator = MPI.COMM_SELF
-#        return factory(resolutions, lengths,
-#                       MPI._handleof(communicator))
-#=======
-#            communicator = mpi4py.MPI.COMM_SELF
-#        return factory(resolutions, mpi4py.MPI._handleof(communicator))
-#>>>>>>> 6acade5140d1e3e1d35ec7b90b7edb79976d0a08
             communicator = MPI.COMM_SELF
         return factory(resolutions, MPI._handleof(communicator))
     else:
