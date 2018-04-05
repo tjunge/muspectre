@@ -64,7 +64,7 @@ The unit tests typically use the `Boost unit test framework <http://www.boost.or
 C++ Coding Style and Convention
 *******************************
 
-These are heavily inspired by the `Google C++ Style Guide <https://google.github.io/styleguide/cppguide.html>`_ but are *not compatible* with it. These guidelines mostly establish a common vocabulary to write common code and do not give advice for efficient programming practices. For that, follow Scott Meyers book :ref:`Effective Modern C++ <Meyers (2014)>`. As far as possible, the guidelines given in that book are also enforces by the ``-Weffc++`` compile flag.
+These are heavily inspired by the `Google C++ Style Guide <https://google.github.io/styleguide/cppguide.html>`_ but are *not compatible* with it. These guidelines mostly establish a common vocabulary to write common code and do not give advice for efficient programming practices. For that, follow Scott Meyers book :ref:`Effective Modern C++ <Meyers (2014)>`. As far as possible, the guidelines given in that book are also enforced by the ``-Weffc++`` compile flag.
 
 The goals of this style guide are:
 
