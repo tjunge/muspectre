@@ -54,7 +54,7 @@ target_link_libraries(pyMuSpectreLib PRIVATE muSpectre)
 # Want to rename the output, so that the python module is called muSpectre
 set_target_properties(pyMuSpectreLib PROPERTIES OUTPUT_NAME _muSpectre)
 
-add_custom_target(pyMuSpectre ALL SOURCES muSpectre/__init__.py)
+add_custom_target(pyMuSpectre ALL SOURCES muSpectre/__init__.py muSpectre/fft.py)
 add_custom_command(TARGET pyMuSpectre POST_BUILD
                    COMMAND ${CMAKE_COMMAND} -E copy_directory
                        ${CMAKE_SOURCE_DIR}/language_bindings/python/muSpectre $<TARGET_FILE_DIR:pyMuSpectreLib>/muSpectre)

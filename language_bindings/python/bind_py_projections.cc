@@ -30,6 +30,12 @@
 #include "fft/projection_finite_strain_fast.hh"
 
 #include "fft/fftw_engine.hh"
+#ifdef WITH_FFTWMPI
+#include "fft/fftwmpi_engine.hh"
+#endif
+#ifdef WITH_PFFT
+#include "fft/pfft_engine.hh"
+#endif
 
 #include <pybind11/pybind11.h>
 #include <pybind11/stl.h>
@@ -73,7 +79,7 @@ public:
   }
 };
 
-template <class Proj, class Engine, Dim_t DimS, Dim_t DimM=DimS>
+template <class Proj, Dim_t DimS, Dim_t DimM=DimS>
 void add_proj_helper(py::module & mod, std::string name_start) {
   using Ccoord = Ccoord_t<DimS>;
   using Rcoord = Rcoord_t<DimS>;
@@ -86,16 +92,41 @@ void add_proj_helper(py::module & mod, std::string name_start) {
   name << name_start << '_' << DimS << 'd';
 
   py::class_<Proj>(mod, name.str().c_str())
-    .def(py::init([](Ccoord res, Rcoord lengths) {
-          auto engine = std::make_unique<Engine>(res);
-          return Proj(std::move(engine), lengths);
-        }))
+    .def(py::init([](Ccoord res, Rcoord lengths, const std::string & fft,
+                     size_t comm) {
+          if (fft == "fftw") {
+            auto engine = std::make_unique<FFTWEngine<DimS, DimM>>
+              (res, std::move(Communicator(MPI_Comm(comm))));
+            return Proj(std::move(engine), lengths);
+          }
+#ifdef WITH_FFTWMPI
+          else if (fft == "fftwmpi") {
+            auto engine = std::make_unique<FFTWMPIEngine<DimS, DimM>>
+              (res, std::move(Communicator(MPI_Comm(comm))));
+            return Proj(std::move(engine), lengths);
+          }
+#endif
+#ifdef WITH_PFFT
+          else if (fft == "pfft") {
+            auto engine = std::make_unique<PFFTEngine<DimS, DimM>>
+              (res, std::move(Communicator(MPI_Comm(comm))));
+            return Proj(std::move(engine), lengths);
+          }
+#endif
+          else {
+            throw std::runtime_error("Unknown FFT engine '"+fft+"' specified.");
+          }
+        }),
+         "resolutions"_a,
+         "lengths"_a,
+         "fft"_a="fftw",
+         "communicator"_a=size_t(MPI_COMM_SELF))
     .def("initialise", &Proj::initialise,
          "flags"_a=FFT_PlanFlags::estimate,
          "initialises the fft engine (plan the transform)")
     .def("apply_projection",
          [](Proj & proj, py::EigenDRef<Eigen::ArrayXXd> v){
-           typename Engine::GFieldCollection_t coll{};
+           typename FFTEngineBase<DimS, DimM>::GFieldCollection_t coll{};
            coll.initialise(proj.get_subdomain_resolutions(),
                            proj.get_subdomain_locations());
            Field_t & temp{make_field<Field_t>("temp_field", coll)};
@@ -112,34 +143,26 @@ void add_proj_helper(py::module & mod, std::string name_start) {
 void add_proj_dispatcher(py::module & mod) {
   add_proj_helper<
     ProjectionSmallStrain<  twoD,   twoD>,
-    FFTWEngine           <  twoD,   twoD>,
     twoD>(mod, "ProjectionSmallStrain");
   add_proj_helper<
     ProjectionSmallStrain<threeD, threeD>,
-    FFTWEngine           <threeD, threeD>,
     threeD>(mod, "ProjectionSmallStrain");
 
   add_proj_helper<
     ProjectionFiniteStrain<  twoD,   twoD>,
-    FFTWEngine            <  twoD,   twoD>,
     twoD>(mod, "ProjectionFiniteStrain");
   add_proj_helper<
     ProjectionFiniteStrain<threeD, threeD>,
-    FFTWEngine            <threeD, threeD>,
     threeD>(mod, "ProjectionFiniteStrain");
 
   add_proj_helper<
     ProjectionFiniteStrainFast<  twoD,   twoD>,
-    FFTWEngine                <  twoD,   twoD>,
     twoD>(mod, "ProjectionFiniteStrainFast");
   add_proj_helper<
     ProjectionFiniteStrainFast<threeD, threeD>,
-    FFTWEngine                <threeD, threeD>,
     threeD>(mod, "ProjectionFiniteStrainFast");
-
 }
 
 void add_projections(py::module & mod) {
   add_proj_dispatcher(mod);
-
 }

@@ -34,6 +34,9 @@ _factories = {'fftw': ('FFTW_2d', 'FFTW_3d', False),
               'pfft': ('PFFT_2d', 'PFFT_3d', True),
               'p3dfft': ('P3DFFT_2d', 'P3DFFT_3d', True)}
 
+_projections = {_muSpectre.Formulation.finite_strain: 'FiniteStrainFast',
+                _muSpectre.Formulation.small_strain: 'SmallStrain'}
+
 
 def FFT(resolutions, fft='fftw', communicator=None):
     """
@@ -71,7 +74,7 @@ def FFT(resolutions, fft='fftw', communicator=None):
         factory = _muSpectre.fft.__dict__[factory_name]
     except KeyError:
         raise KeyError("FFT engine '{}' has not been compiled into the "
-                       "muSpectre library.".format(fft))
+                       "muSpectre library.".format(factory_name))
     if is_parallel:
         if communicator is None:
             communicator = mpi4py.MPI.COMM_SELF
@@ -81,3 +84,41 @@ def FFT(resolutions, fft='fftw', communicator=None):
             raise ValueError("FFT engine '{}' does not support parallel "
                              "execution.".format(fft))
         return factory(resolutions)
+
+
+def Projection(resolutions, lengths,
+               formulation=_muSpectre.Formulation.finite_strain,
+               fft='fftw', communicator=None):
+    """
+    Instantiate a muSpectre Projection class.
+
+    Parameters
+    ----------
+    resolutions: list
+        Grid resolutions in the Cartesian directions.
+    formulation: muSpectre.Formulation
+        Determines whether to use finite or small strain formulation.
+    fft: string
+        FFT engine to use. Options are 'fftw', 'fftwmpi', 'pfft' and 'p3dfft'.
+        Default is 'fftw'.
+    communicator: mpi4py communicator
+        mpi4py communicator object passed to parallel FFT engines. Note that
+        the default 'fftw' engine does not support parallel execution.
+
+
+    Returns
+    -------
+    cell: object
+        Return a muSpectre Cell object.
+    """
+    factory_name = 'Projection{}_{}d'.format(_projections[formulation],
+                                             len(resolutions))
+    try:
+        factory = _muSpectre.fft.__dict__[factory_name]
+    except KeyError:
+        raise KeyError("Projection engine '{}' has not been compiled into the "
+                       "muSpectre library.".format(factory_name))
+    if communicator is None:
+        communicator = mpi4py.MPI.COMM_SELF
+    return factory(resolutions, lengths, fft,
+                   mpi4py.MPI._handleof(communicator))
