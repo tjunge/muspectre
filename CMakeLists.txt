@@ -154,7 +154,20 @@ endif()
 ################################################################################
 if (${MAKE_EXAMPLES})
   #compile executables
-  file( GLOB binaries "${CMAKE_SOURCE_DIR}/bin/*.cc")
+
+  set(binaries
+    ${CMAKE_SOURCE_DIR}/bin/demonstrator1.cc
+    ${CMAKE_SOURCE_DIR}/bin/demonstrator2.cc
+    ${CMAKE_SOURCE_DIR}/bin/hyper-elasticity.cc
+    ${CMAKE_SOURCE_DIR}/bin/small_case.cc)
+
+  if (${MPI_PARALLEL})
+    set (binaries
+      ${binaries}
+      ${CMAKE_SOURCE_DIR}/bin/demonstrator_mpi.cc
+      )
+  endif (${MPI_PARALLEL})
+
   foreach(binaryfile ${binaries})
     get_filename_component(binaryname  ${binaryfile} NAME_WE)
     add_executable(${binaryname} ${binaryfile})
