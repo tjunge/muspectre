@@ -68,7 +68,7 @@ namespace muSpectre {
     //! cell coordinates type
     using Ccoord = typename FFTEngine::Ccoord;
     //! spatial coordinates type
-    using Rcoord = std::array<Real, DimS>;
+    using Rcoord = Rcoord_t<DimS>;
     //! global FieldCollection
     using GFieldCollection_t = typename FFTEngine::GFieldCollection_t;
     //! local FieldCollection (for Fourier-space pixels)
