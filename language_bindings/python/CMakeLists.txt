@@ -55,7 +55,6 @@ target_link_libraries(pyMuSpectreLib PRIVATE muSpectre)
 # Want to rename the output, so that the python module is called muSpectre
 set_target_properties(pyMuSpectreLib PROPERTIES OUTPUT_NAME _muSpectre)
 
-message("PYTHON_INCLUDE_DIRS = ${PYTHON_INCLUDE_DIRS}")
 target_include_directories(pyMuSpectreLib PUBLIC ${PYTHON_INCLUDE_DIRS})
 
 add_custom_target(pyMuSpectre ALL SOURCES muSpectre/__init__.py)
