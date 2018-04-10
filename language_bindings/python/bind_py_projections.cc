@@ -127,6 +127,16 @@ void add_proj_helper(py::module & mod, std::string name_start) {
     .def("apply_projection",
          [](Proj & proj, py::EigenDRef<Eigen::ArrayXXd> v){
            typename FFTEngineBase<DimS, DimM>::GFieldCollection_t coll{};
+           Eigen::Index subdomain_size =
+             CcoordOps::get_size(proj.get_subdomain_resolutions());
+           if (v.rows() != DimS*DimM || v.cols() != subdomain_size) {
+             throw std::runtime_error("Expected input array of shape ("+
+                                      std::to_string(DimS*DimM)+", "+
+                                      std::to_string(subdomain_size)+
+                                      "), but input array has shape ("+
+                                      std::to_string(v.rows())+", "+
+                                      std::to_string(v.cols())+").");
+           }
            coll.initialise(proj.get_subdomain_resolutions(),
                            proj.get_subdomain_locations());
            Field_t & temp{make_field<Field_t>("temp_field", coll)};
