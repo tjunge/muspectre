@@ -174,3 +174,8 @@ foreach(pytest ${PY_TEST_SRCS})
     COPYONLY)
 endforeach(pytest ${PY_TEST_SRCS})
 add_test(python_binding_test python_binding_tests.py)
+
+if(MPI_FOUND)
+  add_test(python_mpi_binding_test1 ${MPIEXEC} ${MPIEXEC_PREFLAGS} ${MPIEXEC_NUMPROC_FLAG} 1 python3 python_mpi_projection_tests.py)
+  add_test(python_mpi_binding_test2 ${MPIEXEC} ${MPIEXEC_PREFLAGS} ${MPIEXEC_NUMPROC_FLAG} 2 python3 python_mpi_projection_tests.py)
+endif()
