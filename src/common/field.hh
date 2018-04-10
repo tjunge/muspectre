@@ -153,11 +153,11 @@ namespace muSpectre {
 
       //! number of pixels in the field
       virtual size_t size() const = 0;
-      
+
       //! add a pad region to the end of the field buffer; required for
       //! using this as e.g. an FFT workspace
       virtual void set_pad_size(size_t pad_size_) = 0;
-      
+
       //! pad region size
       virtual size_t get_pad_size() const {return this->pad_size;};
 
@@ -182,77 +182,80 @@ namespace muSpectre {
     private:
     };
 
+  } // internal
 
     /**
      * Dummy intermediate class to provide a run-time polymorphic
-     * typed field. Mainly for binding Python. TypedFieldBase specifies methods
+     * typed field. Mainly for binding Python. TypedField specifies methods
      * that return typed Eigen maps and vectors in addition to pointers to the
      * raw data.
      */
-    template <class FieldCollection, typename T>
-    class TypedFieldBase: public FieldBase<FieldCollection>
-    {
-    public:
-      using Parent = FieldBase<FieldCollection>; //!< base class
-      //! for type checks when mapping this field
-      using collection_t = typename Parent::collection_t;
-      using Scalar = T; //!< for type checks
-      using Base = Parent; //!< for uniformity of interface
-      //! Plain Eigen type to map
-      using EigenRep = Eigen::Array<T, Eigen::Dynamic, Eigen::Dynamic>;
-      //! map returned when iterating over field
-      using EigenMap = Eigen::Map<EigenRep>;
-      //! Plain eigen vector to map
-      using EigenVec = Eigen::Map<Eigen::VectorXd>;
-      //! vector map returned when iterating over field
-      using EigenVecConst = Eigen::Map<const Eigen::VectorXd>;
-      //! Default constructor
-      TypedFieldBase() = delete;
+  template <class FieldCollection, typename T>
+  class TypedField: public internal::FieldBase<FieldCollection>
+  {
+  public:
+    using Parent = internal::FieldBase<FieldCollection>; //!< base class
+    //! for type checks when mapping this field
+    using collection_t = typename Parent::collection_t;
+    using Scalar = T; //!< for type checks
+    using Base = Parent; //!< for uniformity of interface
+    //! Plain Eigen type to map
+    using EigenRep = Eigen::Array<T, Eigen::Dynamic, Eigen::Dynamic>;
+    //! map returned when iterating over field
+    using EigenMap = Eigen::Map<EigenRep>;
+    //! Plain eigen vector to map
+    using EigenVec = Eigen::Map<Eigen::VectorXd>;
+    //! vector map returned when iterating over field
+    using EigenVecConst = Eigen::Map<const Eigen::VectorXd>;
+    //! Default constructor
+    TypedField() = delete;
 
-      //! constructor
-      TypedFieldBase(std::string unique_name,
-                     size_t nb_components,
-                     FieldCollection& collection);
+    //! constructor
+    TypedField(std::string unique_name,
+                   size_t nb_components,
+                   FieldCollection& collection);
 
-      //! Copy constructor
-      TypedFieldBase(const TypedFieldBase &other) = delete;
+    //! Copy constructor
+    TypedField(const TypedField &other) = delete;
 
-      //! Move constructor
-      TypedFieldBase(TypedFieldBase &&other) = delete;
+    //! Move constructor
+    TypedField(TypedField &&other) = delete;
 
-      //! Destructor
-      virtual ~TypedFieldBase() = default;
+    //! Destructor
+    virtual ~TypedField() = default;
 
-      //! Copy assignment operator
-      TypedFieldBase& operator=(const TypedFieldBase &other) = delete;
+    //! Copy assignment operator
+    TypedField& operator=(const TypedField &other) = delete;
 
-      //! Move assignment operator
-      TypedFieldBase& operator=(TypedFieldBase &&other) = delete;
+    //! Move assignment operator
+    TypedField& operator=(TypedField &&other) = delete;
 
-      //! return type_id of stored type
-      virtual const std::type_info & get_stored_typeid() const override final;
+    //! return type_id of stored type
+    virtual const std::type_info & get_stored_typeid() const override final;
 
-      virtual size_t size() const override = 0;
+    virtual size_t size() const override = 0;
 
-      //! initialise field to zero (do more complicated initialisations through
-      //! fully typed maps)
-      virtual void set_zero() override = 0;
+    //! initialise field to zero (do more complicated initialisations through
+    //! fully typed maps)
+    virtual void set_zero() override = 0;
 
-      //! raw pointer to content (e.g., for Eigen maps)
-      virtual T* data() = 0;
-      //! raw pointer to content (e.g., for Eigen maps)
-      virtual const T* data() const = 0;
+    //! raw pointer to content (e.g., for Eigen maps)
+    virtual T* data() = 0;
+    //! raw pointer to content (e.g., for Eigen maps)
+    virtual const T* data() const = 0;
 
-      //! return a map representing the entire field as a single `Eigen::Array`
-      EigenMap eigen();
-      //! return a map representing the entire field as a single Eigen vector
-      EigenVec eigenvec();
-      //! return a map representing the entire field as a single Eigen vector
-      EigenVecConst eigenvec() const;
+    //! return a map representing the entire field as a single `Eigen::Array`
+    EigenMap eigen();
+    //! return a map representing the entire field as a single Eigen vector
+    EigenVec eigenvec();
+    //! return a map representing the entire field as a single Eigen vector
+    EigenVecConst eigenvec() const;
 
-    protected:
-    private:
-    };
+  protected:
+  private:
+  };
+
+  namespace internal {
 
     /* ---------------------------------------------------------------------- */
     //! declaraton for friending
@@ -270,14 +273,14 @@ namespace muSpectre {
      */
     template <class FieldCollection, typename T, Dim_t NbComponents,
               bool ArrayStore=false>
-    class TypedSizedFieldBase: public TypedFieldBase<FieldCollection, T>
+    class TypedSizedFieldBase: public TypedField<FieldCollection, T>
     {
       friend class FieldMap<FieldCollection, T, NbComponents, true>;
       friend class FieldMap<FieldCollection, T, NbComponents, false>;
     public:
       //! for compatibility checks
       constexpr static auto nb_components{NbComponents};
-      using Parent = TypedFieldBase<FieldCollection, T>; //!< base class
+      using Parent = TypedField<FieldCollection, T>; //!< base class
       using Scalar = T; //!< for type checking
       using Base = typename Parent::Base; //!< root base class
 
@@ -627,47 +630,47 @@ protected:
     get_nb_components() const {
       return this->nb_components;
     }
+  } // internal
 
     /* ---------------------------------------------------------------------- */
-    template <class FieldCollection, typename T>
-    TypedFieldBase<FieldCollection, T>::
-    TypedFieldBase(std::string unique_name, size_t nb_components,
-                   FieldCollection & collection)
-      :Parent(unique_name, nb_components, collection)
-    {}
+  template <class FieldCollection, typename T>
+  TypedField<FieldCollection, T>::
+  TypedField(std::string unique_name, size_t nb_components,
+                 FieldCollection & collection)
+    :Parent(unique_name, nb_components, collection)
+  {}
 
-    /* ---------------------------------------------------------------------- */
-    //! return type_id of stored type
-    template <class FieldCollection, typename T>
-    const std::type_info & TypedFieldBase<FieldCollection, T>::
-    get_stored_typeid() const {
-      return typeid(T);
-    }
+  /* ---------------------------------------------------------------------- */
+  //! return type_id of stored type
+  template <class FieldCollection, typename T>
+  const std::type_info & TypedField<FieldCollection, T>::
+  get_stored_typeid() const {
+    return typeid(T);
+  }
 
-    /* ---------------------------------------------------------------------- */
-    template <class FieldCollection, typename T>
-    typename TypedFieldBase<FieldCollection, T>::EigenMap
-    TypedFieldBase<FieldCollection, T>::
-    eigen() {
-      return EigenMap(this->data(), this->get_nb_components(), this->size());
-    }
+  /* ---------------------------------------------------------------------- */
+  template <class FieldCollection, typename T>
+  typename TypedField<FieldCollection, T>::EigenMap
+  TypedField<FieldCollection, T>::
+  eigen() {
+    return EigenMap(this->data(), this->get_nb_components(), this->size());
+  }
 
-    /* ---------------------------------------------------------------------- */
-    template <class FieldCollection, typename T>
-    typename TypedFieldBase<FieldCollection, T>::EigenVec
-    TypedFieldBase<FieldCollection, T>::
-    eigenvec() {
-      return EigenVec(this->data(), this->get_nb_components() * this->size());
-    }
+  /* ---------------------------------------------------------------------- */
+  template <class FieldCollection, typename T>
+  typename TypedField<FieldCollection, T>::EigenVec
+  TypedField<FieldCollection, T>::
+  eigenvec() {
+    return EigenVec(this->data(), this->get_nb_components() * this->size());
+  }
 
-    /* ---------------------------------------------------------------------- */
-    template <class FieldCollection, typename T>
-    typename TypedFieldBase<FieldCollection, T>::EigenVecConst
-    TypedFieldBase<FieldCollection, T>::
-    eigenvec() const{
-      return EigenVecConst(this->data(), this->get_nb_components() * this->size());
-    }
+  /* ---------------------------------------------------------------------- */
+  template <class FieldCollection, typename T>
+  auto TypedField<FieldCollection, T>:: eigenvec() const -> EigenVecConst{
+    return EigenVecConst(this->data(), this->get_nb_components() * this->size());
+  }
 
+  namespace internal {
 
     /* ---------------------------------------------------------------------- */
     template <class FieldCollection, typename T, Dim_t NbComponents, bool ArrayStore>
