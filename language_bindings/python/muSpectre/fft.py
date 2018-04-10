@@ -79,6 +79,9 @@ def FFT(resolutions, fft='fftw', communicator=None):
         raise KeyError("FFT engine '{}' has not been compiled into the "
                        "muSpectre library.".format(factory_name))
     if is_parallel:
+        if MPI is None:
+            raise RuntimeError('Parallel solver requested but mpi4py could'
+                               ' not be imported.')
         if communicator is None:
             communicator = MPI.COMM_SELF
         return factory(resolutions, MPI._handleof(communicator))
