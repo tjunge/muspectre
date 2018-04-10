@@ -25,7 +25,10 @@
 # Boston, MA 02111-1307, USA.
 #
 
-import mpi4py
+try:
+    from mpi4py import MPI
+except ImportError:
+    MPI = None
 
 import _muSpectre
 
@@ -77,8 +80,8 @@ def FFT(resolutions, fft='fftw', communicator=None):
                        "muSpectre library.".format(factory_name))
     if is_parallel:
         if communicator is None:
-            communicator = mpi4py.MPI.COMM_SELF
-        return factory(resolutions, mpi4py.MPI._handleof(communicator))
+            communicator = MPI.COMM_SELF
+        return factory(resolutions, MPI._handleof(communicator))
     else:
         if communicator is not None:
             raise ValueError("FFT engine '{}' does not support parallel "
@@ -119,6 +122,6 @@ def Projection(resolutions, lengths,
         raise KeyError("Projection engine '{}' has not been compiled into the "
                        "muSpectre library.".format(factory_name))
     if communicator is None:
-        communicator = mpi4py.MPI.COMM_SELF
+        communicator = MPI.COMM_SELF
     return factory(resolutions, lengths, fft,
-                   mpi4py.MPI._handleof(communicator))
+                   MPI._handleof(communicator))
