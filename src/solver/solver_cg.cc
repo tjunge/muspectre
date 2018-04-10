@@ -67,7 +67,7 @@ namespace muSpectre {
     // initialisation of algo
     r = this->cell.directional_stiffness_with_copy(x);
 
-    r -= typename Field_t::ConstEigenMap(rhs.data(), r.rows(), r.cols());
+    r -= typename Field_t::ConstEigenMap_t(rhs.data(), r.rows(), r.cols());
     p = -r;
 
     this->converged = false;
