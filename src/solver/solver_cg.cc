@@ -62,7 +62,7 @@ namespace muSpectre {
     auto r = this->r_k.eigen();
     auto p = this->p_k.eigen();
     auto Ap = this->Ap_k.eigen();
-    typename Field_t::EigenMap x(x_0.data(), r.rows(), r.cols());
+    typename Field_t::EigenMap_t x(x_0.data(), r.rows(), r.cols());
 
     // initialisation of algo
     r = this->cell.directional_stiffness_with_copy(x);
