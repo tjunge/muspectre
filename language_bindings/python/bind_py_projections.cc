@@ -137,7 +137,11 @@ void add_proj_helper(py::module & mod, std::string name_start) {
     .def("get_operator", &Proj::get_operator)
     .def("get_formulation", &Proj::get_formulation,
          "return a Formulation enum indicating whether the projection is small"
-         " or finite strain");
+         " or finite strain")
+    .def("get_subdomain_resolutions", &Proj::get_subdomain_resolutions)
+    .def("get_subdomain_locations", &Proj::get_subdomain_locations)
+    .def("get_domain_resolutions", &Proj::get_domain_resolutions)
+    .def("get_domain_lengths", &Proj::get_domain_resolutions);
 }
 
 void add_proj_dispatcher(py::module & mod) {
