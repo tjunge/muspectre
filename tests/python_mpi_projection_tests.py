@@ -124,5 +124,19 @@ finite_fast_fftwmpi_2 = build_test_classes(Formulation.finite_strain,
                                            get_finite_goose(2),
                                            "fftwmpi")
 
+small_default_pfft_3 = build_test_classes(Formulation.small_strain,
+                                             get_small_goose(3),
+                                             "pfft")
+small_default_pfft_2 = build_test_classes(Formulation.small_strain,
+                                             get_small_goose(2),
+                                             "pfft")
+
+finite_fast_pfft_3 = build_test_classes(Formulation.finite_strain,
+                                           get_finite_goose(3),
+                                           "pfft")
+finite_fast_pfft_2 = build_test_classes(Formulation.finite_strain,
+                                           get_finite_goose(2),
+                                           "pfft")
+
 if __name__ == "__main__":
     unittest.main()
