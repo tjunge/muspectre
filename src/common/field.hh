@@ -46,8 +46,6 @@
 
 namespace muSpectre {
 
-  
-
   namespace internal {
 
     /* ---------------------------------------------------------------------- */
@@ -446,6 +444,9 @@ protected:
     template <class FieldCollection, typename T, Dim_t NbComponents>
     void TypedSizedFieldBase<FieldCollection, T, NbComponents>::
     push_back(const Stored_t & value) {
+      static_assert (not FieldCollection::Global,
+                     "You can only push_back data into local field "
+                     "collections");
       for (Dim_t i = 0; i < NbComponents; ++i) {
         this->values.push_back(value(i));
       }

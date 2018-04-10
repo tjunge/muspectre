@@ -61,8 +61,12 @@ namespace muSpectre {
     //! vector map returned when iterating over field
     using EigenVecConst_t = Eigen::Map<const Eigen::VectorXd>;
 
-    //! type stored if ArrayStore is true
-    using Stored_t = Eigen::Array<T, Eigen::Dynamic, 1>;
+    /**
+     * type stored (unfortunately, we can't statically size the second
+     * dimension due to an Eigen bug,i.e., creating a row vector
+     * reference to a column vector does not raise an error :(
+     */
+    using Stored_t = Eigen::Array<T, Eigen::Dynamic, Eigen::Dynamic>;
     //! storage container
     using Storage_t = std::vector<T,Eigen::aligned_allocator<T>>;
 
@@ -216,13 +220,21 @@ namespace muSpectre {
   template <class FieldCollection, typename T>
   void TypedField<FieldCollection, T>::
   push_back(const Stored_t & value) {
-    if (value.ncol() != this->get_nb_components()) {
+    static_assert (not FieldCollection::Global,
+                   "You can only push_back data into local field collections");
+    if (value.cols() != 1) {
       std::stringstream err{};
-      err << "Expected a column vector of length " << this->get_nb_components()
-          << ", but received one of length " << value.ncol() <<".";
+      err << "Expected a column vector, but received and array with "
+          << value.cols() <<" colums.";
       throw FieldError(err.str());
     }
-    for (Dim_t i = 0; i < this->get_nb_components(); ++i) {
+    if (value.rows() != static_cast<Int>(this->get_nb_components())) {
+      std::stringstream err{};
+      err << "Expected a column vector of length " << this->get_nb_components()
+          << ", but received one of length " << value.rows() <<".";
+      throw FieldError(err.str());
+    }
+    for (size_t i = 0; i < this->get_nb_components(); ++i) {
       this->values.push_back(value(i));
     }
   }
