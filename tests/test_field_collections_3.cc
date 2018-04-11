@@ -26,7 +26,7 @@
  * Boston, MA 02111-1307, USA.
  */
 #include <Eigen/Dense>
-#include "test_field_collections_header.hh"
+#include "test_field_collections.hh"
 #include "tests/test_goodies.hh"
 #include "common/tensor_algebra.hh"
 
