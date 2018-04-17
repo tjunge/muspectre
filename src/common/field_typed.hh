@@ -121,6 +121,8 @@ namespace muSpectre {
     EigenVec_t eigenvec();
     //! return a map representing the entire field as a single Eigen vector
     EigenVecConst_t eigenvec() const;
+    //! return a map representing the entire field as a single Eigen vector
+    EigenVecConst_t const_eigenvec() const;
 
   protected:
     //! returns a raw pointer to the entry, for `Eigen::Map`
@@ -172,6 +174,12 @@ namespace muSpectre {
   /* ---------------------------------------------------------------------- */
   template <class FieldCollection, typename T>
   auto TypedField<FieldCollection, T>:: eigenvec() const -> EigenVecConst_t {
+    return EigenVecConst_t(this->data(), this->get_nb_components() * this->size());
+  }
+
+  /* ---------------------------------------------------------------------- */
+  template <class FieldCollection, typename T>
+  auto TypedField<FieldCollection, T>:: const_eigenvec() const -> EigenVecConst_t {
     return EigenVecConst_t(this->data(), this->get_nb_components() * this->size());
   }
 

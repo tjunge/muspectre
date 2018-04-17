@@ -59,6 +59,81 @@ namespace muSpectre {
     return *this->materials.back();
   }
 
+
+  /* ---------------------------------------------------------------------- */
+  template <Dim_t DimS, Dim_t DimM>
+  auto CellBase<DimS, DimM>::get_strain_vector() -> Vector_ref {
+    return this->get_strain().eigenvec();
+  }
+
+  /* ---------------------------------------------------------------------- */
+  template <Dim_t DimS, Dim_t DimM>
+  auto CellBase<DimS, DimM>::get_stress_vector() const -> ConstVector_ref {
+    return this->get_stress().eigenvec();
+  }
+
+  /* ---------------------------------------------------------------------- */
+  template <Dim_t DimS, Dim_t DimM>
+  auto CellBase<DimS, DimM>::evaluate_stress() -> ConstVector_ref {
+    if (not this->initialised) {
+      this->initialise();
+    }
+    for (auto & mat: this->materials) {
+      mat->compute_stresses(this->F, this->P, this->form);
+    }
+
+    return this->P.const_eigenvec();
+  }
+
+  /* ---------------------------------------------------------------------- */
+  template <Dim_t DimS, Dim_t DimM>
+  auto CellBase<DimS, DimM>::
+  evaluate_stress_tangent() -> std::array<ConstVector_ref, 2> {
+    if (not this->initialised) {
+      this->initialise();
+    }
+
+    constexpr bool create_tangent{true};
+    this->get_tangent(create_tangent);
+
+    for (auto & mat: this->materials) {
+      mat->compute_stresses_tangent(this->F, this->P, this->K.value(),
+                                    this->form);
+    }
+    const TangentField_t & k = this->K.value();
+    return std::array<ConstVector_ref, 2>{
+      this->P.const_eigenvec(), k.const_eigenvec()};
+
+  }
+
+  /* ---------------------------------------------------------------------- */
+  template <Dim_t DimS, Dim_t DimM>
+  auto CellBase<DimS, DimM>::
+  evaluate_projected_directional_stiffness
+  (const Eigen::Ref<const Vector_t>
+   delF) -> Vector_ref {
+    if (!this->K) {
+      throw std::runtime_error
+        ("currently only implemented for cases where a stiffness matrix "
+         "exists");
+    }
+
+    if (delF.size() != this->nb_dof()) {
+      std::stringstream err{};
+      err << "input should be of size ndof = ¶(" << this->subdomain_resolutions
+          << ") × " << DimS << "² = "<< this->nb_dof() << " but I got "
+          << delF.size();
+      throw std::runtime_error(err.str());
+    }
+
+    const std::string out_name{"temp output for directional stiffness"};
+    auto & out_tempref = this->get_managed_field(out_name);
+    throw std::runtime_error("calculation not yet implemented");
+
+    return Vector_ref(out_tempref.data(), this->nb_dof());
+
+  }
+
   /* ---------------------------------------------------------------------- */
   template <Dim_t DimS, Dim_t DimM>
   typename CellBase<DimS, DimM>::FullResponse_t
@@ -98,11 +173,11 @@ namespace muSpectre {
 
   /* ---------------------------------------------------------------------- */
   template <Dim_t DimS, Dim_t DimM>
-  typename CellBase<DimS, DimM>::SolvVectorOut
-  CellBase<DimS, DimM>::directional_stiffness_vec(const SolvVectorIn &delF) {
+  typename CellBase<DimS, DimM>::Vector_ref
+  CellBase<DimS, DimM>::directional_stiffness_vec(const Eigen::Ref<const Vector_t> &delF) {
     if (!this->K) {
       throw std::runtime_error
-        ("corrently only implemented for cases where a stiffness matrix "
+        ("currently only implemented for cases where a stiffness matrix "
          "exists");
     }
     if (delF.size() != this->nb_dof()) {
@@ -117,10 +192,10 @@ namespace muSpectre {
 
     auto & out_tempref = this->get_managed_field(out_name);
     auto & in_tempref = this->get_managed_field(in_name);
-    SolvVectorOut(in_tempref.data(), this->nb_dof()) = delF;
+    Vector_ref(in_tempref.data(), this->nb_dof()) = delF;
 
     this->directional_stiffness(this->K.value(), in_tempref, out_tempref);
-    return SolvVectorOut(out_tempref.data(), this->nb_dof());
+    return Vector_ref(out_tempref.data(), this->nb_dof());
 
   }
 
@@ -132,7 +207,7 @@ namespace muSpectre {
     (Eigen::Ref<Eigen::ArrayXXd> delF) {
     if (!this->K) {
       throw std::runtime_error
-        ("corrently only implemented for cases where a stiffness matrix "
+        ("currently only implemented for cases where a stiffness matrix "
          "exists");
     }
     const std::string out_name{"temp output for directional stiffness"};
