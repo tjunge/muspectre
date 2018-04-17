@@ -48,13 +48,25 @@ set (PY_BINDING_SRCS
   ${CMAKE_CURRENT_SOURCE_DIR}/bind_py_projections.cc
   )
 
+if (${USE_FFTWMPI})
+  add_definitions(-DWITH_FFTWMPI)
+endif(${USE_FFTWMPI})
+
+if (${USE_PFFT})
+  add_definitions(-DWITH_PFFT)
+endif(${USE_PFFT})
+
+find_package(PythonLibsNew ${MUSPECTRE_PYTHON_MAJOR_VERSION} MODULE REQUIRED)
+
 
 pybind11_add_module(pyMuSpectreLib ${PY_BINDING_SRCS})
 target_link_libraries(pyMuSpectreLib PRIVATE muSpectre)
 # Want to rename the output, so that the python module is called muSpectre
 set_target_properties(pyMuSpectreLib PROPERTIES OUTPUT_NAME _muSpectre)
 
-add_custom_target(pyMuSpectre ALL SOURCES muSpectre/__init__.py)
+target_include_directories(pyMuSpectreLib PUBLIC ${PYTHON_INCLUDE_DIRS})
+
+add_custom_target(pyMuSpectre ALL SOURCES muSpectre/__init__.py muSpectre/fft.py)
 add_custom_command(TARGET pyMuSpectre POST_BUILD
                    COMMAND ${CMAKE_COMMAND} -E copy_directory
                        ${CMAKE_SOURCE_DIR}/language_bindings/python/muSpectre $<TARGET_FILE_DIR:pyMuSpectreLib>/muSpectre)

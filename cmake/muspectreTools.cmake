@@ -31,7 +31,7 @@
 µSpectreTools
 -------------
 
-This module provide some helper fuunctions for µSpectre
+This module provide some helper functions for µSpectre
 
 ::
 
@@ -111,7 +111,7 @@ function(download_external_project project_name)
     set(_src_dir ${_dep_args_THIRD_PARTY_SRC_DIR}/${project_name})
   endif()
 
-  if(EXISTS ${_src_dir} AND _dep_args_NO_UPDATE)
+  if(EXISTS ${_src_dir}/.DOWNLOAD_SUCCESS AND _dep_args_NO_UPDATE)
     return()
   endif()
 
@@ -157,6 +157,7 @@ ExternalProject_Add(${project_name}
       " ${_working_dir}/build-error.log for more details")
   endif()
 
+  file(WRITE ${_src_dir}/.DOWNLOAD_SUCCESS "")
 endfunction()
 
 # ------------------------------------------------------------------------------
@@ -170,7 +171,7 @@ function(mark_as_advanced_prefix prefix)
 endfunction()
 
 # ------------------------------------------------------------------------------
-macro(add_external_package package)
+function(add_external_package package)
   include(CMakeParseArguments)
 
   set(_cmake_includes ${PROJECT_SOURCE_DIR}/cmake)
@@ -201,11 +202,55 @@ macro(add_external_package package)
 
   if(NOT _aep_args_IGNORE_SYSTEM)
     find_package(${package} ${_${package}_version} ${_required} ${_aep_UNPARSED_ARGUMENTS} QUIET)
-  endif()
-
-  if(NOT ${${package}_FOUND})
-    if(EXISTS ${_cmake_includes}/${package}.cmake)
-      include(${_cmake_includes}/${package}.cmake)
+    if(${package}_FOUND AND NOT ${package}_FOUND_EXTERNAL)
+      return()
     endif()
   endif()
-endmacro()
+
+
+
+  if(EXISTS ${_cmake_includes}/${package}.cmake)
+    include(${_cmake_includes}/${package}.cmake)
+  endif()
+endfunction()
+
+
+function(muSpectre_add_test test_name)
+  include(CMakeParseArguments)
+
+  set(_mat_flags
+    )
+  set(_mat_one_variables
+    TYPE
+    MPI_NB_PROCS
+    )
+  set(_mat_multi_variables)
+
+  cmake_parse_arguments(_mat_args
+    "${_mat_flags}"
+    "${_mat_one_variables}"
+    "${_mat_multi_variables}"
+    ${ARGN}
+    )
+
+  if ("${_mat_args_TYPE}" STREQUAL "BOOST")
+  elseif("${_mat_args_TYPE}" STREQUAL "PYTHON")
+  else ()
+    message (SEND_ERROR "Can only handle types 'BOOST' and 'PYTHON'")
+  endif ("${_mat_args_TYPE}" STREQUAL "BOOST")
+
+  set(_exe ${_mat_args_UNPARSED_ARGUMENTS})
+  if (${RUNNING_IN_CI})
+    if ("${_mat_args_TYPE}" STREQUAL "BOOST")
+      LIST(APPEND _exe "--logger=JUNIT,all,test_results_${test_name}.xml")
+    elseif("${_mat_args_TYPE}" STREQUAL "PYTHON")
+      set(_exe ${PYTHON_EXECUTABLE} -m pytest --junitxml test_results_${test_name}.xml ${_exe})
+    endif ("${_mat_args_TYPE}" STREQUAL "BOOST")
+  endif (${RUNNING_IN_CI})
+
+  if(${_mat_args_MPI_NB_PROCS})
+    set(_exe ${MPIEXEC_EXECUTABLE} ${MPIEXEC_PREFLAGS} ${MPIEXEC_NUMPROC_FLAG} ${_mat_args_MPI_NB_PROCS} ${_exe})
+  endif(${_mat_args_MPI_NB_PROCS})
+
+  add_test(${test_name} ${_exe})
+endfunction()

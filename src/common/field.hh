@@ -93,7 +93,13 @@ namespace muSpectre {
       virtual ~TypedSizedFieldBase() = default;
 
       //! add a new value at the end of the field
-      inline void push_back(const Stored_t & value);
+      template <bool componentStore = !ArrayStore>
+      inline std::enable_if_t<componentStore> push_back(const StoredType & value);
+
+      //! add a new scalar value at the end of the field
+      template <bool scalar_store = NbComponents==1>
+      inline std::enable_if_t<scalar_store>
+      push_back(const T & value);
 
       /**
        * returns an upcasted reference to a field, or throws an
@@ -450,6 +456,16 @@ protected:
       for (Dim_t i = 0; i < NbComponents; ++i) {
         this->values.push_back(value(i));
       }
+    }
+
+    /* ---------------------------------------------------------------------- */
+    template <class FieldCollection, typename T, Dim_t NbComponents, bool ArrayStore>
+    template <bool scalar_store>
+    std::enable_if_t<scalar_store>
+    TypedSizedFieldBase<FieldCollection, T, NbComponents, ArrayStore>::
+    push_back(const T & value) {
+      static_assert(scalar_store, "SFINAE");
+      this->values.push_back(value);
     }
 
   }  // internal
