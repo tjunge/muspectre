@@ -110,8 +110,7 @@ namespace muSpectre {
   template <Dim_t DimS, Dim_t DimM>
   auto CellBase<DimS, DimM>::
   evaluate_projected_directional_stiffness
-  (const Eigen::Ref<const Vector_t>
-   delF) -> Vector_ref {
+  (Eigen::Ref<Vector_t> delF) -> Vector_ref {
     if (!this->K) {
       throw std::runtime_error
         ("currently only implemented for cases where a stiffness matrix "
@@ -126,11 +125,23 @@ namespace muSpectre {
       throw std::runtime_error(err.str());
     }
 
-    const std::string out_name{"temp output for directional stiffness"};
-    auto & out_tempref = this->get_managed_field(out_name);
-    throw std::runtime_error("calculation not yet implemented");
+    const std::string out_name{"δP; temp output for directional stiffness"};
+    auto & delP = this->get_managed_field(out_name);
 
-    return Vector_ref(out_tempref.data(), this->nb_dof());
+    auto Kmap{this->K.value().get().get_map()};
+    auto delPmap{delP.get_map()};
+    //Eigen::Map<Eigen::VectorXd> delFvec(delF.data(), delF.size());
+    RawFieldMap<Eigen::Map<Eigen::Matrix<Real, DimM, DimM>>> Fmap{delF};
+
+    for (auto && tup:
+           akantu::zip(Kmap, Fmap, delPmap)) {
+      auto & k = std::get<0>(tup);
+      auto & df = std::get<1>(tup);
+      auto & dp = std::get<2>(tup);
+      dp = Matrices::tensmult(k, df);
+    }
+
+    return Vector_ref(this->project(delP).data(), this->nb_dof());
 
   }
 

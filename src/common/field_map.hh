@@ -66,6 +66,19 @@ namespace muSpectre {
       }
     }
 
+    //! constructor from a *contiguous* array
+    RawFieldMap(Eigen::Ref<Eigen::VectorXd> vec):
+      data{vec.data()}, nb_pixels{vec.size()/NbComponents}
+    {
+      if (vec.size() % NbComponents != 0) {
+        std::stringstream err{};
+        err << "The vector size of " << vec.size()
+            << " is not an integer multiple of the size of value_type, which "
+            << "is " << NbComponents << ".";
+        throw std::runtime_error(err.str());
+      }
+    }
+
     //! Copy constructor
     RawFieldMap(const RawFieldMap &other) = delete;
 

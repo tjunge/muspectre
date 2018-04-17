@@ -130,7 +130,7 @@ namespace muSpectre {
      * the copy is only made once)
      */
     virtual Vector_ref evaluate_projected_directional_stiffness
-      (const Eigen::Ref<const Vector_t> delF) = 0;
+      (Eigen::Ref<Vector_t> delF) = 0;
 
 
   protected:
@@ -248,7 +248,7 @@ namespace muSpectre {
      * the copy is only made once)
      */
     virtual Vector_ref evaluate_projected_directional_stiffness
-      (const Eigen::Ref<const Vector_t> delF) override;
+      (Eigen::Ref<Vector_t> delF) override;
 
 
     /**
