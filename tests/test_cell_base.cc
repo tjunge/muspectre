@@ -189,6 +189,34 @@ namespace muSpectre {
     fix::evaluate_stress_tangent(F);
   }
 
+  BOOST_FIXTURE_TEST_CASE_TEMPLATE(evaluation_test_new_interface, fix, fixlist, fix) {
+    constexpr Dim_t dim{fix::sdim};
+    using Mat_t = MaterialLinearElastic1<dim, dim>;
+    auto Material_hard = std::make_unique<Mat_t>("hard", 210e9, .33);
+    auto Material_soft = std::make_unique<Mat_t>("soft",  70e9, .3);
+
+    for (auto && cnt_pixel: akantu::enumerate(*this)) {
+      auto counter = std::get<0>(cnt_pixel);
+      auto && pixel = std::get<1>(cnt_pixel);
+      if (counter < 5) {
+        Material_hard->add_pixel(pixel);
+      } else {
+        Material_soft->add_pixel(pixel);
+      }
+    }
+
+    fix::add_material(std::move(Material_hard));
+    fix::add_material(std::move(Material_soft));
+
+    auto F_vec = fix::get_strain_vector();
+
+    F_vec.setZero();
+
+    fix::initialise_materials();
+    fix::evaluate_stress_tangent();
+
+  }
+
   BOOST_AUTO_TEST_SUITE_END();
 
 }  // muSpectre
