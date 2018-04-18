@@ -228,15 +228,28 @@ namespace muSpectre {
     //delEps0(0, 1) = delEps0(1, 0) = eps0;
     delEps0(0, 0) = eps0;
 
-    constexpr Real cg_tol{1e-8}, newton_tol{1e-5}, equil_tol{1e-10};
+    constexpr Real cg_tol{1e-8};
     constexpr Uint maxiter{dim*10};
     constexpr Dim_t verbose{0};
 
     SolverCGEigen<dim> cg{sys, cg_tol, maxiter, bool(verbose)};
-    auto result = de_geus(sys, delEps0, cg, newton_tol,
-                          equil_tol, verbose);
+    auto F = sys.get_strain_vector();
+    F.setZero();
+    sys.evaluate_stress_tangent();
+    Eigen::VectorXd DelF(sys.nb_dof());
+    using RMap_t = RawFieldMap<Eigen::Map<Grad_t<dim>>>;
+    for (auto tmp: RMap_t(DelF)) {
+      tmp = delEps0;
+    }
+    Eigen::VectorXd rhs = -sys.evaluate_projected_directional_stiffness(DelF);
+    F += DelF;
+    DelF.setZero();
+    cg.initialise();
+    DelF = cg.solve(rhs, DelF);
+    F += DelF;
+
     if (verbose) {
-      std::cout << "result:" << std::endl << result.grad << std::endl;
+      std::cout << "result:" << std::endl << F << std::endl;
       std::cout << "mean strain = " << std::endl
                 << sys.get_strain().get_map().mean() << std::endl;
     }
@@ -274,12 +287,22 @@ namespace muSpectre {
       }
     }
 
-    delEps0 = Grad_t<dim>::Zero();
+    delEps0.setZero();
     delEps0(0, 1) = delEps0(1, 0) = eps0;
 
     SolverCG<dim> cg2{sys, cg_tol, maxiter, bool(verbose)};
-    result = newton_cg(sys, delEps0, cg2, newton_tol,
-                       equil_tol, verbose);
+    F.setZero();
+    sys.evaluate_stress_tangent();
+    for (auto tmp: RMap_t(DelF)) {
+      tmp = delEps0;
+    }
+    rhs = -sys.evaluate_projected_directional_stiffness(DelF);
+    F += DelF;
+    DelF.setZero();
+    cg2.initialise();
+    DelF = cg2.solve(rhs, DelF);
+    F += DelF;
+
     Eps_hard << 0, eps_hard, eps_hard, 0;
     Eps_soft << 0, eps_soft, eps_soft, 0;
 
