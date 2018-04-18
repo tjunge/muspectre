@@ -68,6 +68,20 @@ namespace muSpectre {
 
   }
 
+  BOOST_AUTO_TEST_CASE(Const_correctness_test) {
+    Eigen::VectorXd vec1(12);
+    vec1.setRandom();
+
+    RawFieldMap<Eigen::Map<Eigen::Vector3d>> map1{vec1};
+    static_assert(not map1.IsConst, "should not have been const");
+    RawFieldMap<Eigen::Map<const Eigen::Vector3d>> cmap1{vec1};
+    static_assert(cmap1.IsConst, "should have been const");
+
+    const Eigen::VectorXd vec2{vec1};
+
+    RawFieldMap<Eigen::Map<const Eigen::Vector3d>> cmap2{vec2};
+  }
+
 
   BOOST_AUTO_TEST_SUITE_END();
 

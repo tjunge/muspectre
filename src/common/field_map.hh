@@ -32,6 +32,7 @@
 
 #include <sstream>
 #include <stdexcept>
+#include <type_traits>
 
 #ifndef FIELD_MAP_H
 #define FIELD_MAP_H
@@ -48,13 +49,28 @@ namespace muSpectre {
   class RawFieldMap
   {
   public:
+    /**
+     * determining the constness of the mapped array required in order
+     * to formulate the constructors const-correctly
+     */
+    constexpr static bool IsConst{
+      std::is_const<
+        std::remove_pointer_t<typename EigenMap::PointerArgType>>::value};
     // short-hand for the basic scalar type
     using T = typename EigenMap::Scalar;
+    // raw pointer type to store
+    using T_ptr = std::conditional_t<IsConst,
+                                     const T*,
+                                     T*>;
+    // input array (~field) type to be mapped
+    using FieldVec_t = std::conditional_t<IsConst,
+                                          const Eigen::VectorXd,
+                                          Eigen::VectorXd>;
     //! Default constructor
     RawFieldMap() = delete;
 
     //! constructor from a *contiguous* array
-    RawFieldMap(Eigen::Map<Eigen::VectorXd> vec):
+    RawFieldMap(Eigen::Map<FieldVec_t> vec):
       data{vec.data()}, nb_pixels{vec.size()/NbComponents}
     {
       if (vec.size() % NbComponents != 0) {
@@ -67,7 +83,7 @@ namespace muSpectre {
     }
 
     //! constructor from a *contiguous* array
-    RawFieldMap(Eigen::Ref<Eigen::VectorXd> vec):
+    RawFieldMap(Eigen::Ref<FieldVec_t> vec):
       data{vec.data()}, nb_pixels{vec.size()/NbComponents}
     {
       if (vec.size() % NbComponents != 0) {
@@ -109,7 +125,7 @@ namespace muSpectre {
     //! statically known size of the mapped type
     constexpr static size_t NbComponents{EigenMap::SizeAtCompileTime};
     //! raw data pointer (ugly, I know)
-    T * data;
+    T_ptr data;
     //! number of EigenMaps stored within the array
     size_t nb_pixels;
   private:
@@ -174,9 +190,10 @@ namespace muSpectre {
   protected:
 
     //! protected constructor
-    iterator (Parent::T * raw_map, size_t start): raw_map{raw_map}, index{start} {}
+    iterator (Parent::T_ptr raw_map, size_t start):
+      raw_map{raw_map}, index{start} {}
     //! raw data
-    Parent::T * raw_map;
+    Parent::T_ptr raw_map;
     //! currently pointed-to element
     size_t index;
   private:

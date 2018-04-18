@@ -437,7 +437,8 @@ namespace Eigen {
         // This method should implement "dst += alpha * lhs * rhs" inplace,
         // however, for iterative solvers, alpha is always equal to 1, so let's not bother about it.
         // Here we could simply call dst.noalias() += lhs.my_matrix() * rhs,
-        dst.noalias() += const_cast<CellAdaptor&>(lhs).cell.directional_stiffness_vec(rhs);
+        dst.noalias() += const_cast<CellAdaptor&>(lhs).cell.
+          directional_stiffness_vec(rhs);
       }
     };
   }
