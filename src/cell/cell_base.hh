@@ -94,6 +94,9 @@ namespace muSpectre {
     //! for handling double initialisations right
     bool is_initialised() const {return this->initialised;}
 
+    //! returns the number of degrees of freedom in the cell
+    virtual Dim_t nb_dof() const = 0;
+
     //! return the communicator object
     virtual const Communicator & get_communicator() const = 0;
 
@@ -130,7 +133,7 @@ namespace muSpectre {
      * the copy is only made once)
      */
     virtual Vector_ref evaluate_projected_directional_stiffness
-      (Eigen::Ref<Vector_t> delF) = 0;
+      (Eigen::Ref<const Vector_t> delF) = 0;
 
 
   protected:
@@ -185,7 +188,7 @@ namespace muSpectre {
 
 
     //! sparse matrix emulation
-    using Adaptor = CellAdaptor<CellBase>;
+    using Adaptor = CellAdaptor<Cell>;
 
     //! Default constructor
     CellBase() = delete;
@@ -248,7 +251,7 @@ namespace muSpectre {
      * the copy is only made once)
      */
     virtual Vector_ref evaluate_projected_directional_stiffness
-      (Eigen::Ref<Vector_t> delF) override;
+      (Eigen::Ref<const Vector_t> delF) override;
 
 
     /**
@@ -349,7 +352,7 @@ namespace muSpectre {
     //! return a sparse matrix adaptor to the cell
     Adaptor get_adaptor();
     //! returns the number of degrees of freedom in the cell
-    Dim_t nb_dof() const {return this->size()*ipow(DimS, 2);};
+    Dim_t nb_dof() const override {return this->size()*ipow(DimS, 2);};
 
     //! return the communicator object
     virtual const Communicator & get_communicator() const override {
@@ -380,7 +383,7 @@ namespace muSpectre {
 
 
   /**
-   * lightweight resource handle wrapping a `muSpectre::CellBase` or
+   * lightweight resource handle wrapping a `muSpectre::Cell` or
    * a subclass thereof into `Eigen::EigenBase`, so it can be
    * interpreted as a sparse matrix by Eigen solvers
    */
@@ -438,7 +441,7 @@ namespace Eigen {
         // however, for iterative solvers, alpha is always equal to 1, so let's not bother about it.
         // Here we could simply call dst.noalias() += lhs.my_matrix() * rhs,
         dst.noalias() += const_cast<CellAdaptor&>(lhs).cell.
-          directional_stiffness_vec(rhs);
+          evaluate_projected_directional_stiffness(rhs);
       }
     };
   }

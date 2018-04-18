@@ -110,7 +110,7 @@ namespace muSpectre {
   template <Dim_t DimS, Dim_t DimM>
   auto CellBase<DimS, DimM>::
   evaluate_projected_directional_stiffness
-  (Eigen::Ref<Vector_t> delF) -> Vector_ref {
+  (Eigen::Ref<const Vector_t> delF) -> Vector_ref {
     if (!this->K) {
       throw std::runtime_error
         ("currently only implemented for cases where a stiffness matrix "
@@ -131,7 +131,7 @@ namespace muSpectre {
     auto Kmap{this->K.value().get().get_map()};
     auto delPmap{delP.get_map()};
     //Eigen::Map<Eigen::VectorXd> delFvec(delF.data(), delF.size());
-    RawFieldMap<Eigen::Map<Eigen::Matrix<Real, DimM, DimM>>> Fmap{delF};
+    RawFieldMap<Eigen::Map<const Eigen::Matrix<Real, DimM, DimM>>> Fmap{delF};
 
     for (auto && tup:
            akantu::zip(Kmap, Fmap, delPmap)) {
@@ -326,8 +326,7 @@ namespace muSpectre {
 
   /* ---------------------------------------------------------------------- */
   template <Dim_t DimS, Dim_t DimM>
-  CellAdaptor<CellBase<DimS, DimM>>
-  CellBase<DimS, DimM>::get_adaptor() {
+  auto CellBase<DimS, DimM>::get_adaptor() -> Adaptor {
     return Adaptor(*this);
   }
 
