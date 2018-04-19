@@ -1,4 +1,29 @@
-//cpp script of test_plain_mat4.py necessary to better profile the program
+/**
+ * @file   profile_material_linear_elastic4.cc
+ *
+ * @author Richard Leute <richard.leute@imtek.uni-freiburg.de>
+ *
+ * @date   19 Apr 2018
+ *
+ * @brief  program to profile material_linear_elastic4 for possible bottlenecks
+ *
+ * Copyright © 2018 Till Junge
+ *
+ * µSpectre is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU General Public License as
+ * published by the Free Software Foundation, either version 3, or (at
+ * your option) any later version.
+ *
+ * µSpectre is distributed in the hope that it will be useful, but
+ * WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+ * General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with GNU Emacs; see the file COPYING. If not, write to the
+ * Free Software Foundation, Inc., 59 Temple Place - Suite 330,
+ * Boston, MA 02111-1307, USA.
+ */
 
 #include "cell/cell_factory.hh"
 #include "materials/material_linear_elastic4.hh"
@@ -6,16 +31,13 @@
 #include "solver/solver_cg.hh"
 
 #include <iostream>
-//#include <iomanip>
-
 #include <random>
 
 using namespace muSpectre;
 
-
 int main()
 {
-  std::cout << "startig test_plain_mat4\n";
+  std::cout << "startig program\n";
 
   const Ccoord_t<threeD> resolution{51, 51, 51};
   const Rcoord_t<threeD> lengths{5.0, 5.0, 5.0};
@@ -66,14 +88,14 @@ int main()
 				newton_tol, equil_tol, verbose)[0]};
 
   //print some messages of the solver
-  /*
-  std::cout << "gradient F:\n" << newton_result.grad << "\n";
-  std::cout << "\n\nstress:\n" << newton_result.stress << "\n";
+
+  //std::cout << "gradient F:\n" << newton_result.grad << "\n";
+  //std::cout << "\n\nstress:\n" << newton_result.stress << "\n";
   std::cout << "convergence_test: " << newton_result.success << "\n";
   std::cout << "status: " << newton_result.status << "\n";
   std::cout << "message: " << newton_result.message << "\n";
   std::cout << "# iterations: " << newton_result.nb_it << "\n";
   std::cout << "# cell evaluations: " << newton_result.nb_fev << "\n";
-  */
-  std::cout << "test_plain_mat4 finished correct\n";
+
+  std::cout << "program finished correct\n";
 }
