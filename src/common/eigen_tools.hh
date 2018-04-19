@@ -196,7 +196,38 @@ namespace muSpectre {
                     "matrix");
     };
 
-  };
+
+    namespace internal {
+      template <Dim_t dim, Dim_t nb_row, Dim_t nb_col>
+      constexpr inline Dim_t get_rank() {
+        constexpr bool is_vec{(nb_row == dim) and (nb_col == 1)};
+        constexpr bool is_mat{(nb_row == dim) and (nb_col == nb_row)};
+        constexpr bool is_ten{(nb_row == dim*dim) and (nb_col == dim*dim)};
+        static_assert(is_vec or is_mat or is_ten,
+                      "can't understand the data type as a first-, second-, or fourth-order tensor");
+        if (is_vec) {
+          return firstOrder;
+        } else if (is_mat) {
+          return secondOrder;
+        } else if (is_ten) {
+          return fourthOrder;
+        }
+      }
+
+    }  // internal
+
+    /**
+     * computes the rank of a tensor given the spatial dimension
+     */
+    template <class Derived, Dim_t Dim>
+    struct tensor_rank {
+      using T = std::remove_reference_t<Derived>;
+      static_assert(is_matrix<T>::value, "The type of t is not understood as an Eigen::Matrix");
+      static constexpr Dim_t value{internal::get_rank<Dim, T::RowsAtCompileTime,
+                                                      T::ColsAtCompileTime>()};
+    };
+
+  } // EigenCheck
 
 
   namespace log_comp {

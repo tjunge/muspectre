@@ -27,6 +27,7 @@
 
 #include "common/common.hh"
 #include "common/tensor_algebra.hh"
+#include "common/eigen_tools.hh"
 
 #include <Eigen/Dense>
 #include <Eigen/Geometry>
@@ -41,7 +42,7 @@ namespace muSpectre {
    * https://en.wikipedia.org/wiki/Euler_angles#Rotation_matrix ]] to
    * find the matrices
    */
-  class enum RotationOrder {Z,
+  enum class RotationOrder {Z,
       XZXEuler, XYXEuler, YXYEuler, YZYEuler, ZYZEuler, ZXZEuler,
       XZYTaitBryan, XYZTaitBryan, YXZTaitBryan, YZXTaitBryan, ZYXTaitBryan,
       ZXYTaitBryan};
@@ -69,7 +70,7 @@ namespace muSpectre {
     static_assert(((Dim == twoD) and (Order == RotationOrder::Z)) or
                   ((Dim == threeD) and (Order != RotationOrder::Z)),
                   "In 2d, only order 'Z' makes sense. In 3d, it doesn't");
-    using Angles_t = Eigen::Matrix<Real, (Dim == TwoD) ? 1 :3, 1>;
+    using Angles_t = Eigen::Matrix<Real, (Dim == twoD) ? 1 :3, 1>;
     using RotMat_t = Eigen::Matrix<Real, Dim, Dim>;
 
     //! Default constructor
@@ -114,55 +115,112 @@ namespace muSpectre {
   private:
   };
 
+  namespace internal {
+
+    template <RotationOrder Order, Dim_t Dim>
+    struct RotationMatrixComputer
+    {};
+
+    template <RotationOrder Order>
+    struct RotationMatrixComputer<Order, twoD> {
+      constexpr static Dim_t Dim{twoD};
+      using RotMat_t = typename Rotator<Dim, Order>::RotMat_t;
+      using Angles_t = typename Rotator<Dim, Order>::Angles_t;
+
+      inline static decltype(auto) compute(const Eigen::Ref<Angles_t> & angles) {
+        static_assert(Order == RotationOrder::Z,
+                      "Two-d rotations can only be around the z axis");
+        return RotMat_t(Eigen::Rotation2Dd(angles(0)));
+      }
+    };
+
+    template <RotationOrder Order>
+    struct RotationMatrixComputer<Order, threeD> {
+      constexpr static Dim_t Dim{threeD};
+      using RotMat_t = typename Rotator<Dim, Order>::RotMat_t;
+      using Angles_t = typename Rotator<Dim, Order>::Angles_t;
+
+      inline static decltype(auto) compute(const Eigen::Ref<Angles_t> & angles) {
+        static_assert(Order != RotationOrder::Z,
+                      "three-d rotations cannot only be around the z axis");
+
+        switch (Order) {
+        case RotationOrder::ZXZEuler: {
+          return RotMat_t((Eigen::AngleAxisd(angles(0), Eigen::Vector3d::UnitZ()) *
+                           Eigen::AngleAxisd(angles(1), Eigen::Vector3d::UnitX()) *
+                           Eigen::AngleAxisd(angles(2), Eigen::Vector3d::UnitZ())));
+          break;
+        }
+        }
+      }
+    };
+
+
+  }  // internal
+
   /* ---------------------------------------------------------------------- */
   template <Dim_t Dim, RotationOrder Order>
   auto Rotator<Dim, Order>::compute_rotation_matrix() -> RotMat_t {
-    if (Dim == twoD) {
-      return Eigen::Rotation2Dd(this->angles(0));
-    } else {
-      switch (Order) {
-      case RotationOrder::ZXZEuler: {
-        return (Eigen::AngleAxisd(angles(0), Eigen::Vector3d::UnitZ()) *
-                Eigen::AngleAxisd(angles(1), Eigen::Vector3d::UnitX()) *
-                Eigen::AngleAxisd(angles(2), Eigen::Vector3d::UnitZ()));
-        break;
-      }
-      }
-    }
+    return internal::RotationMatrixComputer<Order, Dim>::compute(this->angles);
   }
 
   namespace internal {
 
-    /* ---------------------------------------------------------------------- */
-    template <class In_t, Dim_t Dim>
-    inline decltype(auto) rotate_T1(In_t && input,
-                                    const Eigen::Matrix<Real, Dim, Dim> & R) {
-      return R*std::forward<In_t>(input);
-    }
+    template<Dim_t Rank>
+    struct RotationHelper {
+    };
 
     /* ---------------------------------------------------------------------- */
-    template <class In_t, Dim_t Dim>
-    inline decltype(auto) rotate_T2(In_t && input,
-                                    const Eigen::Matrix<Real, Dim, Dim> & R) {
-      return R*std::forward<In_t>(input)*R.transpose();
-    }
+    template <>
+    struct RotationHelper<firstOrder> {
+      template <class In_t, class Rot_t>
+      inline static decltype(auto) rotate(In_t && input,
+                                   Rot_t && R) {
+        return R * input;
+      }
+    };
 
     /* ---------------------------------------------------------------------- */
-    template <class In_t, Dim_t Dim>
-    inline decltype(auto) rotate_T4(In_t && input,
-                                    const Eigen::Matrix<Real, Dim, Dim> & R) {
-      auto && rotator_forward = Matrices::outer_under(R, R);
-      auto && rotator_back = Matrices::outer_under(R.transpose(), R.transpose());
-      return rotator_back * std::forward<In_t>(intput) * rotator_forward;
-    }
+    template <>
+    struct RotationHelper<secondOrder> {
+      template <class In_t, class Rot_t>
+      inline static decltype(auto) rotate(In_t && input,
+                                   Rot_t && R) {
+        return R * input * R.transpose();
+      }
+    };
 
+    /* ---------------------------------------------------------------------- */
+    template <>
+    struct RotationHelper<fourthOrder> {
+      template <class In_t, class Rot_t>
+      inline static decltype(auto) rotate(In_t && input,
+                                   Rot_t && R) {
+        auto && rotator_forward = Matrices::outer_under(R, R);
+        auto && rotator_back = Matrices::outer_under(R.transpose(), R.transpose());
+        return rotator_back * input * rotator_forward;
+      }
+    };
   }
 
   /* ---------------------------------------------------------------------- */
   template <Dim_t Dim, RotationOrder Order>
   template <class In_t>
-  auto Rotator<Dim, Order>::rotate_into(In_t && input) decltype(auto) {
-    
+  auto Rotator<Dim, Order>::rotate_into(In_t && input) -> decltype(auto) {
+    constexpr Dim_t tensor_rank{EigenCheck::tensor_rank<In_t, Dim>::value};
+
+    return internal::RotationHelper<tensor_rank>::
+      rotate(std::forward<In_t>(input), this->rot_mat);
+  }
+
+  /* ---------------------------------------------------------------------- */
+  template <Dim_t Dim, RotationOrder Order>
+  template <class In_t>
+  auto Rotator<Dim, Order>::rotate_outof(In_t && input) -> decltype(auto) {
+    constexpr Dim_t tensor_rank{EigenCheck::tensor_rank<In_t, Dim>::value};
+
+    return internal::RotationHelper<tensor_rank>::
+      rotate(std::forward<In_t>(input), this->rot_mat.transpose());
   }
 
 }  // muSpectre
