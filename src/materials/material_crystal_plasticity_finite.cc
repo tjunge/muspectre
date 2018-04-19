@@ -32,7 +32,7 @@ namespace muSpectre {
 
   template <Dim_t DimS, Dim_t DimM, Int nb_slip>
   MaterialCrystalPlasticityFinite<DimS, DimM, nb_slip>::
-  MaterialCrystalPlasticityFinite(std::string name, Real bulk_m, Real shear_m, Real gammadot0, Real m_par, Real tauy0, Real h0, Real s_infty, Real a_par, Real q_n, SlipVecs_ref Slip0, SlipVecs_ref Normal0)
+  MaterialCrystalPlasticityFinite(std::string name, Real bulk_m, Real shear_m, Real gammadot0, Real m_par, Real tauy0, Real h0, Real s_infty, Real a_par, Real q_n, SlipVecs_ref Slip0, SlipVecs_ref Normal0, Real DeltaT, Real tolerance, Int maxiter)
     : Parent{name},
       FpField("Plastic Deformation Gradient Fₚ(t)",this->internal_fields),
       GammadotField("Plastic slip rates dγᵅ/dt",this->internal_fields),
@@ -40,7 +40,7 @@ namespace muSpectre {
       GammaField("Accumulated slips γᵅ(t)",this->internal_fields),
       EulerField("Euler angles", this->internal_fields),
       bulk_m{bulk_m}, shear_m{shear_m}, gammadot_0{gammadot_0}, m_par{m_par}, tauy0{tauy0}, h0{h0},
-      s_infty{s_infty}, a_par{a_par}, q_n{q_n}, Slip0{Slip0}, Normal0{Normal0}
+      s_infty{s_infty}, a_par{a_par}, q_n{q_n}, Slip0{Slip0}, Normal0{Normal0}, DeltaT{DeltaT}, tolerance{tolerance}, maxiter{maxiter}
   {
     // Enforce n_0 and s_0 to be unit vectors!
     Real lambda{Converter<ElasticModulus::Lambda,ElasticModulus::Bulk,ElasticModulus::Shear>::compute(bulk_m,shear_m)};

@@ -31,6 +31,7 @@
 
 #include "materials/material_muSpectre_base.hh"
 #include "common/field.hh"
+#include "common/geometry.hh"
 
 #include <Eigen/Dense>
 
@@ -127,8 +128,8 @@ namespace muSpectre {
     //! Default constructor
     MaterialCrystalPlasticityFinite() = delete;
 
-    //! Construct by name, Bulk modulus, Shear modulus, Reference slip rate, Strain rate sensitivity, Initial CRSS, Initial hardening modulus, CRSS saturation value, Hardening exponent, Latent/Self-hardening ratio, Slip directions, Slip normals
-    MaterialCrystalPlasticityFinite(std::string name, Real bulk_m, Real shear_m, Real gammadot0, Real m_par, Real tauy0, Real h0, Real s_infty, Real a_par, Real q_n, SlipVecs_ref Slip0, SlipVecs_ref Normal0);
+    //! Construct by name, Bulk modulus, Shear modulus, Reference slip rate, Strain rate sensitivity, Initial CRSS, Initial hardening modulus, CRSS saturation value, Hardening exponent, Latent/Self-hardening ratio, Slip directions, Slip normals, Plastic slip rate tolerance, Plastic slip rate loop maximum iterations
+    MaterialCrystalPlasticityFinite(std::string name, Real bulk_m, Real shear_m, Real gammadot0, Real m_par, Real tauy0, Real h0, Real s_infty, Real a_par, Real q_n, SlipVecs_ref Slip0, SlipVecs_ref Normal0, Real DeltaT, Real tolerance=1.e-4, Int maxiter=20);
 
     //! Copy constructor
     MaterialCrystalPlasticityFinite(const MaterialCrystalPlasticityFinite &other) = delete;
@@ -206,6 +207,9 @@ namespace muSpectre {
     Real s_infty;
     Real a_par;
     Real q_n;
+    Real DeltaT;
+    Real tolerance;
+    Int maxiter;
     //! Storage for slip directions
     alignas(16) Eigen::Matrix<Real, nb_slip, DimM> Slip0;
     //! Storage for slip plane normals
@@ -236,17 +240,45 @@ namespace muSpectre {
     T2_t GLe_star{.5*(CGe_star - T2_t::Identity())};
     T2_t SPK_star{Matrices::tensmult(C_el,GLe_star)};
 
-    std::array<Real, nb_slip> tau_star;
+    using ColArray_t = Eigen::Array<Real, nb_slip, 1>;
+    ColArray_t tau_star;
     // pl_corr is the plastic corrector
     std::array<T2_t, nb_slip> pl_corr;
-    Eigen::Matrix<Real, nb_slip, nb_slip> pl_corr_proj;
+    using SlipMat_t = Eigen::Matrix<Real, nb_slip, nb_slip>;
+    SlipMat_t pl_corr_proj;
+    
     for (Int i{0}; i < nb_slip; ++i) {
-      tau_star[i]=(CGe_star*SPK_star*SchmidT[i].transpose()).trace();
+      tau_star(i)=(CGe_star*SPK_star*SchmidT[i].transpose()).trace();
       pl_corr[i]=tensmult(C_el,.5*(CGe_star*SchmidT[i]+SchmidT[i].transpose()*CGe_star));
       for (Int j{0}; j < nb_slip; ++j) {
 	pl_corr_proj(i,j)=(C_el*pl_corr[i]*SchmidT[j].transpose()).trace();
 	}
     }
+
+    SlipMat_t I(SlipMat_t::Identity());
+    auto && q_matrix{(I + this->q_n*(SlipMat_t::Ones() -I))}
+    SlipMat_t h_matrix{this->h0*q_matrix * (1-tau_y/this->s_infty).array().pow(this->a_par).matrix()};
+
+    // residual on plastic slip rates
+    ColArray_t ares= Gammadot.old().array()-this->gammadot0*std::pow(abs(tau_star())/Tauy.old(),this->m_par)*sign(tau_star.array())/this->gammadot0;
+
+    Gammadot.current() = Gammadot.old();
+    ColArray_t tau_inc{tau_star};
+
+    Int counter{};
+
+    while (ares.max() > tolerance){
+      if(counter ++ > this->maxiter){
+	throw std::runtime_error("Max. number of iteration reached without convergence");
+      }
+
+      ColArray_t dr_stress{abs(tau_inc).pow((1-this->m_par)/this->m_par)*tauy.pow(-1/this->m_par)*sign(tau_inc)};
+      ColArray_t dr_hard{abs(tau_inc).pow(1/this->m_par)*tauy.pow(-1-1/this->m_par)*sign(tau_inc)}
+      SlipMat_t drdgammadot{I+0.5*this->DeltaT*this->gammadot0/this->m_par*dr_stress.asDiagonal()*pl_corr_proj.transpose()
+	  +0.5*this->DeltaT*this->gammadot0/this->m_par*dr_hard.asDiagonal()*h_matrix*sign(Gammadot.current()).asDiagonal()
+	  };
+      
+    } 
   }
 
   /* ---------------------------------------------------------------------- */
