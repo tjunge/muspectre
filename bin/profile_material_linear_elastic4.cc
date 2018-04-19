@@ -39,7 +39,7 @@ int main()
 {
   std::cout << "startig program\n";
 
-  const Ccoord_t<threeD> resolution{51, 51, 51};
+  const Ccoord_t<threeD> resolution{25, 25, 25};
   const Rcoord_t<threeD> lengths{5.0, 5.0, 5.0};
   constexpr Formulation formulation{Formulation::finite_strain};
 
