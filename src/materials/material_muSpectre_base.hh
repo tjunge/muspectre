@@ -144,18 +144,29 @@ namespace muSpectre {
     //! computes stress
     virtual void compute_stresses(const StrainField_t & F,
                                   StressField_t & P,
-                                  Formulation form) override final;
+                                  Formulation form,
+                                  SplittedCell is_cell_splitted) override final;
     //! computes stress and tangent modulus
     virtual void compute_stresses_tangent(const StrainField_t & F,
                                           StressField_t & P,
                                           TangentField_t & K,
+<<<<<<< Updated upstream
+<<<<<<< Updated upstream
                                           Formulation form) override final;
+=======
+=======
+>>>>>>> Stashed changes
+                                          Formulation form,
+                                          SplittedCell is_cell_splitted) override final;
+    template<class ...InternalArgs>
+    void add_pixel_split(const Ccoord_t<DimS> & pixel, Real ratio = 1.0, InternalArgs ... args);
+>>>>>>> Stashed changes
 
   protected:
     //! computes stress with the formulation available at compile time
     //! __attribute__ required by g++-6 and g++-7 because of this bug:
     //! https://gcc.gnu.org/bugzilla/show_bug.cgi?id=80947
-    template <Formulation Form>
+    template <Formulation Form, SplittedCell is_cell_splitted>
     inline void compute_stresses_worker(const StrainField_t & F,
                                         StressField_t & P)
       __attribute__ ((visibility ("default")));
@@ -163,7 +174,7 @@ namespace muSpectre {
     //! computes stress with the formulation available at compile time
     //! __attribute__ required by g++-6 and g++-7 because of this bug:
     //! https://gcc.gnu.org/bugzilla/show_bug.cgi?id=80947
-   template <Formulation Form>
+    template <Formulation Form, SplittedCell is_cell_splitted>
     inline void compute_stresses_worker(const StrainField_t & F,
                                         StressField_t & P,
                                         TangentField_t & K)
@@ -189,7 +200,15 @@ namespace muSpectre {
   template <class Material, Dim_t DimS, Dim_t DimM>
   MaterialMuSpectre<Material, DimS, DimM>::
   MaterialMuSpectre(std::string name)
+<<<<<<< Updated upstream
+<<<<<<< Updated upstream
     :Parent(name) {
+=======
+    :Parent(name){
+>>>>>>> Stashed changes
+=======
+    :Parent(name){
+>>>>>>> Stashed changes
     using stress_compatible = typename traits::StressMap_t::
       template is_compatible<StressField_t>;
     using strain_compatible = typename traits::StrainMap_t::
@@ -244,19 +263,21 @@ namespace muSpectre {
   template <class Material, Dim_t DimS, Dim_t DimM>
   void MaterialMuSpectre<Material, DimS, DimM>::
   compute_stresses(const StrainField_t &F, StressField_t &P,
-                   Formulation form) {
+                   Formulation form, SplittedCell is_cell_splitted) {
+    if (is_cell_splitted == SplittedCell::no){
     switch (form) {
     case Formulation::finite_strain: {
-      this->template compute_stresses_worker<Formulation::finite_strain>(F, P);
+      this->compute_stresses_worker<Formulation::finite_strain, SplittedCell::no>(F, P);
       break;
     }
     case Formulation::small_strain: {
-      this->template compute_stresses_worker<Formulation::small_strain>(F, P);
+      this->compute_stresses_worker<Formulation::small_strain, SplittedCell::no>(F, P);
       break;
     }
     default:
       throw std::runtime_error("Unknown formulation");
       break;
+    }
     }
   }
 
@@ -265,25 +286,27 @@ namespace muSpectre {
   void MaterialMuSpectre<Material, DimS, DimM>::
   compute_stresses_tangent(const StrainField_t & F, StressField_t & P,
                            TangentField_t & K,
-                           Formulation form) {
+                           Formulation form, SplittedCell is_cell_splitted) {
+    if (is_cell_splitted == SplittedCell::no){
     switch (form) {
     case Formulation::finite_strain: {
-      this->template compute_stresses_worker<Formulation::finite_strain>(F, P, K);
+      this->compute_stresses_worker<Formulation::finite_strain, SplittedCell::no>(F, P, K);
       break;
     }
     case Formulation::small_strain: {
-      this->template compute_stresses_worker<Formulation::small_strain>(F, P, K);
+      this->compute_stresses_worker<Formulation::small_strain, SplittedCell::no>(F, P, K);
       break;
     }
     default:
       throw std::runtime_error("Unknown formulation");
       break;
     }
+    }
   }
 
   /* ---------------------------------------------------------------------- */
   template <class Material, Dim_t DimS, Dim_t DimM>
-  template <Formulation Form>
+  template <Formulation Form, SplittedCell is_cell_splitted>
   void MaterialMuSpectre<Material, DimS, DimM>::
   compute_stresses_worker(const StrainField_t & F,
                           StressField_t & P,
@@ -396,7 +419,7 @@ namespace muSpectre {
 
   /* ---------------------------------------------------------------------- */
   template <class Material, Dim_t DimS, Dim_t DimM>
-  template <Formulation Form>
+  template <Formulation Form, SplittedCell is_cell_splitted>
   void MaterialMuSpectre<Material, DimS, DimM>::
   compute_stresses_worker(const StrainField_t & F,
                           StressField_t & P){

@@ -116,7 +116,7 @@ namespace muSpectre {
     //! computes stress
     virtual void compute_stresses(const StrainField_t & F,
                                   StressField_t & P,
-                                  Formulation form) = 0;
+                                  Formulation form, SplittedCell is_cell_splitted) = 0;
     /**
      * Convenience function to compute stresses, mostly for debugging and
      * testing. Has runtime-cost associated with compatibility-checking and
@@ -125,12 +125,12 @@ namespace muSpectre {
      */
     void compute_stresses(const Field_t & F,
                           Field_t & P,
-                          Formulation form);
+                          Formulation form, SplittedCell is_cell_splitted);
     //! computes stress and tangent moduli
     virtual void compute_stresses_tangent(const StrainField_t & F,
                                           StressField_t & P,
                                           TangentField_t & K,
-                                          Formulation form) = 0;
+                                          Formulation form, SplittedCell is_cell_splitted) = 0;
     /**
      * Convenience function to compute stresses and tangent moduli, mostly for
      * debugging and testing. Has runtime-cost associated with
@@ -140,8 +140,9 @@ namespace muSpectre {
     void compute_stresses_tangent(const Field_t & F,
                                   Field_t & P,
                                   Field_t & K,
-                                  Formulation form);
-
+                                  Formulation form, SplittedCell is_cell_splitted);
+    // this function return the ratio of which the input pixel is consisted of this material
+    Real get_assigned_ratio(Ccoord pixel);
     //! iterator to first pixel handled by this material
     inline iterator begin() {return this->internal_fields.begin();}
     //! iterator past the last pixel handled by this material
@@ -152,7 +153,10 @@ namespace muSpectre {
 
     const std::string name; //!< material's name (for output and debugging)
     MFieldCollection_t internal_fields{};//!< storage for internal variables
-
+    using ScalarField_t = ScalarField<LocalFieldCollection<DimS>, Real> ;
+    ScalarField_t & assigned_ratio; //!< field holding the assigning ratio of the material
+    using ScalarFieldMap_t = ScalarFieldMap<LocalFieldCollection<DimS>, Real, true>;
+    ScalarFieldMap_t assigned_ratio_mapped;
 
   private:
   };

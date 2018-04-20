@@ -116,7 +116,7 @@ namespace muSpectre {
     /**
      * evaluates all materials
      */
-    FullResponse_t evaluate_stress_tangent(StrainField_t & F);
+    virtual FullResponse_t evaluate_stress_tangent(StrainField_t & F);
 
     /**
      * evaluate directional stiffness (i.e. G:K:δF or G:K:δε)
@@ -223,7 +223,7 @@ namespace muSpectre {
     
   protected:
     //! make sure that every pixel is assigned to one and only one material
-    void check_material_coverage();
+    virtual void check_material_coverage();
 
     const Ccoord & subdomain_resolutions; //!< the cell's subdomain resolutions
     const Ccoord & subdomain_locations; //!< the cell's subdomain resolutions
@@ -241,6 +241,7 @@ namespace muSpectre {
     Projection_ptr projection; //!< handle for the projection operator
     bool initialised{false}; //!< to handle double initialisation right
     const Formulation form; //!< formulation for solution
+    const SplittedCell is_cell_splitted ;
   private:
   };
 
@@ -260,7 +261,14 @@ namespace muSpectre {
     enum {
       ColsAtCompileTime = Eigen::Dynamic,
       MaxColsAtCompileTime = Eigen::Dynamic,
-      RowsAtCompileTime = Eigen::Dynamic,
+      RowsAtCompileTime = Eigen::Dynamic,StressField_t =
+      TensorField<FieldCollection_t, Real, secondOrder, DimM>;
+    //! expected type for tangent stiffness fields
+    using TangentField_t =
+      TensorField<FieldCollection_t, Real, fourthOrder, DimM>;
+    //! combined stress and tangent field
+    using FullResponse_t =
+      std::tuple<const StressField
       MaxRowsAtCompileTime = Eigen::Dynamic,
       IsRowMajor = false
     };

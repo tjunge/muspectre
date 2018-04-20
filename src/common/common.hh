@@ -143,6 +143,12 @@ namespace muSpectre {
     finite_strain, //!< causes evaluation in PK1(F)
     small_strain   //!< causes evaluation in   σ(ε)
   };
+  //! split cell flags
+  enum class SplittedCell{
+    yes,
+    no
+  };
+
   //! inserts `muSpectre::Formulation`s into `std::ostream`s
   std::ostream & operator<<(std::ostream & os, Formulation f);
 

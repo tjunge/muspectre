@@ -32,7 +32,8 @@ namespace muSpectre {
   //----------------------------------------------------------------------------//
   template <Dim_t DimS, Dim_t DimM>
   MaterialBase<DimS, DimM>::MaterialBase(std::string name)
-    :name(name) {
+    :name(name),assigned_ratio{make_field<ScalarField_t>("assigned ratio", this->internal_fields)},
+     assigned_ratio_mapped{assigned_ratio}{
     static_assert((DimM == oneD)||
                   (DimM == twoD)||
                   (DimM == threeD), "only 1, 2, or threeD supported");
@@ -54,10 +55,15 @@ namespace muSpectre {
   template <Dim_t DimS, Dim_t DimM>
   void MaterialBase<DimS, DimM>::compute_stresses(const Field_t & F,
                                                   Field_t & P,
-                                                  Formulation form) {
+                                                  Formulation form, SplittedCell is_cell_splitted) {
     this->compute_stresses(StrainField_t::check_ref(F),
                            StressField_t::check_ref(P),
-                           form);
+                           form, is_cell_splitted);
+  }
+
+  template <Dim_t DimS, Dim_t DimM>
+  Real MaterialBase<DimS, DimM>::get_assigned_ratio(Ccoord pixel){
+    return this->assigned_ratio_mapped[pixel];
   }
 
   /* ---------------------------------------------------------------------- */
@@ -65,11 +71,11 @@ namespace muSpectre {
   void MaterialBase<DimS, DimM>::compute_stresses_tangent(const Field_t & F,
                                                           Field_t & P,
                                                           Field_t & K,
-                                                          Formulation form) {
+                                                          Formulation form, SplittedCell is_cell_splitted) {
     this->compute_stresses_tangent(StrainField_t::check_ref(F),
                                    StressField_t::check_ref(P),
                                    TangentField_t::check_ref(K),
-                                   form);
+                                   form, is_cell_splitted);
   }
 
   template class MaterialBase<2, 2>;

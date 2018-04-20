@@ -31,6 +31,7 @@
 #include "common/common.hh"
 #include "common/ccoord_operations.hh"
 #include "cell/cell_base.hh"
+#include "cell/cell_split.hh"
 #include "fft/projection_finite_strain_fast.hh"
 #include "fft/projection_small_strain.hh"
 #include "fft/fftw_engine.hh"
@@ -94,6 +95,21 @@ namespace muSpectre {
     auto cell{Cell{std::move(input)}};
     return cell;
   }
+
+  /*  template <size_t DimS, size_t DimM=DimS,
+            typename Cell=CellSplit<DimS, DimM>,
+            typename FFTEngine=FFTWEngine<DimS, DimM>>
+  inline
+  Cell make_cell_split(Ccoord_t<DimS> resolutions,
+                 Rcoord_t<DimS> lengths,
+                 Formulation form) {
+
+    auto && input = cell_input<DimS, DimM, FFTEngine>(resolutions, lengths,
+                                                      form);
+    auto cell{Cell{std::move(input)}};
+    return cell;
+    }*/
+
 
 #ifdef WITH_MPI
 

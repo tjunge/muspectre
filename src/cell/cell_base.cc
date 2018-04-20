@@ -1,4 +1,4 @@
-/**
+/*
  * @file   cell_base.cc
  *
  * @author Till Junge <till.junge@epfl.ch>
@@ -29,6 +29,7 @@
 #include "common/ccoord_operations.hh"
 #include "common/iterators.hh"
 #include "common/tensor_algebra.hh"
+#include "common/common.hh"
 
 #include <sstream>
 #include <algorithm>
@@ -48,7 +49,8 @@ namespace muSpectre {
      F{make_field<StrainField_t>("Gradient", *this->fields)},
      P{make_field<StressField_t>("Piola-Kirchhoff-1", *this->fields)},
      projection{std::move(projection_)},
-     form{projection->get_formulation()}
+     form{projection->get_formulation()},
+     is_cell_splitted{SplittedCell::no}
   { }
 
   /* ---------------------------------------------------------------------- */
@@ -62,7 +64,8 @@ namespace muSpectre {
   /* ---------------------------------------------------------------------- */
   template <Dim_t DimS, Dim_t DimM>
   typename CellBase<DimS, DimM>::FullResponse_t
-  CellBase<DimS, DimM>::evaluate_stress_tangent(StrainField_t & grad) {
+  CellBase<DimS, DimM>::
+  evaluate_stress_tangent(StrainField_t & grad) {
     if (this->initialised == false) {
       this->initialise();
     }
@@ -75,7 +78,7 @@ namespace muSpectre {
 
     for (auto & mat: this->materials) {
       mat->compute_stresses_tangent(grad, this->P, this->K.value(),
-                                    this->form);
+                                    this->form, this->is_cell_splitted);
     }
     return std::tie(this->P, this->K.value());
   }
@@ -267,14 +270,12 @@ namespace muSpectre {
         }
       }
     }
-
     // find and identify unassigned pixels
     std::vector<Ccoord> unassigned_pixels;
     for (size_t i = 0; i < assignments.size(); ++i) {
       if (assignments[i] == nullptr) {
-        unassigned_pixels.push_back(
-          CcoordOps::get_ccoord(this->subdomain_resolutions,
-                                this->subdomain_locations, i));
+        unassigned_pixels.push_back(CcoordOps::get_ccoord(this->subdomain_resolutions,
+                                                          this->subdomain_locations, i));
       }
     }
 
