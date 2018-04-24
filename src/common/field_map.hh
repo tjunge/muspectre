@@ -44,6 +44,10 @@ namespace muSpectre {
    * particularly useful when interacting with external solvers, such
    * as scipy and Eigen
    * @param EigenMap needs to be statically sized a Eigen::Map<XXX>
+   *
+   * @warning This type is not safe for re-use. I.e., after there has
+   * been an assignment to the underlying eigen array, the
+   * `RawFieldMap` might be invalidated!
    */
   template <class EigenMap>
   class RawFieldMap
