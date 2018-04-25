@@ -94,6 +94,13 @@ namespace muSpectre {
 
     Eigen::Map<Eigen::ArrayXXd> get_operator() override final;
 
+    /**
+     * returns the number of rows and cols for the strain matrix type
+     * (for full storage, the strain is stored in material_dim ×
+     * material_dim matrices, but in symmetriy storage, it is a column
+     * vector)
+     */
+    std::array<Dim_t, 2> get_strain_shape() const override final;
 
   protected:
     Proj_t & xiField; //!< field of normalised wave vectors

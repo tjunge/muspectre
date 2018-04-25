@@ -455,6 +455,7 @@ protected:
       for (Dim_t i = 0; i < NbComponents; ++i) {
         this->values.push_back(value(i));
       }
+      ++this->current_size;
     }
 
     /* ---------------------------------------------------------------------- */
@@ -465,6 +466,7 @@ protected:
     push_back(const T & value) {
       static_assert(scalar_store, "SFINAE");
       this->values.push_back(value);
+      ++this->current_size;
     }
 
   }  // internal

@@ -74,6 +74,13 @@ namespace muSpectre {
 
   /* ---------------------------------------------------------------------- */
   template <Dim_t DimS, Dim_t DimM>
+  void CellBase<DimS, DimM>::
+  set_uniform_strain(const Eigen::Ref<const Matrix_t> & strain) {
+    this->F.get_map() = strain;
+  }
+
+  /* ---------------------------------------------------------------------- */
+  template <Dim_t DimS, Dim_t DimM>
   auto CellBase<DimS, DimM>::evaluate_stress() -> ConstVector_ref {
     if (not this->initialised) {
       this->initialise();
@@ -117,10 +124,10 @@ namespace muSpectre {
          "exists");
     }
 
-    if (delF.size() != this->nb_dof()) {
+    if (delF.size() != this->get_nb_dof()) {
       std::stringstream err{};
       err << "input should be of size ndof = ¶(" << this->subdomain_resolutions
-          << ") × " << DimS << "² = "<< this->nb_dof() << " but I got "
+          << ") × " << DimS << "² = "<< this->get_nb_dof() << " but I got "
           << delF.size();
       throw std::runtime_error(err.str());
     }
@@ -141,8 +148,20 @@ namespace muSpectre {
       dp = Matrices::tensmult(k, df);
     }
 
-    return Vector_ref(this->project(delP).data(), this->nb_dof());
+    return Vector_ref(this->project(delP).data(), this->get_nb_dof());
 
+  }
+
+  /* ---------------------------------------------------------------------- */
+  template <Dim_t DimS, Dim_t DimM>
+  std::array<Dim_t, 2> CellBase<DimS, DimM>::get_strain_shape() const {
+    return this->projection->get_strain_shape();
+  }
+
+  /* ---------------------------------------------------------------------- */
+  template <Dim_t DimS, Dim_t DimM>
+  void CellBase<DimS, DimM>::apply_projection(Eigen::Ref<Vector_t> /*vec*/) {
+    //this->projection->apply_projection(vec);
   }
 
   /* ---------------------------------------------------------------------- */
@@ -191,10 +210,10 @@ namespace muSpectre {
         ("currently only implemented for cases where a stiffness matrix "
          "exists");
     }
-    if (delF.size() != this->nb_dof()) {
+    if (delF.size() != this->get_nb_dof()) {
       std::stringstream err{};
       err << "input should be of size ndof = ¶(" << this->subdomain_resolutions
-          << ") × " << DimS << "² = "<< this->nb_dof() << " but I got "
+          << ") × " << DimS << "² = "<< this->get_nb_dof() << " but I got "
           << delF.size();
       throw std::runtime_error(err.str());
     }
@@ -203,10 +222,10 @@ namespace muSpectre {
 
     auto & out_tempref = this->get_managed_field(out_name);
     auto & in_tempref = this->get_managed_field(in_name);
-    Vector_ref(in_tempref.data(), this->nb_dof()) = delF;
+    Vector_ref(in_tempref.data(), this->get_nb_dof()) = delF;
 
     this->directional_stiffness(this->K.value(), in_tempref, out_tempref);
-    return Vector_ref(out_tempref.data(), this->nb_dof());
+    return Vector_ref(out_tempref.data(), this->get_nb_dof());
 
   }
 
@@ -287,19 +306,14 @@ namespace muSpectre {
   void CellBase<DimS, DimM>::initialise(FFT_PlanFlags flags) {
     // check that all pixels have been assigned exactly one material
     this->check_material_coverage();
+    for (auto && mat: this->materials) {
+      mat->initialise();
+    }
     // resize all global fields (strain, stress, etc)
     this->fields->initialise(this->subdomain_resolutions, this->subdomain_locations);
     // initialise the projection and compute the fft plan
     this->projection->initialise(flags);
     this->initialised = true;
-  }
-
-  /* ---------------------------------------------------------------------- */
-  template <Dim_t DimS, Dim_t DimM>
-  void CellBase<DimS, DimM>::initialise_materials(bool stiffness) {
-    for (auto && mat: this->materials) {
-      mat->initialise(stiffness);
-    }
   }
 
   /* ---------------------------------------------------------------------- */

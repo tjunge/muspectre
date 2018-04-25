@@ -61,6 +61,8 @@ namespace muSpectre {
   class ProjectionBase
   {
   public:
+    //! Eigen type to replace fields
+    using Vector_t = Eigen::Matrix<Real, Eigen::Dynamic, 1>;
     //! type of fft_engine used
     using FFTEngine = FFTEngineBase<DimS, DimM>;
     //! reference to fft engine is safely managed through a `std::unique_ptr`
@@ -138,6 +140,15 @@ namespace muSpectre {
     const Communicator & get_communicator() const {
       return this->fft_engine->get_communicator();
     }
+
+    /**
+     * returns the number of rows and cols for the strain matrix type
+     * (for full storage, the strain is stored in material_dim ×
+     * material_dim matrices, but in symmetriy storage, it is a column
+     * vector)
+     */
+    virtual std::array<Dim_t, 2> get_strain_shape() const = 0;
+
 
   protected:
     //! handle on the fft_engine used

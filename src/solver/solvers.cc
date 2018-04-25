@@ -122,10 +122,6 @@ namespace muSpectre {
     // initialise return value
     std::vector<OptimizeResult> ret_val{};
 
-    // initialise materials
-    constexpr bool need_tangent{true};
-    cell.initialise_materials(need_tangent);
-
     Grad_t<DimM> previous_grad{Grad_t<DimM>::Zero()};
     for (const auto & delF: delFs) { //incremental loop
 
@@ -273,7 +269,7 @@ namespace muSpectre {
         break;
       }
       case Formulation::finite_strain: {
-        strain_symb = "Fy";
+        strain_symb = "F";
         std::cout << "finite";
         break;
       }
@@ -317,10 +313,6 @@ namespace muSpectre {
 
     // initialise return value
     std::vector<OptimizeResult> ret_val{};
-
-    // initialise materials
-    constexpr bool need_tangent{true};
-    cell.initialise_materials(need_tangent);
 
     Grad_t<DimM> previous_grad{Grad_t<DimM>::Zero()};
     for (const auto & delF: delFs) { //incremental loop

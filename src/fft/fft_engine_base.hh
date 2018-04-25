@@ -108,7 +108,7 @@ namespace muSpectre {
 
     //! return the communicator object
     const Communicator & get_communicator() const {return this->comm;}
-    
+
     //! returns the process-local resolutions of the cell
     const Ccoord & get_subdomain_resolutions() const {
       return this->subdomain_resolutions;}

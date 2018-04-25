@@ -74,27 +74,49 @@ namespace muSpectre {
     RawFieldMap() = delete;
 
     //! constructor from a *contiguous* array
-    RawFieldMap(Eigen::Map<FieldVec_t> vec):
-      data{vec.data()}, nb_pixels{vec.size()/NbComponents}
+    RawFieldMap(Eigen::Map<FieldVec_t> vec,
+                Dim_t nb_rows=EigenMap::RowsAtCompileTime,
+                Dim_t nb_cols=EigenMap::ColsAtCompileTime):
+      data{vec.data()},
+      nb_rows{nb_rows},
+      nb_cols{nb_cols},
+      nb_components{nb_rows * nb_cols},
+      nb_pixels(vec.size()/nb_components)
     {
-      if (vec.size() % NbComponents != 0) {
+      if ((nb_rows == Eigen::Dynamic) or
+          (nb_cols == Eigen::Dynamic)) {
+        throw FieldError
+          ("You have to specify the number of rows and columns if you map a "
+           "dynamically sized Eigen Map type.");
+      }
+      if ((nb_rows < 1) or (nb_cols < 1)) {
+        throw FieldError("Only positive numbers of rows and columns make "
+                         "sense");
+      }
+      if (vec.size() % this->nb_components != 0) {
         std::stringstream err{};
         err << "The vector size of " << vec.size()
             << " is not an integer multiple of the size of value_type, which "
-            << "is " << NbComponents << ".";
+            << "is " << this->nb_components << ".";
         throw std::runtime_error(err.str());
       }
     }
 
     //! constructor from a *contiguous* array
-    RawFieldMap(Eigen::Ref<FieldVec_t> vec):
-      data{vec.data()}, nb_pixels{vec.size()/NbComponents}
+    RawFieldMap(Eigen::Ref<FieldVec_t> vec,
+                Dim_t nb_rows=EigenMap::RowsAtCompileTime,
+                Dim_t nb_cols=EigenMap::ColsAtCompileTime):
+      data{vec.data()},
+      nb_rows{nb_rows},
+      nb_cols{nb_cols},
+      nb_components{nb_rows * nb_cols},
+      nb_pixels(vec.size()/nb_components)
     {
-      if (vec.size() % NbComponents != 0) {
+      if (vec.size() % this->nb_components != 0) {
         std::stringstream err{};
         err << "The vector size of " << vec.size()
             << " is not an integer multiple of the size of value_type, which "
-            << "is " << NbComponents << ".";
+            << "is " << this->nb_components << ".";
         throw std::runtime_error(err.str());
       }
     }
@@ -121,15 +143,17 @@ namespace muSpectre {
     class iterator;
 
     //! returns an iterator to the first element
-    iterator begin() { return iterator{this->data, 0};}
+    iterator begin() { return iterator{this->data, this->nb_components, 0};}
     //! returns an iterator past the last element
-    iterator end() {return iterator{this->data, this->size()};}
+    iterator end() {return iterator{this->data, this->nb_components,
+          this->size()};}
 
   protected:
-    //! statically known size of the mapped type
-    constexpr static size_t NbComponents{EigenMap::SizeAtCompileTime};
     //! raw data pointer (ugly, I know)
     T_ptr data;
+    const Dim_t nb_rows;
+    const Dim_t nb_cols;
+    const Dim_t nb_components;
     //! number of EigenMaps stored within the array
     size_t nb_pixels;
   private:
@@ -178,7 +202,7 @@ namespace muSpectre {
 
     //! dereference
     inline value_type operator *() {
-      return EigenMap(raw_map + Parent::NbComponents*index);
+      return EigenMap(raw_map + this->nb_components*index);
     }
 
     //! inequality
@@ -194,10 +218,12 @@ namespace muSpectre {
   protected:
 
     //! protected constructor
-    iterator (Parent::T_ptr raw_map, size_t start):
-      raw_map{raw_map}, index{start} {}
+    iterator (Parent::T_ptr raw_map, Dim_t nb_components, size_t start):
+      raw_map{raw_map}, nb_components{nb_components}, index{start} {}
     //! raw data
     Parent::T_ptr raw_map;
+    //! number of components to compute offset
+    const Dim_t nb_components;
     //! currently pointed-to element
     size_t index;
   private:

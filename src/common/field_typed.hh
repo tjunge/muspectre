@@ -137,6 +137,15 @@ namespace muSpectre {
 
     //! The actual storage container
     Storage_t values{};
+    /**
+     * an unregistered typed field can be mapped onto an array of
+     * existing values
+     */
+    optional<Eigen::Ref<Eigen::Matrix<Real, Eigen::Dynamic, 1>>> alt_values{};
+
+    size_t current_size;
+
+    T* data_ptr{};
 
   private:
   };
@@ -148,7 +157,7 @@ namespace muSpectre {
   TypedField<FieldCollection, T>::
   TypedField(std::string unique_name, FieldCollection & collection,
              size_t nb_components)
-    :Parent(unique_name, nb_components, collection)
+    :Parent(unique_name, nb_components, collection), current_size{0}
   {}
 
   /* ---------------------------------------------------------------------- */
@@ -186,7 +195,12 @@ namespace muSpectre {
   /* ---------------------------------------------------------------------- */
   template <class FieldCollection, typename T>
   void TypedField<FieldCollection, T>::resize(size_t size) {
+    if (this->alt_values) {
+      throw FieldError("Field proxies can't resize.");
+    }
+    this->current_size = size;
     this->values.resize(size*this->get_nb_components() + this->pad_size);
+    this->data_ptr = &this->values.front();
   }
 
   /* ---------------------------------------------------------------------- */
@@ -199,15 +213,19 @@ namespace muSpectre {
   template <class FieldCollection, typename T>
   size_t TypedField<FieldCollection, T>::
   size() const {
-    return (this->values.size() - this->pad_size)/this->get_nb_components();
+    return this->current_size;
   }
 
   /* ---------------------------------------------------------------------- */
   template <class FieldCollection, typename T>
   void TypedField<FieldCollection, T>::
   set_pad_size(size_t pad_size) {
-    this->values.resize(this->size()*this->get_nb_components() + pad_size);
+    if (this->alt_values) {
+      throw FieldError("You can't set the pad size of a field proxy.");
+    }
     this->pad_size = pad_size;
+    this->resize(this->size());
+    this->data_ptr = &this->values.front();
   }
 
   /* ---------------------------------------------------------------------- */
@@ -245,6 +263,8 @@ namespace muSpectre {
     for (size_t i = 0; i < this->get_nb_components(); ++i) {
       this->values.push_back(value(i));
     }
+    ++this->current_size;
+    this->data_ptr = &this->values.front();
   }
 
 }  // muSpectre

@@ -143,7 +143,6 @@ namespace muSpectre {
       }
     }
 
-    fix::initialise_materials();
     auto res_tup{fix::evaluate_stress_tangent(F)};
     auto stress{std::get<0>(res_tup).get_map()};
     auto tangent{std::get<1>(res_tup).get_map()};
@@ -183,7 +182,6 @@ namespace muSpectre {
     fix::add_material(std::move(Material_soft));
 
     auto & F = fix::get_strain();
-    fix::initialise_materials();
     fix::evaluate_stress_tangent(F);
 
     fix::evaluate_stress_tangent(F);
@@ -212,7 +210,6 @@ namespace muSpectre {
 
     F_vec.setZero();
 
-    fix::initialise_materials();
     fix::evaluate_stress_tangent();
 
   }

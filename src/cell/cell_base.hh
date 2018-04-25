@@ -65,7 +65,10 @@ namespace muSpectre {
   public:
 
     //! dynamic vector type for interactions with numpy/scipy/solvers etc.
-    using Vector_t = Eigen::VectorXd;
+    using Vector_t = Eigen::Matrix<Real, Eigen::Dynamic, 1>;
+
+    //! dynamic matrix type for setting strains
+    using Matrix_t = Eigen::Matrix<Real, Eigen::Dynamic, Eigen::Dynamic>;
 
     //! ref to constant vector
     using ConstVector_ref = Eigen::Map<const Vector_t>;
@@ -95,10 +98,28 @@ namespace muSpectre {
     bool is_initialised() const {return this->initialised;}
 
     //! returns the number of degrees of freedom in the cell
-    virtual Dim_t nb_dof() const = 0;
+    virtual Dim_t get_nb_dof() const = 0;
 
     //! return the communicator object
     virtual const Communicator & get_communicator() const = 0;
+
+    /**
+     * formulation is hard set by the choice of the projection class
+     */
+    virtual const Formulation & get_formulation() const = 0;
+
+    /**
+     * returns the material dimension of the problem
+     */
+    virtual Dim_t get_material_dim() const = 0;
+
+    /**
+     * returns the number of rows and cols for the strain matrix type
+     * (for full storage, the strain is stored in material_dim ×
+     * material_dim matrices, but in symmetriy storage, it is a column
+     * vector)
+     */
+    virtual std::array<Dim_t, 2> get_strain_shape() const = 0;
 
     /**
      * returns a writable map onto the strain field of this cell. This
@@ -124,6 +145,17 @@ namespace muSpectre {
      */
     virtual std::array<ConstVector_ref, 2> evaluate_stress_tangent() = 0;
 
+
+    /**
+     * applies the projection operator in-place on the input vector
+     */
+    virtual void apply_projection(Eigen::Ref<Vector_t> vec) = 0;
+
+    /**
+     * freezes all the history variables of the materials
+     */
+    virtual void save_history_variables() = 0;
+
     /**
      * evaluates the directional and projected stiffness (this
      * corresponds to G:K:δF in de Geus 2017,
@@ -136,6 +168,10 @@ namespace muSpectre {
       (Eigen::Ref<const Vector_t> delF) = 0;
 
 
+    /**
+     * set uniform strain (typically used to initialise problems
+     */
+    virtual void set_uniform_strain(const Eigen::Ref<const Matrix_t> &) = 0;
   protected:
     bool initialised{false}; //!< to handle double initialisation right
 
@@ -253,6 +289,29 @@ namespace muSpectre {
     virtual Vector_ref evaluate_projected_directional_stiffness
       (Eigen::Ref<const Vector_t> delF) override;
 
+    //! return the template param DimM (required for polymorphic use of `Cell`
+    Dim_t get_material_dim() const override final {return DimM;}
+
+    /**
+     * returns the number of rows and cols for the strain matrix type
+     * (for full storage, the strain is stored in material_dim ×
+     * material_dim matrices, but in symmetriy storage, it is a column
+     * vector)
+     */
+    std::array<Dim_t, 2> get_strain_shape() const override final;
+
+    /**
+     * applies the projection operator in-place on the input vector
+     */
+    void apply_projection(Eigen::Ref<Vector_t> vec) override final;
+
+
+
+    /**
+     * set uniform strain (typically used to initialise problems
+     */
+    void set_uniform_strain(const Eigen::Ref<const Matrix_t> &) override;
+
 
     /**
      * evaluates all materials
@@ -304,17 +363,13 @@ namespace muSpectre {
      * need to be initialised separately
      */
     void initialise(FFT_PlanFlags flags = FFT_PlanFlags::estimate);
-    /**
-     * initialise materials (including resetting any history variables)
-     */
-    void initialise_materials(bool stiffness=false);
 
     /**
      * for materials with state variables, these typically need to be
      * saved/updated an the end of each load increment, this function
      * calls this update for each material in the cell
      */
-    void save_history_variables();
+    void save_history_variables() override final;
 
     iterator begin(); //!< iterator to the first pixel
     iterator end();  //!< iterator past the last pixel
@@ -336,7 +391,7 @@ namespace muSpectre {
     /**
      * formulation is hard set by the choice of the projection class
      */
-    const Formulation & get_formulation() const {
+    const Formulation & get_formulation() const override final {
       return this->projection->get_formulation();}
 
     /**
@@ -352,7 +407,7 @@ namespace muSpectre {
     //! return a sparse matrix adaptor to the cell
     Adaptor get_adaptor();
     //! returns the number of degrees of freedom in the cell
-    Dim_t nb_dof() const override {return this->size()*ipow(DimS, 2);};
+    Dim_t get_nb_dof() const override {return this->size()*ipow(DimS, 2);};
 
     //! return the communicator object
     virtual const Communicator & get_communicator() const override {
@@ -405,7 +460,7 @@ namespace muSpectre {
     //! constructor
     CellAdaptor(Cell & cell):cell{cell}{}
     //!returns the number of logical rows
-    Eigen::Index rows() const {return this->cell.nb_dof();}
+    Eigen::Index rows() const {return this->cell.get_nb_dof();}
     //!returns the number of logical columns
     Eigen::Index cols() const {return this->rows();}
 
