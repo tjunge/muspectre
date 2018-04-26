@@ -435,14 +435,14 @@ protected:
     template <class FieldCollection, typename T, Dim_t NbComponents>
     T* TypedSizedFieldBase<FieldCollection, T, NbComponents>::
     get_ptr_to_entry(const size_t&& index) {
-      return &this->values[NbComponents*std::move(index)];
+      return this->data_ptr + NbComponents*std::move(index);
     }
 
     /* ---------------------------------------------------------------------- */
     template <class FieldCollection, typename T, Dim_t NbComponents>
     const T* TypedSizedFieldBase<FieldCollection, T, NbComponents>::
     get_ptr_to_entry(const size_t&& index) const {
-      return &this->values[NbComponents*std::move(index)];
+      return this->data_ptr + NbComponents*std::move(index);
     }
 
     /* ---------------------------------------------------------------------- */
@@ -456,6 +456,7 @@ protected:
         this->values.push_back(value(i));
       }
       ++this->current_size;
+      this->data_ptr = &this->values.front();
     }
 
     /* ---------------------------------------------------------------------- */
@@ -467,6 +468,7 @@ protected:
       static_assert(scalar_store, "SFINAE");
       this->values.push_back(value);
       ++this->current_size;
+      this->data_ptr = &this->values.front();
     }
 
   }  // internal

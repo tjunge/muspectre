@@ -342,19 +342,15 @@ namespace muSpectre {
     F.setZero();
     sys.evaluate_stress_tangent();
     Eigen::VectorXd DelF(sys.get_nb_dof());
-    std::cout << "DelF.data() = " << DelF.data() << std::endl;
     using RMap_t = RawFieldMap<Eigen::Map<Grad_t<dim>>>;
     for (auto tmp: RMap_t(DelF)) {
       tmp = delEps0;
     }
     Eigen::VectorXd rhs = -sys.evaluate_projected_directional_stiffness(DelF);
     F += DelF;
-    std::cout << "DelF.data() = " << DelF.data() << std::endl;
     DelF.setZero();
-    std::cout << "DelF.data() = " << DelF.data() << std::endl;
     cg.initialise();
     Eigen::Map<Eigen::VectorXd>(DelF.data(), DelF.size()) = cg.solve(rhs, DelF);
-    std::cout << "DelF.data() = " << DelF.data() << std::endl;
     F += DelF;
 
     if (verbose) {

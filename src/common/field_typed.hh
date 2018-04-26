@@ -75,8 +75,18 @@ namespace muSpectre {
 
     //! constructor
     TypedField(std::string unique_name,
-                   FieldCollection& collection,
-                   size_t nb_components);
+               FieldCollection& collection,
+               size_t nb_components);
+
+    /**
+     * constructor for field proxies which piggy-back on existing
+     * memory. These cannot be registered in field collections and
+     * should only be used for transient temporaries
+     */
+    TypedField(std::string unique_name,
+               FieldCollection& collection,
+               Eigen::Ref<Eigen::Matrix<Real, Eigen::Dynamic, 1>> vec,
+               size_t nb_components);
 
     //! Copy constructor
     TypedField(const TypedField &other) = delete;
@@ -143,8 +153,27 @@ namespace muSpectre {
      */
     optional<Eigen::Ref<Eigen::Matrix<Real, Eigen::Dynamic, 1>>> alt_values{};
 
+    /**
+     * maintains a tally of the current size, as it cannot be reliably
+     * determined from either `values` or `alt_values` alone.
+     */
     size_t current_size;
 
+    /**
+     * in order to accomodate both registered fields (who own and
+     * manage their data) and unregistered temporary field proxies
+     * (piggy-backing on a chunk of existing memory as e.g., a numpy
+     * array) *efficiently*, the `get_ptr_to_entry` methods need to be
+     * branchless. this means that we cannot decide on the fly whether
+     * to return pointers pointing into values or into alt_values, we
+     * need to maintain an (shudder) raw data pointer that is set
+     * either at construction (for unregistered fields) or at any
+     * resize event (which may invalidate existing pointers). For the
+     * coder, this means that they need to be absolutely vigilant that
+     * *any* operation on the values vector that invalidates iterators
+     * needs to be followed by an update of data_ptr, or we will get
+     * super annoying memory bugs.
+     */
     T* data_ptr{};
 
   private:
@@ -153,12 +182,38 @@ namespace muSpectre {
   /* ---------------------------------------------------------------------- */
   /* Implementations                                                        */
   /* ---------------------------------------------------------------------- */
-    template <class FieldCollection, typename T>
+  template <class FieldCollection, typename T>
   TypedField<FieldCollection, T>::
   TypedField(std::string unique_name, FieldCollection & collection,
-             size_t nb_components)
-    :Parent(unique_name, nb_components, collection), current_size{0}
+             size_t nb_components):
+    Parent(unique_name, nb_components, collection), current_size{0}
   {}
+
+  /* ---------------------------------------------------------------------- */
+  template <class FieldCollection, typename T>
+  TypedField<FieldCollection, T>::
+  TypedField(std::string unique_name, FieldCollection & collection,
+             Eigen::Ref<Eigen::Matrix<Real, Eigen::Dynamic, 1>> vec,
+             size_t nb_components):
+    Parent(unique_name, nb_components, collection),
+    alt_values{vec}, current_size{vec.size()/nb_components},
+    data_ptr{vec.data()}
+  {
+    if (vec.size()%nb_components) {
+      std::stringstream err{};
+      err << "The vector you supplied has a size of " << vec.size()
+          << ", which is not a multiple of the number of components ("
+          << nb_components << ")";
+      throw FieldError(err.str());
+    }
+    if (current_size != collection.size()) {
+      std::stringstream err{};
+      err << "The vector you supplied has the size for " << current_size
+          << " pixels with " << nb_components << "components each, but the "
+          << "field collection has " << collection.size() << " pixels.";
+      throw FieldError(err.str());
+    }
+  }
 
   /* ---------------------------------------------------------------------- */
   //! return type_id of stored type
@@ -232,14 +287,14 @@ namespace muSpectre {
   template <class FieldCollection, typename T>
   T* TypedField<FieldCollection, T>::
   get_ptr_to_entry(const size_t&& index) {
-    return &this->values[this->get_nb_components()*std::move(index)];
+    return this->data_ptr + this->get_nb_components()*std::move(index);
   }
 
   /* ---------------------------------------------------------------------- */
   template <class FieldCollection, typename T>
   const T* TypedField<FieldCollection, T>::
   get_ptr_to_entry(const size_t&& index) const {
-    return &this->values[this->get_nb_components()*std::move(index)];
+    return this->data_ptr+this->get_nb_components()*std::move(index);
   }
 
   /* ---------------------------------------------------------------------- */
