@@ -95,7 +95,7 @@ namespace muSpectre {
     Uint get_maxiter() const;
 
     //! returns the resolution tolerance
-    Uint get_tol() const;
+    Real get_tol() const;
 
     //! returns the solver's name (i.e. 'CG', 'GMRES', etc)
     virtual std::string get_name() const = 0;

@@ -76,7 +76,7 @@ namespace muSpectre {
     //! local FieldCollection (for Fourier-space pixels)
     using LFieldCollection_t = typename FFTEngine::LFieldCollection_t;
     //! Field type on which to apply the projection
-    using Field_t = typename FFTEngine::Field_t;
+    using Field_t = TypedField<GFieldCollection_t, Real>;
     /**
      * iterator over all pixels. This is taken from the FFT engine,
      * because depending on the real-to-complex FFT employed, only
@@ -148,6 +148,11 @@ namespace muSpectre {
      * vector)
      */
     virtual std::array<Dim_t, 2> get_strain_shape() const = 0;
+
+    //! get number of components to project per pixel
+    Dim_t get_nb_components() const {
+      return this->fft_engine->get_nb_components();
+    }
 
 
   protected:

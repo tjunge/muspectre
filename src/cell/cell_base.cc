@@ -118,6 +118,14 @@ namespace muSpectre {
   auto CellBase<DimS, DimM>::
   evaluate_projected_directional_stiffness
   (Eigen::Ref<const Vector_t> delF) -> Vector_ref {
+    // the following const_cast should be safe, as long as the
+    // constructed delF_field is const itself
+    const TypedField<FieldCollection_t, Real> delF_field
+      ("Proxied raw memory for strain increment",
+       *this->fields,
+       Eigen::Map<Vector_t>(const_cast<Real *>(delF.data()), delF.size()),
+       this->F.get_nb_components());
+
     if (!this->K) {
       throw std::runtime_error
         ("currently only implemented for cases where a stiffness matrix "
@@ -137,11 +145,10 @@ namespace muSpectre {
 
     auto Kmap{this->K.value().get().get_map()};
     auto delPmap{delP.get_map()};
-    //Eigen::Map<Eigen::VectorXd> delFvec(delF.data(), delF.size());
-    RawFieldMap<Eigen::Map<const Eigen::Matrix<Real, DimM, DimM>>> Fmap{delF};
+    MatrixFieldMap<FieldCollection_t, Real, DimM, DimM, true> delFmap(delF_field);
 
     for (auto && tup:
-           akantu::zip(Kmap, Fmap, delPmap)) {
+           akantu::zip(Kmap, delFmap, delPmap)) {
       auto & k = std::get<0>(tup);
       auto & df = std::get<1>(tup);
       auto & dp = std::get<2>(tup);
@@ -160,8 +167,12 @@ namespace muSpectre {
 
   /* ---------------------------------------------------------------------- */
   template <Dim_t DimS, Dim_t DimM>
-  void CellBase<DimS, DimM>::apply_projection(Eigen::Ref<Vector_t> /*vec*/) {
-    //this->projection->apply_projection(vec);
+  void CellBase<DimS, DimM>::apply_projection(Eigen::Ref<Vector_t> vec) {
+    TypedField<FieldCollection_t, Real> field("Proxy for projection",
+                                              *this->fields,
+                                              vec,
+                                              this->F.get_nb_components());
+    this->projection->apply_projection(field);
   }
 
   /* ---------------------------------------------------------------------- */
@@ -189,8 +200,8 @@ namespace muSpectre {
   template <Dim_t DimS, Dim_t DimM>
   typename CellBase<DimS, DimM>::StressField_t &
   CellBase<DimS, DimM>::directional_stiffness(const TangentField_t &K,
-                                                const StrainField_t &delF,
-                                                StressField_t &delP) {
+                                              const StrainField_t &delF,
+                                              StressField_t &delP) {
     for (auto && tup:
            akantu::zip(K.get_map(), delF.get_map(), delP.get_map())){
       auto & k = std::get<0>(tup);

@@ -31,10 +31,12 @@
 
 #include <Eigen/Dense>
 
+#include <iomanip>
+
 namespace muSpectre {
 
   std::vector<OptimizeResult>
-  newton_cg_dyn(Cell & cell, const std::vector<Eigen::MatrixXd> load_increments,
+  newton_cg_dyn(Cell & cell, const std::vector<Eigen::MatrixXd> load_steps,
                 SolverBaseDyn & solver, Real newton_tol,
                 Real equil_tol, Dim_t verbose) {
     const Communicator & comm = cell.get_communicator();
@@ -74,7 +76,7 @@ namespace muSpectre {
                 << "newton_tol = " << newton_tol << ", cg_tol = "
                 << solver.get_tol() << " maxiter = " << solver.get_maxiter() << " and Δ"
                 << strain_symb << " =" <<std::endl;
-      for (auto&& tup: akantu::enumerate(load_increments)) {
+      for (auto&& tup: akantu::enumerate(load_steps)) {
         auto && counter{std::get<0>(tup)};
         auto && grad{std::get<1>(tup)};
         std::cout << "Step " << counter + 1 << ":" << std::endl
@@ -89,7 +91,7 @@ namespace muSpectre {
     switch (form) {
     case Formulation::finite_strain: {
       cell.set_uniform_strain(Matrix_t::Identity(mat_dim, mat_dim));
-      for (const auto & delF: load_increments) {
+      for (const auto & delF: load_steps) {
         if (not (delF.cols() == mat_dim) and not (delF.rows() == mat_dim)) {
           std::stringstream err{};
           err << "Load increments need to be given in " << mat_dim << "×"
@@ -102,7 +104,7 @@ namespace muSpectre {
     }
     case Formulation::small_strain: {
       cell.set_uniform_strain(Matrix_t::Zero(mat_dim, mat_dim));
-      for (const auto & delF: load_increments) {
+      for (const auto & delF: load_steps) {
         if (not (delF.cols() == mat_dim) and not (delF.rows() == mat_dim)) {
           std::stringstream err{};
           err << "Load increments need to be given in " << mat_dim << "×"
@@ -117,7 +119,7 @@ namespace muSpectre {
       break;
     }
     default:
-      throw std::SolverError("Unknown strain measure");
+      throw SolverError("Unknown strain measure");
       break;
     }
 
@@ -125,12 +127,13 @@ namespace muSpectre {
     std::vector<OptimizeResult> ret_val{};
 
     // storage for the previous mean strain (to compute ΔF or Δε)
-    Matrix_t previous_macro_strain{load_increments.back().Zero()};
+    Matrix_t previous_macro_strain{load_steps.back().Zero(shape[0], shape[1])};
 
     auto F{cell.get_strain_vector()};
     //! incremental loop
-    for (const auto & macro_strain: load_increments) {
-      for (auto && strain: RawFieldMap(F, shape[0], shape[1])) {
+    for (const auto & macro_strain: load_steps) {
+      using StrainMap_t = RawFieldMap<Eigen::Map<Eigen::MatrixXd>>;
+      for (auto && strain: StrainMap_t(F, shape[0], shape[1])) {
         strain += macro_strain - previous_macro_strain;
       }
 
@@ -157,7 +160,7 @@ namespace muSpectre {
            newt_iter < solver.get_maxiter() && !has_converged;
            ++newt_iter) {
         // obtain material response
-        auto res_tup{cell.evaluate_stress_tangent(F)};
+        auto res_tup{cell.evaluate_stress_tangent()};
         auto & P{std::get<0>(res_tup)};
 
         rhs = -P;
@@ -179,12 +182,12 @@ namespace muSpectre {
         if ((verbose > 0) and (comm.rank() == 0)) {
           std::cout << "at Newton step " << std::setw(count_width) << newt_iter
                     << ", |δ" << strain_symb << "|/|Δ" << strain_symb
-                    << "| = " << std::setw(17) << incrNorm/gradNorm
+                    << "| = " << std::setw(17) << incr_norm/grad_norm
                     << ", tol = " << newton_tol << std::endl;
 
           if (verbose-1>1) {
             std::cout << "<" << strain_symb << "> =" << std::endl
-                      << F.get_map().mean() << std::endl;
+                      << StrainMap_t(F, shape[0], shape[1]).mean() << std::endl;
           }
         }
         convergence_test();
@@ -195,15 +198,15 @@ namespace muSpectre {
       previous_macro_strain = macro_strain;
 
       // store results
-      ret_val.emplace_back
-        (F, cell.get_stress_vector(),
-         convergence_test(), Int(convergence_test()),
-         message, newt_iter, solver.get_counter());
+      ret_val.emplace_back(OptimizeResult{F, cell.get_stress_vector(),
+                               convergence_test(), Int(convergence_test()),
+                               message, newt_iter, solver.get_counter()});
 
       // store history variables for next load increment
       cell.save_history_variables();
     }
 
     return ret_val;
+  }
 
   }  // muSpectre

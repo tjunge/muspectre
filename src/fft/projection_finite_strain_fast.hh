@@ -55,7 +55,7 @@ namespace muSpectre {
     //! local field collection (for Fourier-space representations)
     using LFieldCollection_t = LocalFieldCollection<DimS>;
     //! Real space second order tensor fields (to be projected)
-    using Field_t = TensorField<GFieldCollection_t, Real, secondOrder, DimM>;
+    using Field_t = TypedField<GFieldCollection_t, Real>;
     //! Fourier-space field containing the projection operator itself
     using Proj_t = TensorField<LFieldCollection_t, Real, firstOrder, DimM>;
     //! iterable form of the operator

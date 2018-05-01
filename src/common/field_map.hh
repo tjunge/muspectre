@@ -60,16 +60,20 @@ namespace muSpectre {
     constexpr static bool IsConst{
       std::is_const<
         std::remove_pointer_t<typename EigenMap::PointerArgType>>::value};
-    // short-hand for the basic scalar type
+    //! short-hand for the basic scalar type
     using T = typename EigenMap::Scalar;
-    // raw pointer type to store
+    //! raw pointer type to store
     using T_ptr = std::conditional_t<IsConst,
                                      const T*,
                                      T*>;
-    // input array (~field) type to be mapped
+    //! input array (~field) type to be mapped
     using FieldVec_t = std::conditional_t<IsConst,
                                           const Eigen::VectorXd,
                                           Eigen::VectorXd>;
+
+    //! Plain mapped Eigen type
+    using EigenPlain = typename EigenMap::PlainObject;
+
     //! Default constructor
     RawFieldMap() = delete;
 
@@ -140,15 +144,34 @@ namespace muSpectre {
     size_t size() const {return this->nb_pixels;}
 
     //! forward declaration of iterator type
-    class iterator;
+    template <bool IsConst>
+    class iterator_t;
+    using iterator = iterator_t<false>;
+    using const_iterator = iterator_t<true>;
 
     //! returns an iterator to the first element
-    iterator begin() { return iterator{this->data, this->nb_components, 0};}
+    iterator begin() { return iterator{*this, 0};}
+    const_iterator begin() const {
+      return const_iterator{*this, 0};}
     //! returns an iterator past the last element
-    iterator end() {return iterator{this->data, this->nb_components,
-          this->size()};}
+    iterator end() {return iterator{*this, this->size()};}
+    const_iterator end() const {
+      return const_iterator{*this, this->size()};}
+
+    //! evaluates the average of the field
+    EigenPlain mean () const {
+      using T_t = EigenPlain;
+      T_t mean(T_t::Zero(this->nb_rows, this->nb_cols));
+      for (auto && val: *this) {
+        mean += val;
+      }
+      mean /= this->size();
+      return mean;
+    }
 
   protected:
+    inline T_ptr get_data() {return data;}
+    inline const T_ptr get_data() const {return data;}
     //! raw data pointer (ugly, I know)
     T_ptr data;
     const Dim_t nb_rows;
@@ -163,7 +186,8 @@ namespace muSpectre {
    * Small iterator class to be used with the RawFieldMap
    */
   template <class EigenMap>
-  class RawFieldMap<EigenMap>::iterator
+  template <bool IsConst>
+  class RawFieldMap<EigenMap>::iterator_t
   {
   public:
     //! short hand for the raw field map's type
@@ -172,58 +196,71 @@ namespace muSpectre {
     //! the  map needs to be friend in order to access the protected constructor
     friend Parent;
     //! stl compliance
-    using value_type = EigenMap;
+    using value_type = std::conditional_t
+      <IsConst,
+       Eigen::Map<const typename EigenMap::PlainObject>,
+       EigenMap>;
+    using T_ptr = std::conditional_t<IsConst,
+                                     const Parent::T_ptr,
+                                     Parent::T_ptr>;
     //! stl compliance
     using iterator_category = std::forward_iterator_tag;
 
     //! Default constructor
-    iterator() = delete;
+    iterator_t() = delete;
 
     //! Copy constructor
-    iterator(const iterator &other) = default;
+    iterator_t(const iterator_t &other) = default;
 
     //! Move constructor
-    iterator(iterator &&other) = default;
+    iterator_t(iterator_t &&other) = default;
 
     //! Destructor
-    virtual ~iterator() = default;
+    virtual ~iterator_t() = default;
 
     //! Copy assignment operator
-    iterator& operator=(const iterator &other) = default;
+    iterator_t& operator=(const iterator_t &other) = default;
 
     //! Move assignment operator
-    iterator& operator=(iterator &&other) = default;
+    iterator_t& operator=(iterator_t &&other) = default;
 
     //! pre-increment
-    inline iterator & operator++() {
+    inline iterator_t & operator++() {
       ++this->index;
       return *this;
     }
 
     //! dereference
     inline value_type operator *() {
-      return EigenMap(raw_map + this->nb_components*index);
+      return value_type(raw_ptr + this->map.nb_components*index,
+                        this->map.nb_rows, this->map.nb_cols);
     }
 
     //! inequality
-    inline bool operator != (const iterator & other) const {
+    inline bool operator != (const iterator_t & other) const {
       return this->index != other.index;
     }
 
     //! equality
-    inline bool operator == (const iterator & other) const {
+    inline bool operator == (const iterator_t & other) const {
       return this->index == other.index;
     }
 
   protected:
-
     //! protected constructor
-    iterator (Parent::T_ptr raw_map, Dim_t nb_components, size_t start):
-      raw_map{raw_map}, nb_components{nb_components}, index{start} {}
+    iterator_t (const Parent& map,
+                size_t start):
+      raw_ptr{map.get_data()}, map{map}, index{start} { }
+
+    template <bool dummy_non_const = not IsConst>
+    iterator_t (std::enable_if_t<dummy_non_const, Parent&> map,
+                size_t start):
+      raw_ptr{map.data}, map{map}, index{start} {
+        static_assert(dummy_non_const == not IsConst, "SFINAE");}
     //! raw data
-    Parent::T_ptr raw_map;
-    //! number of components to compute offset
-    const Dim_t nb_components;
+    T_ptr raw_ptr;
+    //! ref to underlying map
+    const Parent & map;
     //! currently pointed-to element
     size_t index;
   private:

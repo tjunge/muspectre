@@ -51,7 +51,7 @@ namespace muSpectre {
     //! local FieldCollection (for Fourier-space pixels)
     using LFieldCollection_t = LocalFieldCollection<DimS>;
     //! Field type on which to apply the projection
-    using Field_t = TensorField<GFieldCollection_t, Real, 2, DimM>;
+    using Field_t = TypedField<GFieldCollection_t, Real>;
     /**
      * Field type holding a Fourier-space representation of a
      * real-valued second-order tensor field
@@ -137,6 +137,9 @@ namespace muSpectre {
     //! projection operator (where no additional loop is required)
     inline Real normalisation() const {return norm_factor;};
 
+    //! return the number of components per pixel
+    Dim_t get_nb_components() const {return nb_components;}
+
   protected:
     /**
      * Field collection in which to store fields associated with
@@ -151,6 +154,7 @@ namespace muSpectre {
     const Ccoord domain_resolutions; //!< resolutions of the full domain of the cell
     Workspace_t & work; //!< field to store the Fourier transform of P
     const Real norm_factor; //!< normalisation coefficient of fourier transform
+    Dim_t nb_components{DimM*DimM};
   private:
   };
 

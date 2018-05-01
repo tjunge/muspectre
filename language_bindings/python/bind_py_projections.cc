@@ -151,7 +151,8 @@ void add_proj_helper(py::module & mod, std::string name_start) {
            }
            coll.initialise(proj.get_subdomain_resolutions(),
                            proj.get_subdomain_locations());
-           Field_t & temp{make_field<Field_t>("temp_field", coll)};
+           Field_t & temp{make_field<Field_t>("temp_field", coll,
+                                              proj.get_nb_components())};
            temp.eigen() = v;
            proj.apply_projection(temp);
            return Eigen::ArrayXXd{temp.eigen()};

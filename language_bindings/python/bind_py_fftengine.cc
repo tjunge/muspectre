@@ -64,7 +64,8 @@ void add_engine_helper(py::module & mod, std::string name) {
            Coll_t coll{};
            coll.initialise(eng.get_subdomain_resolutions(),
                            eng.get_subdomain_locations());
-           Field_t & temp{make_field<Field_t>("temp_field", coll)};
+           Field_t & temp{make_field<Field_t>("temp_field", coll,
+                                              eng.get_nb_components())};
            temp.eigen() = v;
            return ArrayXXc{eng.fft(temp).eigen()};
          },
@@ -77,7 +78,8 @@ void add_engine_helper(py::module & mod, std::string name) {
            Coll_t coll{};
            coll.initialise(eng.get_subdomain_resolutions(),
                            eng.get_subdomain_locations());
-           Field_t & temp{make_field<Field_t>("temp_field", coll)};
+           Field_t & temp{make_field<Field_t>("temp_field", coll,
+                                              eng.get_nb_components())};
            eng.get_work_space().eigen() = v;
            eng.ifft(temp);
            return Eigen::ArrayXXd{temp.eigen()};

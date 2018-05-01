@@ -48,7 +48,7 @@ namespace muSpectre {
     ptrdiff_t res_x, loc_x, res_y, loc_y;
     this->workspace_size =
       fftw_mpi_local_size_many_transposed(DimS, narr.data(),
-                                          Field_t::nb_components,
+                                          this->nb_components,
                                           FFTW_MPI_DEFAULT_BLOCK,
                                           FFTW_MPI_DEFAULT_BLOCK,
                                           this->comm.get_mpi_comm(),
@@ -100,9 +100,9 @@ namespace muSpectre {
     // We need to check whether the workspace provided by our field is large
     // enough. MPI parallel FFTW may request a workspace size larger than the
     // nominal size of the complex buffer.
-    if (long(this->work.size()*Field_t::nb_components) < this->workspace_size) {
+    if (long(this->work.size()*this->nb_components) < this->workspace_size) {
       this->work.set_pad_size(this->workspace_size -
-                              Field_t::nb_components*this->work.size());
+                              this->nb_components*this->work.size());
     }
 
     unsigned int flags;
@@ -130,7 +130,7 @@ namespace muSpectre {
     Real * in{this->real_workspace};
     fftw_complex * out{reinterpret_cast<fftw_complex*>(this->work.data())};
     this->plan_fft = fftw_mpi_plan_many_dft_r2c(
-      DimS, narr.data(), Field_t::nb_components, FFTW_MPI_DEFAULT_BLOCK,
+      DimS, narr.data(), this->nb_components, FFTW_MPI_DEFAULT_BLOCK,
       FFTW_MPI_DEFAULT_BLOCK, in, out, this->comm.get_mpi_comm(),
       FFTW_MPI_TRANSPOSED_OUT | flags);
     if (this->plan_fft == nullptr) {
@@ -141,7 +141,7 @@ namespace muSpectre {
     Real * i_out = this->real_workspace;
 
     this->plan_ifft = fftw_mpi_plan_many_dft_c2r(
-      DimS, narr.data(), Field_t::nb_components, FFTW_MPI_DEFAULT_BLOCK,
+      DimS, narr.data(), this->nb_components, FFTW_MPI_DEFAULT_BLOCK,
       FFTW_MPI_DEFAULT_BLOCK, i_in, i_out, this->comm.get_mpi_comm(),
       FFTW_MPI_TRANSPOSED_IN | flags);
     if (this->plan_ifft == nullptr) {
@@ -175,9 +175,9 @@ namespace muSpectre {
     // Copy non-padded field to padded real_workspace.
     // Transposed output of M x N x L transform for >= 3 dimensions is padded
     // M x N x 2*(L/2+1).
-    ptrdiff_t fstride = (Field_t::nb_components*
+    ptrdiff_t fstride = (this->nb_components*
                          this->subdomain_resolutions[DimS-1]);
-    ptrdiff_t wstride = (Field_t::nb_components*2*
+    ptrdiff_t wstride = (this->nb_components*2*
                          (this->subdomain_resolutions[DimS-1]/2+1));
     ptrdiff_t n = field.size()/this->subdomain_resolutions[DimS-1];
 
@@ -213,10 +213,10 @@ namespace muSpectre {
     // Transposed output of M x N x L transform for >= 3 dimensions is padded
     // M x N x 2*(L/2+1).
     ptrdiff_t fstride{
-      Field_t::nb_components*this->subdomain_resolutions[DimS-1]
+      this->nb_components*this->subdomain_resolutions[DimS-1]
     };
     ptrdiff_t wstride{
-      Field_t::nb_components*2*(this->subdomain_resolutions[DimS-1]/2+1)
+      this->nb_components*2*(this->subdomain_resolutions[DimS-1]/2+1)
     };
     ptrdiff_t n(field.size()/this->subdomain_resolutions[DimS-1]);
 

@@ -54,7 +54,7 @@ namespace muSpectre {
     std::copy(this->subdomain_resolutions.begin(),
               this->subdomain_resolutions.end(),
               narr.begin());
-    int howmany = Field_t::nb_components;
+    int howmany = this->nb_components;
     //temporary buffer for plan
     size_t alloc_size = (CcoordOps::get_size(this->subdomain_resolutions)*
                          howmany);

@@ -52,4 +52,14 @@ namespace muSpectre {
     return this->counter;
   }
 
+  /* ---------------------------------------------------------------------- */
+  Real SolverBaseDyn::get_tol() const {
+    return this->tol;
+  }
+
+  /* ---------------------------------------------------------------------- */
+  Uint SolverBaseDyn::get_maxiter() const {
+    return this->maxiter;
+  }
+
 }  // muSpectre

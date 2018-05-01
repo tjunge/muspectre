@@ -43,10 +43,22 @@ namespace muSpectre {
 
   std::vector<OptimizeResult>
   newton_cg_dyn(Cell & cell,
-                const std::vector<Eigen::MatrixXd> load_increments,
+                const std::vector<Eigen::MatrixXd> load_steps,
                 SolverBaseDyn & solver, Real newton_tol,
                 Real equil_tol,
                 Dim_t verbose = 0);
+
+  /* ---------------------------------------------------------------------- */
+  OptimizeResult
+  newton_cg_dyn(Cell & cell,
+                const Eigen::Ref<Eigen::MatrixXd> load_step,
+                SolverBaseDyn & solver, Real newton_tol,
+                Real equil_tol,
+                Dim_t verbose = 0) {
+    std::vector<Eigen::MatrixXd> load_steps{load_step};
+    return newton_cg_dyn(cell, load_steps, solver, newton_tol,
+                         equil_tol, verbose).front();
+  }
 
 }  // muSpectre
 

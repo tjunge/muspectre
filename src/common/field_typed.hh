@@ -92,7 +92,7 @@ namespace muSpectre {
     TypedField(const TypedField &other) = delete;
 
     //! Move constructor
-    TypedField(TypedField &&other) = delete;
+    TypedField(TypedField &&other) = default;
 
     //! Destructor
     virtual ~TypedField() = default;
