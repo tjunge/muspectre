@@ -151,6 +151,7 @@ namespace muSpectre {
                                   StressField_t & P,
                                   Formulation form,
                                   SplittedCell is_cell_splitted) override;
+
     //! computes stress and tangent modulus
     virtual void compute_stresses_tangent(const StrainField_t & F,
                                           StressField_t & P,
@@ -361,7 +362,7 @@ namespace muSpectre {
       auto & grad = std::get<0>(Strains);
       auto && strain = MatTB::convert_strain<stored_strain_m, expected_strain_m>(grad);
       // return value contains a tuple of rvalue_refs to both stress and tangent moduli
-      
+
       // for the case that cells do not contain any splitt cells
       auto non_split_pixel = [&strain, &this_mat, ratio, &Stresses, &internal_variables](){
         Stresses =
@@ -371,7 +372,7 @@ namespace muSpectre {
                                              internals...);},
           internal_variables);
       };
-      
+
       // for the case that cells contain splitt cells
       auto split_pixel = [&strain, &this_mat, ratio, &Stresses, &internal_variables](){
         auto stress_tgt_contributions =
@@ -411,7 +412,7 @@ namespace muSpectre {
 
       // return value contains a tuple of rvalue_refs to both stress
       // and tangent moduli
-      
+
       // for the case that cells do not contain splitt cells
       auto non_split_pixel = [&strain, &this_mat, ratio, &Stresses, &internal_variables, &grad](){
         auto stress_tgt =
@@ -425,7 +426,7 @@ namespace muSpectre {
          std::move(std::get<0>(stress_tgt)),
          std::move( std::get<1>(stress_tgt)));
       };
-      
+
       // for the case that cells contain splitt cells
       auto split_pixel = [&strain, &this_mat, ratio, &Stresses, &internal_variables, &grad](){
         auto stress_tgt =
@@ -535,14 +536,14 @@ namespace muSpectre {
 
       //for the case that cell does not contain any splitted pixel
       auto non_split_pixel = [&strain, &this_mat,ratio, &sigma, &internal_variables](){
-      sigma = 
+      sigma =
       apply([&strain, &this_mat] (auto && ... internals) {
           return
           this_mat.evaluate_stress(std::move(strain),
                                            internals...);},
         internal_variables);
       };
-      
+
       // for the case that cells contain splitt cells
       auto split_pixel = [&strain, &this_mat, &ratio, &sigma, &internal_variables](){
       sigma += ratio *
@@ -594,7 +595,7 @@ namespace muSpectre {
       P = MatTB::PK1_stress<traits::stress_measure, traits::strain_measure>
       (grad, stress);
       };
-      
+
       // for the case that cells contain splitted cells
       auto split_pixel = [&strain, &this_mat, ratio, &Stresses, internal_variables, &grad](){
       auto  stress =
@@ -603,7 +604,7 @@ namespace muSpectre {
           this_mat.evaluate_stress(std::move(strain),
                                            internals...);},
         internal_variables);
-      
+
       auto && P = get<0>(Stresses);
       P += ratio * MatTB::PK1_stress<traits::stress_measure, traits::strain_measure>
       (grad, stress);
