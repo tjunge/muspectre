@@ -97,21 +97,21 @@ void add_proj_helper(py::module & mod, std::string name_start) {
                      size_t comm) {
           if (fft == "fftw") {
             auto engine = std::make_unique<FFTWEngine<DimS>>
-              (res, Proj::NbComponents, std::move(Communicator(MPI_Comm(comm))));
+              (res, Proj::NbComponents(), std::move(Communicator(MPI_Comm(comm))));
             return Proj(std::move(engine), lengths);
           }
 #else
     .def(py::init([](Ccoord res, Rcoord lengths, const std::string & fft) {
           if (fft == "fftw") {
             auto engine = std::make_unique<FFTWEngine<DimS>>
-              (res, Proj::NbComponents);
+              (res, Proj::NbComponents());
             return Proj(std::move(engine), lengths);
           }
 #endif
 #ifdef WITH_FFTWMPI
           else if (fft == "fftwmpi") {
             auto engine = std::make_unique<FFTWMPIEngine<DimS>>
-              (res, Proj::NbComponents,
+              (res, Proj::NbComponents(),
                std::move(Communicator(MPI_Comm(comm))));
             return Proj(std::move(engine), lengths);
           }
@@ -119,7 +119,7 @@ void add_proj_helper(py::module & mod, std::string name_start) {
 #ifdef WITH_PFFT
           else if (fft == "pfft") {
             auto engine = std::make_unique<PFFTEngine<DimS>>
-              (res, Proj::NbComponents,
+              (res, Proj::NbComponents(),
                std::move(Communicator(MPI_Comm(comm))));
             return Proj(std::move(engine), lengths);
           }
