@@ -34,8 +34,8 @@
 #include "common/ccoord_operations.hh"
 #include "cell/cell_factory.hh"
 #include "materials/material_linear_elastic1.hh"
-#include "solver/solvers.hh"
-#include "solver/solver_cg.hh"
+#include "solver/new_solvers.hh"
+#include "solver/new_solver_cg.hh"
 
 
 using opt_ptr = std::unique_ptr<cxxopts::Options>;
@@ -124,14 +124,14 @@ int main(int argc, char *argv[])
   constexpr Real cg_tol{1e-7};
   const Uint maxiter = nb_dofs;
 
-  Grad_t<dim> DeltaF{Grad_t<dim>::Zero()};
+  Eigen::MatrixXd DeltaF{Eigen::MatrixXd::Zero(dim, dim)};
   DeltaF(0, 1) = .1;
   Dim_t verbose {1};
 
   auto start = std::chrono::high_resolution_clock::now();
-  GradIncrements<dim> grads{DeltaF};
-  SolverCG<dim> cg{cell, cg_tol, maxiter, bool(verbose)};
-  newton_cg(cell, grads, cg, newton_tol, verbose);
+  LoadSteps_t loads{DeltaF};
+  SolverCGDyn cg{cell, cg_tol, maxiter, bool(verbose)};
+  newton_cg_dyn(cell, loads, cg, newton_tol, verbose);
   std::chrono::duration<Real> dur = std::chrono::high_resolution_clock::now() - start;
   std::cout << "Resolution time = " << dur.count() << "s" << std::endl;
 
