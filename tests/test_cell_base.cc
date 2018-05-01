@@ -85,8 +85,8 @@ namespace muSpectre {
   BOOST_AUTO_TEST_CASE(manual_construction) {
     constexpr Dim_t dim{twoD};
 
-    Ccoord_t<dim> resolutions{3, 3};
-    Rcoord_t<dim> lengths{2.3, 2.7};
+    Ccoord_t<dim> resolutions{ 3, 3};
+    Rcoord_t<dim> lengths{ 2.3, 2.7};
     Formulation form{Formulation::finite_strain};
     auto fft_ptr{std::make_unique<FFTWEngine<dim, dim>>(resolutions)};
     auto proj_ptr{std::make_unique<ProjectionFiniteStrainFast<dim, dim>>(std::move(fft_ptr), lengths)};
@@ -155,7 +155,6 @@ namespace muSpectre {
       Real norm = (mat - P_ref).norm();
       BOOST_CHECK_EQUAL(norm, 0.);
     }
-
     auto tan_ref = std::get<1>(tup);
     for (const auto tan: tangent) {
       Real norm = (tan - tan_ref).norm();

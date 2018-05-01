@@ -39,7 +39,7 @@ namespace muSpectre {
 
   /* ---------------------------------------------------------------------- */
   template <Dim_t DimS, Dim_t DimM>
-  CellBase<DimS, DimM>::CellBase(Projection_ptr projection_)
+  CellBase<DimS, DimM>::CellBase(Projection_ptr projection_, SplittedCell is_cell_splitted)
     :subdomain_resolutions{projection_->get_subdomain_resolutions()},
      subdomain_locations{projection_->get_subdomain_locations()},
      domain_resolutions{projection_->get_domain_resolutions()},
@@ -50,7 +50,7 @@ namespace muSpectre {
      P{make_field<StressField_t>("Piola-Kirchhoff-1", *this->fields)},
      projection{std::move(projection_)},
      form{projection->get_formulation()},
-     is_cell_splitted{SplittedCell::no}
+     is_cell_splitted{is_cell_splitted}
   { }
 
   /* ---------------------------------------------------------------------- */

@@ -29,6 +29,7 @@
 
 set (cells_SRC
   ${CMAKE_CURRENT_SOURCE_DIR}/cell_base.cc
+  ${CMAKE_CURRENT_SOURCE_DIR}/cell_split.cc
   )
 
 target_sources(muSpectre PRIVATE ${cells_SRC})

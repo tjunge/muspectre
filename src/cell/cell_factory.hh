@@ -96,19 +96,20 @@ namespace muSpectre {
     return cell;
   }
 
-  /*  template <size_t DimS, size_t DimM=DimS,
+  template <size_t DimS, size_t DimM=DimS,
             typename Cell=CellSplit<DimS, DimM>,
             typename FFTEngine=FFTWEngine<DimS, DimM>>
   inline
   Cell make_cell_split(Ccoord_t<DimS> resolutions,
-                 Rcoord_t<DimS> lengths,
-                 Formulation form) {
+                       Rcoord_t<DimS> lengths,
+                       Formulation form) {
 
     auto && input = cell_input<DimS, DimM, FFTEngine>(resolutions, lengths,
                                                       form);
-    auto cell{Cell{std::move(input)}};
-    return cell;
-    }*/
+    Cell cell (std::move(input), SplittedCell::yes);
+    //CellBase<DimS, DimM> cell_base {cell};
+    return std::unique_ptr<CellBase<DimS,DimM>>(CellBase<DimS, DimM> {cell});
+  }
 
 
 #ifdef WITH_MPI

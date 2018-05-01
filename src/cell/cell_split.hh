@@ -5,7 +5,7 @@
  *
  * @date   19 Apr 2018
  *
- * @brief Base class representing a unit cell able to handle 
+ * @brief Base class representing a unit cell able to handle
  *        split material assignments
  *
  * Copyright © 2017 Till Junge
@@ -50,6 +50,7 @@ namespace muSpectre {
   template <Dim_t DimS, Dim_t DimM=DimS>
   class CellSplit: public CellBase<DimS, DimM> {
   public:
+    using Parent = CellBase<DimS, DimM>; //!< base class
     //! global field collection
     using FieldCollection_t = GlobalFieldCollection<DimS>;
     using Projection_t = ProjectionBase<DimS, DimM>;
@@ -72,7 +73,7 @@ namespace muSpectre {
     CellSplit() = delete;
 
     //! constructor using sizes and resolution
-    CellSplit(Projection_ptr projection);
+    CellSplit(Projection_ptr projection, SplittedCell is_cell_splitted = SplittedCell::yes);
 
     //! Copy constructor
     CellSplit(const CellSplit &other) = delete;
@@ -90,7 +91,7 @@ namespace muSpectre {
     CellSplit& operator=(CellSplit &&other) = default;
 
   protected:
-    void check_material_coverage();
+    void check_material_coverage() override final;
     void set_p_k_zero();
     //full resppnse is consisted of the stresses and tangent matrix
     FullResponse_t evaluate_stress_tangent(StrainField_t & F) override final;

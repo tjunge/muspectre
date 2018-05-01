@@ -69,10 +69,10 @@ namespace muSpectre {
    * - `stress_measure`: the measure of the returned stress. Is used by
    *                     `muspectre::MaterialMuSpectre` to transform it into
    *                     Cauchy stress (`muspectre::StressMeasure::Cauchy`) in
-   *                     small-strain computations and into first 
+   *                     small-strain computations and into first
    *                     Piola-Kirchhoff stress `muspectre::StressMeasure::PK1`
    *                     in finite-strain computations
-   * - `InternalVariables`: a tuple of `muSpectre::FieldMap`s containing 
+   * - `InternalVariables`: a tuple of `muSpectre::FieldMap`s containing
    *                        internal variables
    */
   template <class Material>
@@ -92,7 +92,7 @@ namespace muSpectre {
   public:
     /**
      * type used to determine whether the
-     * `muSpectre::MaterialMuSpectre::iterable_proxy` evaluate only
+     * `muSpectre::MaterialMuSpectre::iterable_proxy evaluate only
      * stresses or also tangent stiffnesses
      */
     using NeedTangent = MatTB::NeedTangent;
@@ -105,7 +105,7 @@ namespace muSpectre {
     using StrainField_t = typename Parent::StrainField_t;
     //! expected type for tangent stiffness fields
     using TangentField_t = typename Parent::TangentField_t;
-
+    using Ccoord = Ccoord_t<DimS>; //!< cell coordinates type
     //! traits for the CRTP subclass
     using traits = MaterialMuSpectre_traits<Material>;
 
@@ -139,28 +139,24 @@ namespace muSpectre {
     //! allocate memory, etc
     virtual void initialise(bool stiffness = false) override;
 
+    // this fucntion is speicalized to assign partial material to a pixel
+    //void add_pixel_split(const Ccoord & local_ccoord, Real ratio = 1.0);
+    template<class ...InternalArgs>
+    void add_pixel_split(const Ccoord_t<DimS> & pixel, Real ratio, InternalArgs ... args);
+
     using Parent::compute_stresses;
     using Parent::compute_stresses_tangent;
     //! computes stress
     virtual void compute_stresses(const StrainField_t & F,
                                   StressField_t & P,
                                   Formulation form,
-                                  SplittedCell is_cell_splitted) override final;
+                                  SplittedCell is_cell_splitted) override;
     //! computes stress and tangent modulus
     virtual void compute_stresses_tangent(const StrainField_t & F,
                                           StressField_t & P,
                                           TangentField_t & K,
-<<<<<<< Updated upstream
-<<<<<<< Updated upstream
-                                          Formulation form) override final;
-=======
-=======
->>>>>>> Stashed changes
                                           Formulation form,
-                                          SplittedCell is_cell_splitted) override final;
-    template<class ...InternalArgs>
-    void add_pixel_split(const Ccoord_t<DimS> & pixel, Real ratio = 1.0, InternalArgs ... args);
->>>>>>> Stashed changes
+                                          SplittedCell is_cell_splitted)override;
 
   protected:
     //! computes stress with the formulation available at compile time
@@ -200,15 +196,7 @@ namespace muSpectre {
   template <class Material, Dim_t DimS, Dim_t DimM>
   MaterialMuSpectre<Material, DimS, DimM>::
   MaterialMuSpectre(std::string name)
-<<<<<<< Updated upstream
-<<<<<<< Updated upstream
-    :Parent(name) {
-=======
     :Parent(name){
->>>>>>> Stashed changes
-=======
-    :Parent(name){
->>>>>>> Stashed changes
     using stress_compatible = typename traits::StressMap_t::
       template is_compatible<StressField_t>;
     using strain_compatible = typename traits::StrainMap_t::
@@ -247,7 +235,14 @@ namespace muSpectre {
     cell.add_material(std::move(mat));
     return mat_ref;
   }
-
+  template <class Material, Dim_t DimS, Dim_t DimM>
+  template<class ...InternalArgs>
+  void MaterialMuSpectre<Material, DimS, DimM>::
+  add_pixel_split(const Ccoord &local_ccoord, Real ratio, InternalArgs ...args){
+    auto & this_mat = static_cast<Material&>(*this);
+    this_mat.add_pixel(local_ccoord, args...);
+    this->assigned_ratio.push_back(ratio);
+  }
 
   /* ---------------------------------------------------------------------- */
   template <class Material, Dim_t DimS, Dim_t DimM>
@@ -264,20 +259,36 @@ namespace muSpectre {
   void MaterialMuSpectre<Material, DimS, DimM>::
   compute_stresses(const StrainField_t &F, StressField_t &P,
                    Formulation form, SplittedCell is_cell_splitted) {
-    if (is_cell_splitted == SplittedCell::no){
     switch (form) {
     case Formulation::finite_strain: {
-      this->compute_stresses_worker<Formulation::finite_strain, SplittedCell::no>(F, P);
+      switch (is_cell_splitted){
+      case (SplittedCell::no): {
+        this->compute_stresses_worker<Formulation::finite_strain, SplittedCell::no>(F, P);
+        break;
+      }
+      case (SplittedCell::yes): {
+        this->compute_stresses_worker<Formulation::finite_strain, SplittedCell::yes>(F, P);
+        break;
+      }
+      }
       break;
     }
     case Formulation::small_strain: {
-      this->compute_stresses_worker<Formulation::small_strain, SplittedCell::no>(F, P);
+      switch (is_cell_splitted){
+      case (SplittedCell::no): {
+        this->compute_stresses_worker<Formulation::small_strain, SplittedCell::no>(F, P);
+        break;
+      }
+      case (SplittedCell::yes): {
+        this->compute_stresses_worker<Formulation::small_strain, SplittedCell::yes>(F, P);
+        break;
+      }
+      }
       break;
     }
     default:
       throw std::runtime_error("Unknown formulation");
       break;
-    }
     }
   }
 
@@ -287,20 +298,36 @@ namespace muSpectre {
   compute_stresses_tangent(const StrainField_t & F, StressField_t & P,
                            TangentField_t & K,
                            Formulation form, SplittedCell is_cell_splitted) {
-    if (is_cell_splitted == SplittedCell::no){
     switch (form) {
     case Formulation::finite_strain: {
-      this->compute_stresses_worker<Formulation::finite_strain, SplittedCell::no>(F, P, K);
+      switch (is_cell_splitted){
+      case (SplittedCell::no): {
+        this->compute_stresses_worker<Formulation::finite_strain, SplittedCell::no>(F, P, K);
+        break;
+      }
+      case (SplittedCell::yes): {
+        this->compute_stresses_worker<Formulation::finite_strain, SplittedCell::yes>(F, P, K);
+        break;
+      }
+      }
       break;
     }
     case Formulation::small_strain: {
-      this->compute_stresses_worker<Formulation::small_strain, SplittedCell::no>(F, P, K);
+      switch (is_cell_splitted){
+      case (SplittedCell::no): {
+        this->compute_stresses_worker<Formulation::small_strain, SplittedCell::no>(F, P, K);
+        break;
+      }
+      case (SplittedCell::yes): {
+        this->compute_stresses_worker<Formulation::small_strain, SplittedCell::yes>(F, P, K);
+        break;
+      }
+      }
       break;
     }
     default:
       throw std::runtime_error("Unknown formulation");
       break;
-    }
     }
   }
 
@@ -324,27 +351,55 @@ namespace muSpectre {
     using Stresses_t = std::tuple<typename traits::StressMap_t::reference,
                                   typename traits::TangentMap_t::reference>;
     auto constitutive_law_small_strain = [this]
-      (Strains_t Strains, Stresses_t Stresses, auto && internal_variables) {
+      (Strains_t Strains, Stresses_t Stresses, const Real & ratio, auto && internal_variables) {
       constexpr StrainMeasure stored_strain_m{get_stored_strain_type(Form)};
       constexpr StrainMeasure expected_strain_m{
-      get_formulation_strain_type(Form, traits::strain_measure)};
-
+        get_formulation_strain_type(Form, traits::strain_measure)};
       auto & this_mat = static_cast<Material&>(*this);
 
       // Transformation gradient is first in the strains tuple
-      auto & F = std::get<0>(Strains);
-      auto && strain = MatTB::convert_strain<stored_strain_m, expected_strain_m>(F);
+      auto & grad = std::get<0>(Strains);
+      auto && strain = MatTB::convert_strain<stored_strain_m, expected_strain_m>(grad);
       // return value contains a tuple of rvalue_refs to both stress and tangent moduli
-      Stresses =
+      
+      // for the case that cells do not contain any splitt cells
+      auto non_split_pixel = [&strain, &this_mat, ratio, &Stresses, &internal_variables](){
+        Stresses =
         apply([&strain, &this_mat] (auto && ... internals) {
             return
             this_mat.evaluate_stress_tangent(std::move(strain),
                                              internals...);},
           internal_variables);
+      };
+      
+      // for the case that cells contain splitt cells
+      auto split_pixel = [&strain, &this_mat, ratio, &Stresses, &internal_variables](){
+        auto stress_tgt_contributions =
+        apply([&strain, &this_mat] (auto && ... internals) {
+            return
+            this_mat.evaluate_stress_tangent(std::move(strain),
+                                             internals...);},
+          internal_variables);
+        auto && stress   = std::get<0>(Stresses);
+        auto && tangent  = std::get<1>(Stresses);
+        stress  += ratio * std::get<0>(stress_tgt_contributions);
+        tangent += ratio * std::get<1>(stress_tgt_contributions);
+      };
+
+      switch (is_cell_splitted){
+      case  SplittedCell::no : {
+        non_split_pixel();
+        break;
+      }
+      case SplittedCell::yes : {
+        split_pixel();
+        break;
+      }
+      }
     };
 
     auto constitutive_law_finite_strain = [this]
-      (Strains_t Strains, Stresses_t Stresses, auto && internal_variables) {
+      (Strains_t Strains, Stresses_t Stresses, const Real & ratio, auto && internal_variables) {
       constexpr StrainMeasure stored_strain_m{get_stored_strain_type(Form)};
       constexpr StrainMeasure expected_strain_m{
       get_formulation_strain_type(Form, traits::strain_measure)};
@@ -354,26 +409,51 @@ namespace muSpectre {
       auto & grad = std::get<0>(Strains);
       auto && strain = MatTB::convert_strain<stored_strain_m, expected_strain_m>(grad);
 
-      // TODO: Figure this out: I can't std::move(internals...),
-      // because if there are no internals, compilation fails with "no
-      // matching function for call to ‘move()’'. These are tuples of
-      // lvalue references, so it shouldn't be too bad, but still
-      // irksome.
-
       // return value contains a tuple of rvalue_refs to both stress
       // and tangent moduli
-      auto stress_tgt =
+      
+      // for the case that cells do not contain splitt cells
+      auto non_split_pixel = [&strain, &this_mat, ratio, &Stresses, &internal_variables, &grad](){
+        auto stress_tgt =
         apply([&strain, &this_mat] (auto && ... internals) {
             return
             this_mat.evaluate_stress_tangent(std::move(strain),
                                              internals...);},
           internal_variables);
-      auto & stress = std::get<0>(stress_tgt);
-      auto & tangent = std::get<1>(stress_tgt);
-      Stresses = MatTB::PK1_stress<traits::stress_measure, traits::strain_measure>
-      (std::move(grad),
-       std::move(stress),
-       std::move(tangent));
+        Stresses = MatTB::PK1_stress<traits::stress_measure, traits::strain_measure>
+        (std::move(grad),
+         std::move(std::get<0>(stress_tgt)),
+         std::move( std::get<1>(stress_tgt)));
+      };
+      
+      // for the case that cells contain splitt cells
+      auto split_pixel = [&strain, &this_mat, ratio, &Stresses, &internal_variables, &grad](){
+        auto stress_tgt =
+        apply([&strain, &this_mat] (auto && ... internals) {
+            return
+            this_mat.evaluate_stress_tangent(std::move(strain),
+                                             internals...);},
+          internal_variables);
+        auto && stress_tgt_contributions = MatTB::PK1_stress<traits::stress_measure, traits::strain_measure>
+        (std::move(grad),
+         std::move(std::get<0>(stress_tgt)),
+         std::move(std::get<1>(stress_tgt)));
+        auto && stress   = std::get<0>(Stresses);
+        auto && tangent  = std::get<1>(Stresses);
+        stress  += ratio * std::get<0>(stress_tgt_contributions);
+        tangent += ratio * std::get<1>(stress_tgt_contributions);
+      };
+
+      switch (is_cell_splitted){
+      case  SplittedCell::no : {
+        non_split_pixel();
+        break;
+      }
+      case SplittedCell::yes : {
+        split_pixel();
+        break;
+      }
+      }
     };
 
     iterable_proxy<NeedTangent::yes> fields{*this, F, P, K};
@@ -402,6 +482,10 @@ namespace muSpectre {
                     decltype(std::get<1>(std::get<1>(arglist)))>>::value,
                     "Type mismatch for tangent reference, check iterator"
                     "value_type");
+      static_assert(std::is_same<Real,
+                    std::remove_reference_t<
+                    decltype(std::get<2>(arglist))>>::value,
+                    "Type mismatch for ratio reference, expected a real number");
 
       switch (Form) {
       case Formulation::small_strain: {
@@ -436,7 +520,7 @@ namespace muSpectre {
     using Strains_t = std::tuple<typename traits::StrainMap_t::reference>;
     using Stresses_t = std::tuple<typename traits::StressMap_t::reference>;
     auto constitutive_law_small_strain = [this]
-      (Strains_t Strains, Stresses_t Stresses, auto && internal_variables) {
+      (Strains_t Strains, Stresses_t Stresses,const  Real & ratio, auto && internal_variables) {
       constexpr StrainMeasure stored_strain_m{get_stored_strain_type(Form)};
       constexpr StrainMeasure expected_strain_m{
       get_formulation_strain_type(Form, traits::strain_measure)};
@@ -444,28 +528,53 @@ namespace muSpectre {
       auto & this_mat = static_cast<Material&>(*this);
 
       // Transformation gradient is first in the strains tuple
-      auto & F = std::get<0>(Strains);
-      auto && strain = MatTB::convert_strain<stored_strain_m, expected_strain_m>(F);
+      auto & grad = std::get<0>(Strains);
+      auto && strain = MatTB::convert_strain<stored_strain_m, expected_strain_m>(grad);
       // return value contains a tuple of rvalue_refs to both stress and tangent moduli
       auto & sigma = std::get<0>(Stresses);
-      sigma =
-        apply([&strain, &this_mat] (auto && ... internals) {
-            return
-            this_mat.evaluate_stress(std::move(strain),
-                                     internals...);},
-          internal_variables);
+
+      //for the case that cell does not contain any splitted pixel
+      auto non_split_pixel = [&strain, &this_mat,ratio, &sigma, &internal_variables](){
+      sigma = 
+      apply([&strain, &this_mat] (auto && ... internals) {
+          return
+          this_mat.evaluate_stress(std::move(strain),
+                                           internals...);},
+        internal_variables);
+      };
+      
+      // for the case that cells contain splitt cells
+      auto split_pixel = [&strain, &this_mat, &ratio, &sigma, &internal_variables](){
+      sigma += ratio *
+      apply([&strain, &this_mat] (auto && ... internals) {
+          return
+          this_mat.evaluate_stress(std::move(strain),
+                                           internals...);},
+        internal_variables);
+      };
+
+      switch (is_cell_splitted){
+      case  SplittedCell::no : {
+        non_split_pixel();
+        break;
+      }
+      case SplittedCell::yes : {
+        split_pixel();
+        break;
+      }
+      }
     };
 
     auto constitutive_law_finite_strain = [this]
-      (Strains_t Strains, Stresses_t && Stresses, auto && internal_variables) {
+      (Strains_t Strains, Stresses_t && Stresses,const Real & ratio, auto && internal_variables) {
       constexpr StrainMeasure stored_strain_m{get_stored_strain_type(Form)};
       constexpr StrainMeasure expected_strain_m{
       get_formulation_strain_type(Form, traits::strain_measure)};
       auto & this_mat = static_cast<Material&>(*this);
 
       // Transformation gradient is first in the strains tuple
-      auto & F = std::get<0>(Strains);
-      auto && strain = MatTB::convert_strain<stored_strain_m, expected_strain_m>(F);
+      auto & grad = std::get<0>(Strains);
+      auto && strain = MatTB::convert_strain<stored_strain_m, expected_strain_m>(grad);
 
       // TODO: Figure this out: I can't std::move(internals...),
       // because if there are no internals, compilation fails with "no
@@ -473,17 +582,43 @@ namespace muSpectre {
       // lvalue references, so it shouldn't be too bad, but still
       // irksome.
 
-      // return value contains a tuple of rvalue_refs to both stress
-      // and tangent moduli
-      auto && stress =
-        apply([&strain, &this_mat] (auto && ... internals) {
-            return
-            this_mat.evaluate_stress(std::move(strain),
-                                     internals...);},
-          internal_variables);
+      //for the case that cell does not contain any splitted pixel
+      auto non_split_pixel = [ &strain, &this_mat, &ratio, &Stresses, &internal_variables, &grad] (){
+      auto stress =
+      apply([&strain, &this_mat] (auto && ... internals) {
+          return
+          this_mat.evaluate_stress(std::move(strain),
+                                           internals...);},
+        internal_variables);
       auto & P = get<0>(Stresses);
       P = MatTB::PK1_stress<traits::stress_measure, traits::strain_measure>
-      (F, stress);
+      (grad, stress);
+      };
+      
+      // for the case that cells contain splitted cells
+      auto split_pixel = [&strain, &this_mat, ratio, &Stresses, internal_variables, &grad](){
+      auto  stress =
+      apply([&strain, &this_mat] (auto && ... internals) {
+          return
+          this_mat.evaluate_stress(std::move(strain),
+                                           internals...);},
+        internal_variables);
+      
+      auto && P = get<0>(Stresses);
+      P += ratio * MatTB::PK1_stress<traits::stress_measure, traits::strain_measure>
+      (grad, stress);
+      };
+
+      switch (is_cell_splitted){
+      case  SplittedCell::no : {
+        non_split_pixel();
+        break;
+      }
+      case SplittedCell::yes : {
+        split_pixel();
+        break;
+      }
+      }
     };
 
     iterable_proxy<NeedTangent::no> fields{*this, F, P};
@@ -491,7 +626,7 @@ namespace muSpectre {
     for (auto && arglist: fields) {
       /**
        * arglist is a tuple of three tuples containing only Lvalue
-       * references (see value_tye in the class definition of
+       * references (see value_type in the class definition of
        * iterable_proxy::iterator). Tuples contain strains, stresses
        * and internal variables, respectively,
        */
@@ -508,6 +643,10 @@ namespace muSpectre {
                     decltype(std::get<0>(std::get<1>(arglist)))>>::value,
                     "Type mismatch for stress reference, check iterator"
                     "value_type");
+      static_assert(std::is_same<Real,
+                    std::remove_reference_t<
+                    decltype(std::get<2>(arglist))>>::value,
+                    "Type mismatch for ratio reference, expected a real number");
 
       switch (Form) {
       case Formulation::small_strain: {
@@ -621,7 +760,7 @@ namespace muSpectre {
       using InternalReferences = MatTB::ReferenceTuple_t<InternalVariables>;
       //! return type to be unpacked per pixel my the constitutive law
       using value_type =
-        std::tuple<std::tuple<Strain_t>, Stress_tTup, InternalReferences>;
+        std::tuple<std::tuple<Strain_t>, Stress_tTup, Real, InternalReferences>;
       using iterator_category = std::forward_iterator_tag; //!< stl conformance
 
       //! Default constructor
@@ -719,7 +858,7 @@ namespace muSpectre {
     const Ccoord_t<DimS> pixel{
       this->it.material.internal_fields.get_ccoord(this->index)};
     auto && strain = std::make_tuple(this->strain_map[pixel]);
-
+    auto && ratio  = this->it.material.get_assigned_ratio(pixel);
     auto && stresses =
       apply([&pixel] (auto && ... stress_tgt) {
           return std::make_tuple(stress_tgt[pixel]...);},
@@ -732,9 +871,9 @@ namespace muSpectre {
         internal);
     return std::make_tuple(std::move(strain),
                            std::move(stresses),
+                           std::move(ratio),
                            std::move(internals));
   }
-
 }  // muSpectre
 
 

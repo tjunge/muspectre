@@ -34,6 +34,7 @@
 #include "materials/material_linear_elastic1.hh"
 #include "common/iterators.hh"
 #include "common/ccoord_operations.hh"
+#include "common/common.hh"
 #include "cell/cell_factory.hh"
 
 namespace muSpectre {

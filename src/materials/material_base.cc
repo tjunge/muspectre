@@ -32,7 +32,8 @@ namespace muSpectre {
   //----------------------------------------------------------------------------//
   template <Dim_t DimS, Dim_t DimM>
   MaterialBase<DimS, DimM>::MaterialBase(std::string name)
-    :name(name),assigned_ratio{make_field<ScalarField_t>("assigned ratio", this->internal_fields)},
+    :name(name),assigned_ratio{make_field<ScalarField_t>("assigned ratio",
+                                                         this->internal_fields)},
      assigned_ratio_mapped{assigned_ratio}{
     static_assert((DimM == oneD)||
                   (DimM == twoD)||

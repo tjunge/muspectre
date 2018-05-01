@@ -29,6 +29,8 @@
 #include "common/ccoord_operations.hh"
 #include "cell/cell_factory.hh"
 #include "cell/cell_base.hh"
+#include "cell/cell_split.hh"
+
 
 #ifdef WITH_FFTWMPI
 #include "fft/fftwmpi_engine.hh"
@@ -89,6 +91,15 @@ void add_cell_factory_helper(py::module & mod) {
      "resolutions"_a,
      "lengths"_a=CcoordOps::get_cube<dim>(1.),
      "formulation"_a=Formulation::finite_strain);
+  
+  /*mod.def
+    ("CellFactorySplit",
+     [](Ccoord res, Rcoord lens, Formulation form) {
+       CellSplit splitted_cell = make_cell_split(std::move(res), std::move(lens), std::move(form));
+     },
+     "resolutions"_a,
+     "lengths"_a=CcoordOps::get_cube<dim>(1.),
+     "formulation"_a=Formulation::finite_strain);*/
 
 #ifdef WITH_FFTWMPI
   add_parallel_cell_factory_helper<dim, FFTWMPIEngine<dim, dim>>(

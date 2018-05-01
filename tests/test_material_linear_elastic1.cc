@@ -83,7 +83,7 @@ namespace muSpectre {
   }
 
 
-  BOOST_FIXTURE_TEST_CASE_TEMPLATE(test_add_pixel, Fix, mat_list, Fix) {
+  BOOST_FIXTURE_TEST_CASE_TEMPLATE(test_add_pixel, Fix, mat_list, Fix)   {
     auto & mat{Fix::mat};
     constexpr Dim_t sdim{Fix::sdim};
     testGoodies::RandRange<size_t> rng;;
@@ -175,7 +175,8 @@ namespace muSpectre {
     //compute stresses using material
     mat.compute_stresses(globalfields["Transformation Gradient"],
                          globalfields["Nominal Stress1"],
-                         Formulation::finite_strain);
+                         Formulation::finite_strain,
+                         SplittedCell::no);
 
     //compute stresses and tangent moduli using material
     BOOST_CHECK_THROW

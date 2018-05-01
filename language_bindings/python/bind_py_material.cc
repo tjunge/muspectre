@@ -65,6 +65,11 @@ void add_material_linear_elastic1_helper(py::module & mod) {
          [] (Mat_t & mat, Ccoord_t<dim> pix) {
            mat.add_pixel(pix);},
          "pixel"_a)
+    .def("add_pixel_split",
+         [] (Mat_t & mat, Ccoord_t<dim> pix, Real ratio) {
+           mat.add_pixel_split(pix, ratio);},
+         "pixel"_a,
+         "ratio"_a)
     .def("size", &Mat_t::size);
 }
 
@@ -89,6 +94,13 @@ void add_material_linear_elastic2_helper(py::module & mod) {
            Eigen::Matrix<Real, dim, dim> eig_strain{eig};
            mat.add_pixel(pix, eig_strain);},
          "pixel"_a,
+         "eigenstrain"_a)
+    .def("add_pixel_split",
+         [] (Mat_t & mat, Ccoord_t<dim> pix, Real ratio, py::EigenDRef<Eigen::ArrayXXd>& eig) {
+           Eigen::Matrix<Real, dim, dim> eig_strain{eig};
+           mat.add_pixel_split(pix, ratio, eig_strain);},
+         "pixel"_a,
+         "ratio"_a,
          "eigenstrain"_a)
     .def("size", &Mat_t::size);
 }
@@ -116,7 +128,15 @@ void add_material_linear_elastic3_helper(py::module & mod) {
 	   mat.add_pixel(pix, Young, Poisson);},
          "pixel"_a,
          "Young"_a,
-	 "Poisson"_a)
+         "Poisson"_a)
+    .def("add_pixel_split",
+         [] (Mat_t & mat, Ccoord_t<dim> pix, Real ratio, Real Young, Real Poisson) {
+           mat.add_pixel_split(pix, ratio, Young, Poisson);},
+         "pixel"_a,
+         "ratio"_a,
+         "Young"_a,
+         "Poisson"_a)
+
     .def("size", &Mat_t::size);
 }
 
@@ -142,7 +162,14 @@ void add_material_linear_elastic4_helper(py::module & mod) {
 	   mat.add_pixel(pix, Young, Poisson);},
          "pixel"_a,
          "Young"_a,
-	 "Poisson"_a)
+         "Poisson"_a)
+    .def("add_pixel_split",
+         [] (Mat_t & mat, Ccoord_t<dim> pix, Real ratio, Real Young, Real Poisson) {
+           mat.add_pixel_split(pix, ratio, Young, Poisson);},
+         "pixel"_a,
+         "ratio"_a,
+         "Young"_a,
+         "Poisson"_a)
     .def("size", &Mat_t::size);
 }
 

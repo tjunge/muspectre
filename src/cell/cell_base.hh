@@ -90,7 +90,7 @@ namespace muSpectre {
     CellBase() = delete;
 
     //! constructor using sizes and resolution
-    CellBase(Projection_ptr projection);
+    CellBase(Projection_ptr projection, SplittedCell is_cell_splitted = SplittedCell::no);
 
     //! Copy constructor
     CellBase(const CellBase &other) = delete;
@@ -114,7 +114,7 @@ namespace muSpectre {
     Material_t & add_material(Material_ptr mat);
 
     /**
-     * evaluates all materials
+     * evaluate all materials
      */
     virtual FullResponse_t evaluate_stress_tangent(StrainField_t & F);
 
@@ -153,6 +153,8 @@ namespace muSpectre {
 
     //! returns a ref to the cell's tangent stiffness field
     const TangentField_t & get_tangent(bool create = false);
+
+
 
     //! returns a ref to a temporary field managed by the cell
     StrainField_t & get_managed_field(std::string unique_name);
@@ -241,7 +243,7 @@ namespace muSpectre {
     Projection_ptr projection; //!< handle for the projection operator
     bool initialised{false}; //!< to handle double initialisation right
     const Formulation form; //!< formulation for solution
-    const SplittedCell is_cell_splitted ;
+    SplittedCell is_cell_splitted ;
   private:
   };
 
@@ -261,14 +263,7 @@ namespace muSpectre {
     enum {
       ColsAtCompileTime = Eigen::Dynamic,
       MaxColsAtCompileTime = Eigen::Dynamic,
-      RowsAtCompileTime = Eigen::Dynamic,StressField_t =
-      TensorField<FieldCollection_t, Real, secondOrder, DimM>;
-    //! expected type for tangent stiffness fields
-    using TangentField_t =
-      TensorField<FieldCollection_t, Real, fourthOrder, DimM>;
-    //! combined stress and tangent field
-    using FullResponse_t =
-      std::tuple<const StressField
+      RowsAtCompileTime = Eigen::Dynamic,
       MaxRowsAtCompileTime = Eigen::Dynamic,
       IsRowMajor = false
     };

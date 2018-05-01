@@ -42,7 +42,8 @@ _factories = {'fftw': ('CellFactory', False),
 
 
 def Cell(resolutions, lengths, formulation=Formulation.finite_strain,
-         fft='fftw', communicator=None):
+         fft='fftw', communicator=None,
+         is_cell_splitted=False):
     """
     Instantiate a muSpectre Cell class.
 
@@ -73,6 +74,8 @@ def Cell(resolutions, lengths, formulation=Formulation.finite_strain,
         factory_name, is_parallel = _factories[fft]
     except KeyError:
         raise KeyError("Unknown FFT engine '{}'.".format(fft))
+    if is_cell_splitted:
+        factory_name = factory_name + "Split"
     try:
         factory = _muSpectre.__dict__[factory_name]
     except KeyError:

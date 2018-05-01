@@ -1,9 +1,9 @@
 /**
  * @file   cell_split.cc
  *
- * @author Ali FalsafiTill Junge <ali.faslafi@epfl.ch>
+ * @author Ali Falsafi <ali.faslafi@epfl.ch>
  *
- * @date   01 Nov 2017
+ * @date   19 Apr 2018
  *
  * @brief  Implementation for cell base class
  *
@@ -33,15 +33,15 @@
 
 #include <sstream>
 #include <algorithm>
-
+#include <boost/optional.hpp>
 
 namespace muSpectre {
 
     /* ---------------------------------------------------------------------- */
 
   template <Dim_t DimS, Dim_t DimM>
-  CellSplit<DimS, DimM>::CellSplit(Projection_ptr projection)
-    :Parent(projection), is_cell_splitted{SplittedCell::yes}{}
+  CellSplit<DimS, DimM>::CellSplit(Projection_ptr projection,SplittedCell is_cell_splitted )
+    :Parent(std::move(projection), is_cell_splitted) {}
 
   /* ---------------------------------------------------------------------- */
 
@@ -57,8 +57,8 @@ namespace muSpectre {
         pixel_assigned_ratio.at(index) += mat->get_assigned_ratio(pixel);
       }
     }
-    std::vector<Ccoord> over_assigned_pixels;
-    std::vector<Ccoord> under_assigned_pixels;
+    std::vector<Ccoord_t<DimM>> over_assigned_pixels;
+    std::vector<Ccoord_t<DimM>> under_assigned_pixels;
     for (size_t i = 0; i < nb_pixels; ++i) {
       if (pixel_assigned_ratio.at(i) > 1.0) {
         over_assigned_pixels.push_back(CcoordOps::get_ccoord(this->subdomain_resolutions,
@@ -93,35 +93,42 @@ namespace muSpectre {
   //diffferent materials.
 
   template <Dim_t DimS, Dim_t DimM>
-  void CellSplit<DimS, DimM>::evaluate_stress_tangent(StrainField_t & F){
-    evaluate_split_stress_tangent(F)
+  typename CellSplit<DimS, DimM>::FullResponse_t
+  CellSplit<DimS, DimM>::evaluate_stress_tangent(StrainField_t & F){
+    return evaluate_split_stress_tangent(F);
   }
 
   template <Dim_t DimS, Dim_t DimM>
-  void CellSplit<DimS, DimM>::evaluate_split_stress_tangent(StrainField_t & F){
+  typename CellSplit<DimS, DimM>::FullResponse_t
+  CellSplit<DimS, DimM>::evaluate_split_stress_tangent(StrainField_t & F){
     if (this->initialised == false) {
       this->initialise();
     }
     //! High level compatibility checks
-    if (grad.size() != this->F.size()) {
+    if (F.size() != this->F.size()) {
       throw std::runtime_error("Size mismatch");
     }
     constexpr bool create_tangent{true};
     this->get_tangent(create_tangent);
 
-    // Here we should first set P and K matrixes equal to zeros first
-    this->set_p_k_zero()
+    // Here we should first set P and K matrixes equal to zeros first because we want to add up contribution
+    //of the partial influence of different materials assigend to each pixel. Therefore, this values should be
+    // initiialised as zero filled tensors
+    this->set_p_k_zero();
 
-    for (auto & mat: this->materials) {
-      mat->compute_stresses_tangent(grad, this->P, this->K.value(),
-                                    this->form, this->is_cell_splitted);
-    }
-    }
-
-  template <Dim_t DimS, Dim_t DimM>
-  void CellSplit<DimS, DimM>::set_p_k_zero(StrainField_t & F){
-    auto nb_pixels = CcoordOps::get_size(this->subdomain_resolutions);
-    
+      for (auto & mat: this->materials) {
+        mat->compute_stresses_tangent(F, this->P, this->K.value(),
+                                      this->form, this->is_cell_splitted);
+      }
+      return std::tie(this->P, this->K.value());
   }
 
+  template <Dim_t DimS, Dim_t DimM>
+  void CellSplit<DimS, DimM>::set_p_k_zero(){
+    this->P.set_zero();
+    this->K.value().get().set_zero();
+  }
+
+  template class CellSplit<twoD, twoD>;
+  template class CellSplit<threeD, threeD>;
 } //muspectre

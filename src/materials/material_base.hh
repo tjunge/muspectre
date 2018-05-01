@@ -125,7 +125,7 @@ namespace muSpectre {
      */
     void compute_stresses(const Field_t & F,
                           Field_t & P,
-                          Formulation form, SplittedCell is_cell_splitted);
+                          Formulation form, SplittedCell is_cell_splitted = SplittedCell::no);
     //! computes stress and tangent moduli
     virtual void compute_stresses_tangent(const StrainField_t & F,
                                           StressField_t & P,
@@ -140,7 +140,7 @@ namespace muSpectre {
     void compute_stresses_tangent(const Field_t & F,
                                   Field_t & P,
                                   Field_t & K,
-                                  Formulation form, SplittedCell is_cell_splitted);
+                                  Formulation form, SplittedCell is_cell_splitted = SplittedCell::no);
     // this function return the ratio of which the input pixel is consisted of this material
     Real get_assigned_ratio(Ccoord pixel);
     //! iterator to first pixel handled by this material
