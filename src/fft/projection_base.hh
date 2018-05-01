@@ -64,7 +64,7 @@ namespace muSpectre {
     //! Eigen type to replace fields
     using Vector_t = Eigen::Matrix<Real, Eigen::Dynamic, 1>;
     //! type of fft_engine used
-    using FFTEngine = FFTEngineBase<DimS, DimM>;
+    using FFTEngine = FFTEngineBase<DimS>;
     //! reference to fft engine is safely managed through a `std::unique_ptr`
     using FFTEngine_ptr = std::unique_ptr<FFTEngine>;
     //! cell coordinates type
@@ -150,9 +150,8 @@ namespace muSpectre {
     virtual std::array<Dim_t, 2> get_strain_shape() const = 0;
 
     //! get number of components to project per pixel
-    Dim_t get_nb_components() const {
-      return this->fft_engine->get_nb_components();
-    }
+    virtual Dim_t get_nb_components() const {
+      return DimM*DimM;}
 
 
   protected:

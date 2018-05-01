@@ -38,12 +38,11 @@ namespace muSpectre {
    * Virtual base class for FFT engines. To be implemented by all
    * FFT_engine implementations.
    */
-  template <Dim_t DimS, Dim_t DimM>
+  template <Dim_t DimS>
   class FFTEngineBase
   {
   public:
     constexpr static Dim_t sdim{DimS}; //!< spatial dimension of the cell
-    constexpr static Dim_t mdim{DimM}; //!< material dimension of the cell
     //! cell coordinates type
     using Ccoord = Ccoord_t<DimS>;
     //! global FieldCollection
@@ -56,7 +55,7 @@ namespace muSpectre {
      * Field type holding a Fourier-space representation of a
      * real-valued second-order tensor field
      */
-    using Workspace_t = TensorField<LFieldCollection_t, Complex, 2, DimM>;
+    using Workspace_t = TypedField<LFieldCollection_t, Complex>;
     /**
      * iterator over Fourier-space discretisation point
      */
@@ -66,7 +65,8 @@ namespace muSpectre {
     FFTEngineBase() = delete;
 
     //! Constructor with cell resolutions
-    FFTEngineBase(Ccoord resolutions, Communicator comm=Communicator());
+    FFTEngineBase(Ccoord resolutions, Dim_t nb_components,
+                  Communicator comm=Communicator());
 
     //! Copy constructor
     FFTEngineBase(const FFTEngineBase &other) = delete;
@@ -154,7 +154,7 @@ namespace muSpectre {
     const Ccoord domain_resolutions; //!< resolutions of the full domain of the cell
     Workspace_t & work; //!< field to store the Fourier transform of P
     const Real norm_factor; //!< normalisation coefficient of fourier transform
-    Dim_t nb_components{DimM*DimM};
+    Dim_t nb_components;
   private:
   };
 

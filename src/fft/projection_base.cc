@@ -40,8 +40,9 @@ namespace muSpectre {
   {
     static_assert((DimS == FFTEngine::sdim),
                   "spatial dimensions are incompatible");
-    static_assert((DimM == FFTEngine::mdim),
-                  "material dimensions are incompatible");
+    if (this->get_nb_components() != fft_engine->get_nb_components()) {
+      throw ProjectionError("Incompatible number of components per pixel");
+    }
   }
 
   /* ---------------------------------------------------------------------- */

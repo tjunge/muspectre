@@ -91,12 +91,12 @@ void add_cell_factory_helper(py::module & mod) {
      "formulation"_a=Formulation::finite_strain);
 
 #ifdef WITH_FFTWMPI
-  add_parallel_cell_factory_helper<dim, FFTWMPIEngine<dim, dim>>(
+  add_parallel_cell_factory_helper<dim, FFTWMPIEngine<dim>>(
     mod, "FFTWMPICellFactory");
 #endif
 
 #ifdef WITH_PFFT
-  add_parallel_cell_factory_helper<dim, PFFTEngine<dim, dim>>(
+  add_parallel_cell_factory_helper<dim, PFFTEngine<dim>>(
     mod, "PFFTCellFactory");
 #endif
 }

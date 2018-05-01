@@ -44,6 +44,7 @@ namespace muSpectre {
   class ProjectionDefault: public ProjectionBase<DimS, DimM>
   {
   public:
+    constexpr static Dim_t NbComponents{ipow(DimM, 2)};
     using Parent = ProjectionBase<DimS, DimM>; //!< base class
     using Vector_t = typename Parent::Vector_t; //!< to represent fields
     //! polymorphic FFT pointer type

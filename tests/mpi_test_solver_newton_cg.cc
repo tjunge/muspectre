@@ -51,7 +51,7 @@ namespace muSpectre {
     // constexpr Rcoord_t<dim> lengths{2.3, 2.7};
     constexpr Ccoord_t<dim> resolutions{5, 5, 5};
     constexpr Rcoord_t<dim> lengths{5, 5, 5};
-    auto fft_ptr{std::make_unique<FFTWMPIEngine<dim, dim>>(resolutions, comm)};
+    auto fft_ptr{std::make_unique<FFTWMPIEngine<dim>>(resolutions, dim*dim, comm)};
     auto proj_ptr{std::make_unique<ProjectionFiniteStrainFast<dim, dim>>(std::move(fft_ptr), lengths)};
     CellBase<dim, dim> sys(std::move(proj_ptr));
 

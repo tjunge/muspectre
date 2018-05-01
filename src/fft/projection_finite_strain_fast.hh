@@ -45,6 +45,7 @@ namespace muSpectre {
   class ProjectionFiniteStrainFast: public ProjectionBase<DimS, DimM>
   {
   public:
+    constexpr static Dim_t NbComponents{ipow(DimM, 2)};
     using Parent = ProjectionBase<DimS, DimM>; //!< base class
     //! polymorphic pointer to FFT engines
     using FFTEngine_ptr = typename Parent::FFTEngine_ptr;

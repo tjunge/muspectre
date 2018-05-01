@@ -49,11 +49,13 @@ void add_engine_helper(py::module & mod, std::string name) {
                                 Eigen::Dynamic>;
   py::class_<Engine>(mod, name.c_str())
 #ifdef WITH_MPI
-    .def(py::init([](Ccoord res, size_t comm) {
-           return new Engine(res, std::move(Communicator(MPI_Comm(comm))));
-         }),
-         "resolutions"_a,
-         "communicator"_a=size_t(MPI_COMM_SELF))
+    .def(py::init([](Ccoord res, Dim_t nb_components, size_t comm) {
+          return new Engine(res, nb_components,
+                            std::move(Communicator(MPI_Comm(comm))));
+        }),
+      "resolutions"_a,
+      "nb_components"_a,
+      "communicator"_a=size_t(MPI_COMM_SELF))
 #else
     .def(py::init<Ccoord>())
 #endif
@@ -98,15 +100,15 @@ void add_engine_helper(py::module & mod, std::string name) {
 void add_fft_engines(py::module & mod) {
   auto fft{mod.def_submodule("fft")};
   fft.doc() = "bindings for µSpectre's fft engines";
-  add_engine_helper<FFTWEngine<  twoD,   twoD>,  twoD>(fft, "FFTW_2d");
-  add_engine_helper<FFTWEngine<threeD, threeD>, threeD>(fft, "FFTW_3d");
+  add_engine_helper<FFTWEngine<  twoD>,  twoD>(fft, "FFTW_2d");
+  add_engine_helper<FFTWEngine<threeD>, threeD>(fft, "FFTW_3d");
 #ifdef WITH_FFTWMPI
-  add_engine_helper<FFTWMPIEngine<  twoD,   twoD>,   twoD>(fft, "FFTWMPI_2d");
-  add_engine_helper<FFTWMPIEngine<threeD, threeD>, threeD>(fft, "FFTWMPI_3d");
+  add_engine_helper<FFTWMPIEngine<  twoD>,   twoD>(fft, "FFTWMPI_2d");
+  add_engine_helper<FFTWMPIEngine<threeD>, threeD>(fft, "FFTWMPI_3d");
 #endif
 #ifdef WITH_PFFT
-  add_engine_helper<PFFTEngine<  twoD,   twoD>,   twoD>(fft, "PFFT_2d");
-  add_engine_helper<PFFTEngine<threeD, threeD>, threeD>(fft, "PFFT_3d");
+  add_engine_helper<PFFTEngine<  twoD>,   twoD>(fft, "PFFT_2d");
+  add_engine_helper<PFFTEngine<threeD>, threeD>(fft, "PFFT_3d");
 #endif
   add_projections(fft);
 }
