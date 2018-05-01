@@ -151,7 +151,6 @@ namespace muSpectre {
                                   StressField_t & P,
                                   Formulation form,
                                   SplittedCell is_cell_splitted) override;
-
     //! computes stress and tangent modulus
     virtual void compute_stresses_tangent(const StrainField_t & F,
                                           StressField_t & P,
