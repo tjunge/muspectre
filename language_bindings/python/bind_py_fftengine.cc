@@ -57,7 +57,7 @@ void add_engine_helper(py::module & mod, std::string name) {
       "nb_components"_a,
       "communicator"_a=size_t(MPI_COMM_SELF))
 #else
-    .def(py::init<Ccoord>())
+    .def(py::init<Ccoord, Dim_t>())
 #endif
     .def("fft",
          [](Engine & eng, py::EigenDRef<Eigen::ArrayXXd> v) {

@@ -82,6 +82,11 @@ namespace muSpectre {
     RawFieldMap<Eigen::Map<const Eigen::Vector3d>> cmap2{vec2};
   }
 
+  BOOST_AUTO_TEST_CASE(incompatible_size_check) {
+    Eigen::VectorXd vec1(11);
+    using RawFieldMap_t = RawFieldMap<Eigen::Map<Eigen::Vector3d>>;
+    BOOST_CHECK_THROW(RawFieldMap_t {vec1}, std::runtime_error);
+  }
 
   BOOST_AUTO_TEST_SUITE_END();
 

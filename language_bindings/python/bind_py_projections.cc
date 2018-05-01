@@ -103,7 +103,7 @@ void add_proj_helper(py::module & mod, std::string name_start) {
 #else
     .def(py::init([](Ccoord res, Rcoord lengths, const std::string & fft) {
           if (fft == "fftw") {
-            auto engine = std::make_unique<FFTWEngine<DimS, DimM>>
+            auto engine = std::make_unique<FFTWEngine<DimS>>
               (res, Proj::NbComponents);
             return Proj(std::move(engine), lengths);
           }
