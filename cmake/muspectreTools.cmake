@@ -142,7 +142,9 @@ ExternalProject_Add(${project_name}
   if(_result)
     message(FATAL_ERROR "Something went wrong (${_result}) during the download"
       " process of ${project_name} check the file"
-      " ${_working_dir}/configure-error.log for more details")
+      " ${_working_dir}/configure-error.log for more details:")
+    file(STRINGS "${_working_dir}/configure-error.log" ERROR_MSG)
+    message("${ERROR_MSG}")
   endif()
 
   execute_process(COMMAND "${CMAKE_COMMAND}" --build .
@@ -164,7 +166,7 @@ endfunction()
 function(mark_as_advanced_prefix prefix)
   get_property(_list DIRECTORY PROPERTY VARIABLES)
   foreach(_var ${_list})
-    if("${_var}" MATCHES "^${prefix}.*")
+    if(${_var} MATCHES "^${prefix}.*")
       mark_as_advanced(${_var})
     endif()
   endforeach()
