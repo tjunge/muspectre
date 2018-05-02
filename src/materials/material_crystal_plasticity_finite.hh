@@ -260,24 +260,31 @@ namespace muSpectre {
     SlipMat_t h_matrix{this->h0*q_matrix * (1-tau_y/this->s_infty).array().pow(this->a_par).matrix()};
 
     // residual on plastic slip rates
-    ColArray_t ares= Gammadot.old().array()-this->gammadot0*std::pow(abs(tau_star())/Tauy.old(),this->m_par)*sign(tau_star.array())/this->gammadot0;
-
     Gammadot.current() = Gammadot.old();
+    Tauy.current() = Tauy.old();
     ColArray_t tau_inc{tau_star};
-
+    
+    auto compute_gamma_dot = [this, &Gammadot, &tau_inc, &Tauy] () {
+      return Gammadot.current().array()-this->gammadot0*std::pow(abs(tau_inc())/Tauy.current(),this->m_par)*sign(tau_inc.array()); };
+    ColArray_t res{compute_gamma_dot()};
+    
     Int counter{};
 
-    while (ares.max() > tolerance){
+    while (abs(res).max()/this->gammadot0 > tolerance){
       if(counter ++ > this->maxiter){
 	throw std::runtime_error("Max. number of iteration reached without convergence");
       }
 
-      ColArray_t dr_stress{abs(tau_inc).pow((1-this->m_par)/this->m_par)*tauy.pow(-1/this->m_par)*sign(tau_inc)};
+      ColArray_t dr_stress{abs(tau_inc).pow((1-this->m_par)/this->m_par)*Tauy.current().pow(-1/this->m_par)*sign(tau_inc)};
       ColArray_t dr_hard{abs(tau_inc).pow(1/this->m_par)*tauy.pow(-1-1/this->m_par)*sign(tau_inc)}
       SlipMat_t drdgammadot{I+0.5*this->DeltaT*this->gammadot0/this->m_par*dr_stress.asDiagonal()*pl_corr_proj.transpose()
-	  +0.5*this->DeltaT*this->gammadot0/this->m_par*dr_hard.asDiagonal()*h_matrix*sign(Gammadot.current()).asDiagonal()
-	  };
+	  +0.5*this->DeltaT*this->gammadot0/this->m_par*dr_hard.asDiagonal()*h_matrix*sign(Gammadot.current()).asDiagonal()};
+      Gammadot.current() -= drdgammadot.inverse()*res;
       
+      tau_inc = tau_star - 0.5*this->DeltaT*(Gammadot.current()-Gammadot.old())*pl_corr_proj.transpose();
+      Tauy.current()
+
+      res = compute_gamma_dot();
     } 
   }
 
