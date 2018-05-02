@@ -56,17 +56,17 @@ namespace muSpectre {
   cell_input(Ccoord_t<DimS> resolutions,
                Rcoord_t<DimS> lengths,
                Formulation form) {
-    auto fft_ptr{std::make_unique<FFTEngine>(resolutions, lengths)};
+    auto fft_ptr{std::make_unique<FFTEngine>(resolutions)};
     switch (form)
       {
       case Formulation::finite_strain: {
         using Projection = ProjectionFiniteStrainFast<DimS, DimM>;
-        return std::make_unique<Projection>(std::move(fft_ptr));
+        return std::make_unique<Projection>(std::move(fft_ptr), lengths);
         break;
       }
       case Formulation::small_strain: {
         using Projection = ProjectionSmallStrain<DimS, DimM>;
-        return std::make_unique<Projection>(std::move(fft_ptr));
+        return std::make_unique<Projection>(std::move(fft_ptr), lengths);
         break;
       }
       default: {
@@ -94,7 +94,7 @@ namespace muSpectre {
     auto cell{Cell{std::move(input)}};
     return cell;
   }
-  
+
 #ifdef WITH_MPI
 
   /**
@@ -106,30 +106,30 @@ namespace muSpectre {
   inline
   std::unique_ptr<ProjectionBase<DimS, DimM>>
   parallel_cell_input(Ccoord_t<DimS> resolutions,
-             Rcoord_t<DimS> lengths,
-             Formulation form,
-             const Communicator & comm) {
-    auto fft_ptr{std::make_unique<FFTEngine>(resolutions, lengths, comm)};
+                      Rcoord_t<DimS> lengths,
+                      Formulation form,
+                      const Communicator & comm) {
+    auto fft_ptr{std::make_unique<FFTEngine>(resolutions, comm)};
     switch (form)
     {
       case Formulation::finite_strain: {
         using Projection = ProjectionFiniteStrainFast<DimS, DimM>;
-        return std::make_unique<Projection>(std::move(fft_ptr));
+        return std::make_unique<Projection>(std::move(fft_ptr), lengths);
         break;
       }
       case Formulation::small_strain: {
         using Projection = ProjectionSmallStrain<DimS, DimM>;
-        return std::make_unique<Projection>(std::move(fft_ptr));
+        return std::make_unique<Projection>(std::move(fft_ptr), lengths);
         break;
       }
       default: {
-        throw std::runtime_error("unknow formulation");
+        throw std::runtime_error("unknown formulation");
         break;
       }
     }
   }
 
-  
+
   /**
    * convenience function to create a parallel cell (avoids having to build
    * and move the chain of unique_ptrs
@@ -142,7 +142,7 @@ namespace muSpectre {
                           Rcoord_t<DimS> lengths,
                           Formulation form,
                           const Communicator & comm) {
-    
+
     auto && input = parallel_cell_input<DimS, DimM, FFTEngine>(resolutions,
                                                                lengths,
                                                                form, comm);
@@ -155,5 +155,3 @@ namespace muSpectre {
 }  // muSpectre
 
 #endif /* CELL_FACTORY_H */
-
-

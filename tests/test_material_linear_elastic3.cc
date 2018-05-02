@@ -7,7 +7,7 @@
  *
  * @brief  description
  *
- * Copyright © 2018 Richard Leute
+ * Copyright © 2018 Till Junge
  *
  * µSpectre is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License as
@@ -60,7 +60,7 @@ namespace muSpectre {
   };
 
   BOOST_FIXTURE_TEST_CASE_TEMPLATE(test_response, Fix, mat_list, Fix) {
-    constexpr Dim_t Dim{Fix::Material_t::Parent::Parent::sdim()};
+    constexpr Dim_t Dim{Fix::Material_t::Parent::Parent::mdim()};
     Eigen::Matrix<Real, Dim, Dim>E;
     E.setZero();
     E(0,0) = 0.001;

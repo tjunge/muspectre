@@ -26,6 +26,12 @@
  */
 
 #include "fft/fftw_engine.hh"
+#ifdef WITH_FFTWMPI
+#include "fft/fftwmpi_engine.hh"
+#endif
+#ifdef WITH_PFFT
+#include "fft/pfft_engine.hh"
+#endif
 #include "bind_py_declarations.hh"
 
 #include <pybind11/pybind11.h>
@@ -36,20 +42,28 @@ using namespace muSpectre;
 namespace py=pybind11;
 using namespace pybind11::literals;
 
-template <Dim_t dim, class Engine>
+template <class Engine, Dim_t dim>
 void add_engine_helper(py::module & mod, std::string name) {
   using Ccoord = Ccoord_t<dim>;
-  using Rcoord = Rcoord_t<dim>;
   using ArrayXXc = Eigen::Array<Complex, Eigen::Dynamic,
                                 Eigen::Dynamic>;
   py::class_<Engine>(mod, name.c_str())
-    .def(py::init<Ccoord, Rcoord>())
+#ifdef WITH_MPI
+    .def(py::init([](Ccoord res, size_t comm) {
+           return new Engine(res, std::move(Communicator(MPI_Comm(comm))));
+         }),
+         "resolutions"_a,
+         "communicator"_a=size_t(MPI_COMM_SELF))
+#else
+    .def(py::init<Ccoord>())
+#endif
     .def("fft",
          [](Engine & eng, py::EigenDRef<Eigen::ArrayXXd> v) {
            using Coll_t = typename Engine::GFieldCollection_t;
            using Field_t = typename Engine::Field_t;
            Coll_t coll{};
-           coll.initialise(eng.get_resolutions(), eng.get_locations());
+           coll.initialise(eng.get_subdomain_resolutions(),
+                           eng.get_subdomain_locations());
            Field_t & temp{make_field<Field_t>("temp_field", coll)};
            temp.eigen() = v;
            return ArrayXXc{eng.fft(temp).eigen()};
@@ -61,26 +75,36 @@ void add_engine_helper(py::module & mod, std::string name) {
            using Coll_t = typename Engine::GFieldCollection_t;
            using Field_t = typename Engine::Field_t;
            Coll_t coll{};
-           coll.initialise(eng.get_resolutions(), eng.get_locations());
+           coll.initialise(eng.get_subdomain_resolutions(),
+                           eng.get_subdomain_locations());
            Field_t & temp{make_field<Field_t>("temp_field", coll)};
-           eng.get_work_space().eigen()=v;
+           eng.get_work_space().eigen() = v;
            eng.ifft(temp);
            return Eigen::ArrayXXd{temp.eigen()};
          },
          "array"_a)
     .def("initialise", &Engine::initialise,
          "flags"_a=FFT_PlanFlags::estimate)
-    .def("normalisation", &Engine::normalisation);
-}
-
-void add_engine(py::module & mod) {
-  add_engine_helper<  twoD, FFTWEngine<  twoD,   twoD>>(mod, "FFTW_2d");
-  add_engine_helper<threeD, FFTWEngine<threeD, threeD>>(mod, "FFTW_3d");
+    .def("normalisation", &Engine::normalisation)
+    .def("get_subdomain_resolutions", &Engine::get_subdomain_resolutions)
+    .def("get_subdomain_locations", &Engine::get_subdomain_locations)
+    .def("get_fourier_resolutions", &Engine::get_fourier_resolutions)
+    .def("get_fourier_locations", &Engine::get_fourier_locations)
+    .def("get_domain_resolutions", &Engine::get_domain_resolutions);
 }
 
 void add_fft_engines(py::module & mod) {
   auto fft{mod.def_submodule("fft")};
   fft.doc() = "bindings for µSpectre's fft engines";
-  add_engine(fft);
+  add_engine_helper<FFTWEngine<  twoD,   twoD>,  twoD>(fft, "FFTW_2d");
+  add_engine_helper<FFTWEngine<threeD, threeD>, threeD>(fft, "FFTW_3d");
+#ifdef WITH_FFTWMPI
+  add_engine_helper<FFTWMPIEngine<  twoD,   twoD>,   twoD>(fft, "FFTWMPI_2d");
+  add_engine_helper<FFTWMPIEngine<threeD, threeD>, threeD>(fft, "FFTWMPI_3d");
+#endif
+#ifdef WITH_PFFT
+  add_engine_helper<PFFTEngine<  twoD,   twoD>,   twoD>(fft, "PFFT_2d");
+  add_engine_helper<PFFTEngine<threeD, threeD>, threeD>(fft, "PFFT_3d");
+#endif
   add_projections(fft);
 }

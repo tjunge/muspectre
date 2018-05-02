@@ -46,7 +46,6 @@ namespace muSpectre {
   public:
     using Parent = FFTEngineBase<DimS, DimM>; //!< base class
     using Ccoord = typename Parent::Ccoord; //!< cell coordinates type
-    using Rcoord = typename Parent::Rcoord; //!< spatial coordinates type
     //! field for Fourier transform of second-order tensor
     using Workspace_t = typename Parent::Workspace_t;
     //! real-valued second-order tensor
@@ -55,8 +54,7 @@ namespace muSpectre {
     PFFTEngine() = delete;
 
     //! Constructor with system resolutions
-    PFFTEngine(Ccoord resolutions, Rcoord lengths,
-               Communicator comm=Communicator());
+    PFFTEngine(Ccoord resolutions, Communicator comm=Communicator());
 
     //! Copy constructor
     PFFTEngine(const PFFTEngine &other) = delete;
@@ -83,9 +81,12 @@ namespace muSpectre {
     virtual void ifft(Field_t & field) const override;
 
   protected:
+    MPI_Comm mpi_comm; //! < MPI communicator
     static int nb_engines; //!< number of times this engine has been instatiated
     pfft_plan plan_fft{}; //!< holds the plan for forward fourier transform
     pfft_plan plan_ifft{}; //!< holds the plan for inverse fourier transform
+    ptrdiff_t workspace_size{}; //!< size of workspace buffer returned by planner
+    Real *real_workspace{}; //!< temporary real workspace that is correctly padded
     bool initialised{false}; //!< to prevent double initialisation
   private:
   };

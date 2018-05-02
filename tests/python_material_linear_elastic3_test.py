@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding:utf-8 -*-
 """
-@file   python_richard_test.py
+@file   python_material_linear_elastic3.py
 
 @author Richard Leute <richard.leute@imtek.uni-freiburg.de>
 
@@ -36,17 +36,18 @@ from python_test_imports import µ
 
 class MaterialLinearElastic3_Check(unittest.TestCase):
     """
-    Check the implementation of Youngs modulus and Poisson ratio for each cell.
-    Assign the same E and nu to each cell, calculate the stress and compare the
-    result with stress=2*mu*Del0 (Hooke law for small symmetric strains).
+    Check the implementation of the fourth order stiffness tensor C for each
+    cell. Assign the same Youngs modulus and Poisson ratio to each cell,
+    calculate the stress and compare the result with stress=2*mu*Del0
+    (Hooke law for small symmetric strains).
     """
     def setUp(self):
         self.resolution = [5,5]
         self.lengths = [2.5, 3.1]
         self.formulation = µ.Formulation.small_strain
-        self.sys = µ.CellFactory(self.resolution,
-                                   self.lengths,
-                                   self.formulation)
+        self.sys = µ.Cell(self.resolution,
+                          self.lengths,
+                          self.formulation)
         self.mat = µ.material.MaterialLinearElastic3_2d.make(
             self.sys, "material")
 
