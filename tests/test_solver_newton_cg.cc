@@ -280,9 +280,9 @@ namespace muSpectre {
     delEps0 = Grad_t<dim>::Zero();
     delEps0(0, 1) = delEps0(1, 0) = eps0;
 
-    SolverCG<dim> cg2{sys, cg_tol, maxiter, bool(verbose)};
-    result = newton_cg(sys, delEps0, cg2, newton_tol,
-                       equil_tol, verbose);
+    SolverCGDyn cg2{sys, cg_tol, maxiter, bool(verbose)};
+    result = de_geus_dyn(sys, delEps0, cg2, newton_tol,
+                         equil_tol, verbose);
     Eps_hard << 0, eps_hard, eps_hard, 0;
     Eps_soft << 0, eps_soft, eps_soft, 0;
 
