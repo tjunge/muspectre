@@ -241,6 +241,7 @@ namespace muSpectre {
     T2_t SPK_star{Matrices::tensmult(C_el,GLe_star)};
 
     using ColArray_t = Eigen::Array<Real, nb_slip, 1>;
+    using ColMatrix_t = Eigen::Matrix<Real, nb_slip, 1>;
     ColArray_t tau_star;
     // pl_corr is the plastic corrector
     std::array<T2_t, nb_slip> pl_corr;
@@ -257,8 +258,7 @@ namespace muSpectre {
 
     SlipMat_t I(SlipMat_t::Identity());
     auto && q_matrix{(I + this->q_n*(SlipMat_t::Ones() -I))}
-    SlipMat_t h_matrix{this->h0*q_matrix * (1-tau_y/this->s_infty).array().pow(this->a_par).matrix()};
-
+    
     // residual on plastic slip rates
     Gammadot.current() = Gammadot.old();
     Tauy.current() = Tauy.old();
@@ -267,12 +267,16 @@ namespace muSpectre {
     auto compute_gamma_dot = [this, &Gammadot, &tau_inc, &Tauy] () {
       return Gammadot.current().array()-this->gammadot0*std::pow(abs(tau_inc())/Tauy.current(),this->m_par)*sign(tau_inc.array()); };
     ColArray_t res{compute_gamma_dot()};
+
+    auto compute_hmatrix = [this] (const ColMatrix_t & Tauy_temp) {
+      return this->h0*q_matrix*(ColMatrix_t::Ones()-Tauy_temp/this->s_infty).array().pow(this->a_par).matrix(); };
+    ColArray_t s_dot_old{(compute_hmatrix(Tauy.current())*Gammadot.old()).array()};
     
     Int counter{};
 
     while (abs(res).max()/this->gammadot0 > tolerance){
       if(counter ++ > this->maxiter){
-	throw std::runtime_error("Max. number of iteration reached without convergence");
+	throw std::runtime_error("Max. number of iteration for plastic slip reached without convergence");
       }
 
       ColArray_t dr_stress{abs(tau_inc).pow((1-this->m_par)/this->m_par)*Tauy.current().pow(-1/this->m_par)*sign(tau_inc)};
@@ -281,11 +285,59 @@ namespace muSpectre {
 	  +0.5*this->DeltaT*this->gammadot0/this->m_par*dr_hard.asDiagonal()*h_matrix*sign(Gammadot.current()).asDiagonal()};
       Gammadot.current() -= drdgammadot.inverse()*res;
       
-      tau_inc = tau_star - 0.5*this->DeltaT*(Gammadot.current()-Gammadot.old())*pl_corr_proj.transpose();
-      Tauy.current()
+      tau_inc = tau_star - 0.5*this->DeltaT*(Gammadot.current()+Gammadot.old())*pl_corr_proj.transpose();
+
+      Int counter_h{};
+      
+      do{
+	if(counter_h ++ > this->maxiter){
+	throw std::runtime_error("Max. number of iteration for hardening reached without convergence")
+	  ColMatrix_t Tauy_temp {Tauy.current()}
+	Tauy.current() = Tauy.old() + 0.5*this->DeltaT*(s_dot_old + compute_hmatrix(Tauy_temp)*Gammadot.current())} while ((Tauy.current() - Tauy_temp).norm() > tolerance);
+      }      
 
       res = compute_gamma_dot();
-    } 
+    }
+
+    T2_t SPK{SPK_star};
+    for (Int i{0}; i < nb_slip; ++i) {
+      SPK -= .5*DeltaT*(Gammadot.current()(i)+Gammadot.old()(i))*pl_corr[i];
+    }
+
+    T2_t Lp{T2_t::Zeros()};
+    for (Int i{0}; i < nb_slip; ++i) {
+      Lp += .5*(Gammadot.current()(i)+Gammadot.old()(i))*SchmidT[i];
+    }
+
+    Fp.current() = (T2_t::Identity()+this->DeltaT*Lp)*Fp.old();
+
+    auto PK2 = Rot.loc_to_glob(Fp.current().inverse()*SPK*Fp.current().inverse().transpose());
+
+    // Stiffness matrix calculation begins
+
+    // A4: elastic trial consistent tangent
+
+    auto IRT = Matrices::Itrns()<DimM>();
+    auto I4 = Matrices:Iiden()<DimM>();
+    auto Fe_star = F*Fp.old().inverse();
+    auto odot = [] (auto && T4, auto && T2) {
+      T4_t Return_value(T4_t::Zeros());
+      for (Int i = 0; i < DimM; ++i) {
+	for (Int j = 0; j < DimM; ++j) {
+	  for (Int k = 0; k < DimM; ++k) {
+	    for (Int l = 0; l < DimM; ++l) {
+	      for (Int m = 0; m < DimM; ++m) {
+		get(Return_value,i,j,k,l) += get(T4,i,m,k,l)*T2(m,j);
+	      }
+	    }
+	  }
+	}
+      }
+      return Return_value;
+    };
+
+    T4_t A4{.5*ddot((C_el,odot(dot(Fp.old().inverse().transpose(),IRT),Fe_star))+odot(dot(Fe_star.transpose(),I4),Fp.old().inverse()))};
+    
   }
 
   /* ---------------------------------------------------------------------- */
