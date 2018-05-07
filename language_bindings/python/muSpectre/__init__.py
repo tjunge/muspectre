@@ -34,6 +34,7 @@ import _muSpectre
 from _muSpectre import (Formulation, get_domain_ccoord, get_domain_index,
                         get_hermitian_sizes, material, solvers)
 import muSpectre.fft
+import muSpectre.tools
 
 _factories = {'fftw': ('CellFactory', False),
               'fftwmpi': ('FFTWMPICellFactory', True),
