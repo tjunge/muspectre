@@ -71,21 +71,18 @@ def compute_displacements(F, resolutions, lengths, order=0):
         Positions 'U' after applying the deformation, according to the
         deformation gradient F, to the initial positions 'X'. U=u+<F>*X.
 
-    Coution!
+    Caution!
     --------
         Up to now only for 3D grids implemented!
 
     TODO:
     -----
         --> implementation for 2D grid, (1D grid)
-        --> implement higher order corrections (select order in function),
-            is this necessary?
-        --> should we implement that one can give the initial coordinates 'X',
+        --> implement higher order corrections, is this necessary?
+        --> we should implement that one can give the initial coordinates 'X',
             if the body is already deformed.
-            What happens if the grid is not cubic/orthogonal?
-        --> prevent error messages from dividing by zero in F/(i*q)
+
     """
-    print('\n\ntools output\n')
     #for 3D grids...
 
     F    = np.array(F)    #deformation gradient
@@ -96,10 +93,6 @@ def compute_displacements(F, resolutions, lengths, order=0):
     Lx, Ly, Lz = lens     #lengths in each direction
     dx, dy, dz = lens/res #gridspacing in each direction
 
-    print('gridpoints:   ', res)
-    print('lengths:      ', lens)
-    print('grid spacing: ', lens/res)
-
     ### Initialize the undeformed positions and q-vectors
     #TODO: write this shorter/faster
     #      prevent unnecessary increas in dimension of q and X33NNN
@@ -107,12 +100,8 @@ def compute_displacements(F, resolutions, lengths, order=0):
     for i,j,k in itertools.product(range(Nx), range(Ny), range(Nz)):
         X[:,i,j,k] = np.array([i*dx, j*dy, k*dz])
 
-    print('positions:\n', X[:,25,20,10])
-
-    #increase dim of X for more easy multiplication with F (do this better)
+    #increase dim of X for easy multiplication with F (do this better)
     X_33NNN = np.tensordot(np.array([1,1,1]), X , axes=0)
-
-    print('positions tensor:\n', X_33NNN[:,:,25,20,10])
 
     # calculate the q vectors and bring them in a (ndim,ndim,Nx,Ny,Nz) shape
     q = np.zeros((ndim, ndim, Nx, Ny, Nz))
@@ -124,19 +113,12 @@ def compute_displacements(F, resolutions, lengths, order=0):
                                     np.array([qx_1d[i], qy_1d[j], qz_1d[k]]),
                                     axes=0)
 
-    print('q-vector:\n', q[:,:,:,20,10])
-
     # calculate <F>
     # F_av_(ij,klm) = 1/N^3 * Sum_(a,b,c=0)^(N-1){F_ij,abc} * I_(ij,klm)
-    # TODO: proof if you can use F_av=F_q(q=0)
     F_av = np.einsum('ij,klm', 1.0/(Nx*Ny*Nz) * F.sum(axis=(2,3,4)),
                      np.ones([Nx,Ny,Nz]))
 
-    print('shape F ', F.shape)
     F_q = np.fft.fftn(F, [Nx,Ny,Nz]) #F_q = DFT(F)
-    print('shape F_q ', F_q.shape)
-    print(F_q[:,:,0,0,0]*1/(Nx*Ny*Nz))
-    print(F_av[:,:,0,0,0])
 
     ### Calculate u_q from F_q; u_q = F_q/(j*q)
     # u'_i=1/3 * { F'_xi/(j*q_i) + F'_yi/(j*q_i) + F'_zi/(j*q_i) }
@@ -152,24 +134,23 @@ def compute_displacements(F, resolutions, lengths, order=0):
     # A. Vidyasagar et al., Computer Methods in Applied Mechanics and
     # Engineering 106 (2017) 133-151, sec. 3.4 and Appendix C.
 
-    if order == 0:
-        #zeroth order
-        u_q = (F_q / (1j*q))
-    elif order == 1:
-        #first oder correction
-        u_q = (F_q / (1j * np.sin(q*dx)/dx))
-    elif order == 2:
-        #second oder correction
-        u_q = (F_q / (1j * (8*np.sin(q*dx)/(6*dx) - np.sin(2*q*dx)/(6*dx) )))
-    else:
-        print('\n\n   WARNING!   \n')
-        print('The order {} is not supported. Up to now only order={{0,1,2}} is'
-              ' supported.'.format(order))
-        print('I switch back to default, order = 0.\n\n')
-        u_q = (F_q / (1j*q))
-
-
-    print('u_q before correction:\n', u_q[:,:,41,31,18])
+    with np.errstate(divide='ignore', invalid='ignore'):
+        if order == 0:
+            #zeroth order
+            u_q = (F_q / (1j*q))
+        elif order == 1:
+            #first oder correction
+            u_q = (F_q / (1j * np.sin(q*dx)/dx))
+        elif order == 2:
+            #second oder correction
+            u_q = (F_q / (1j * (8*np.sin(q*dx)/(6*dx) - np.sin(2*q*dx)/(6*dx) )))
+        else:
+            print('\n\n   WARNING!   \n')
+            print('In muSpectre/language_bindings/python/muSpectre/tools.py')
+            print('The order {} is not supported. Up to now only order={{0,1,2}} is'
+                  ' supported.'.format(order))
+            print('I fall back to the default order: order = 0\n\n')
+            u_q = (F_q / (1j*q))
 
     ## correct the problematic u_q(q_i=0) by setting them:
     #   a) to zero ('0./0 = 0') for u_q[:,:,0,0,0]
@@ -182,19 +163,13 @@ def compute_displacements(F, resolutions, lengths, order=0):
     u_q[:,2, 1:, : , 0 ] = u_q[:,0, 1:, : , 0 ]   # m=0 correct with k=1...(N-1)
     u_q[:,2, 0 , : , 0 ] = u_q[:,1, 0 , : , 0 ]   # correct for m=k=0
 
-    print('u_q after correction:\n', u_q[:,:,41,31,18])
-
     # get u by inverse fourier transform u_q; u=IFFT(u_q)
     # take the real values and average over axis=1 (which are all the same entries)
     u = (1./3.) * np.real(np.fft.ifftn(u_q, [Nx,Ny,Nz])).sum(axis=1)
 
-    print('u final:\n', u[:,41,31,18])
-
     # calculate U = u + <F>*X
     fx = (F_av * X_33NNN).sum(axis=1) #fx = <F>*X
     U  = u + fx
-
-    print('final_positions:\n', U[:,41,31,18])
 
     #give mor meaningfull names to the results
     displacements   = u
@@ -205,8 +180,8 @@ def compute_displacements(F, resolutions, lengths, order=0):
 
 def write_structure_as_vtk(file_name, positions, cellData=None, pointData=None):
     """
-    Function to save a structure as vtk file by using pyevtk.hl.
-    The file is named file_name.vtk.
+    Function to save a structure as vtk files by using pyevtk.hl.
+    Two files a written named: file_name_grid.vts and file_name_points.vtu.
 
     Parameters
     ----------
@@ -221,23 +196,22 @@ def write_structure_as_vtk(file_name, positions, cellData=None, pointData=None):
 
     Returns
     -------
-    writes a '.vtk' file with the file name, file_name.vtk
-    returns str 'file was writen'
+    writes a '.vts' file with the file name, file_name_grid.vts and a '.vtu'
+    file with the name file_name_points.vtu. If it ends successfully it returns
+    the stirng 'file_name_grid.vts and file_name_points.vtu files were written.'
 
-    TODO
-    ----
-        --> write more about the function...
     """
-    from pyevtk.hl import gridToVTK
+
+    from pyevtk.hl import gridToVTK, pointsToVTK
 
     cdata = cellData
     pdata = pointData
-    x = positions[0,:,:,:].flatten()
-    print('x\n', x, x.shape)
-    y = positions[1,:,:,:].flatten()
-    print('y\n', y, y.shape)
-    z = positions[2,:,:,:].flatten()
-    print('z\n', z, z.shape)
-    gridToVTK(file_name, x, y, z, cellData=cdata, pointData=pdata)
+    x = positions[0]
+    y = positions[1]
+    z = positions[2]
+    gridToVTK(file_name+'_grid', x, y, z, cellData=cdata, pointData=pdata)
+    pointsToVTK(file_name+'_points', x, y, z, data=pdata)
+    message = '{}_grid.vts and {}_points.vtu'\
+              ' files were written.'.format(file_name, file_name)
 
-    return 'file was writen'
+    return message
