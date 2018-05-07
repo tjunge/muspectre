@@ -171,6 +171,7 @@ if (${MAKE_EXAMPLES})
     ${CMAKE_SOURCE_DIR}/bin/demonstrator1.cc
     ${CMAKE_SOURCE_DIR}/bin/demonstrator2.cc
     ${CMAKE_SOURCE_DIR}/bin/hyper-elasticity.cc
+    ${CMAKE_SOURCE_DIR}/bin/profile_material_linear_elastic4.cc
     ${CMAKE_SOURCE_DIR}/bin/small_case.cc)
 
   if (${MPI_PARALLEL})

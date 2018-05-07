@@ -185,8 +185,7 @@ namespace muSpectre {
   decltype(auto)
   MaterialLinearElastic4<DimS, DimM>::
   evaluate_stress(s_t && E, const Real & lambda, const Real & mu) {
-    auto C = Hooke::compute_C_T4(lambda, mu);
-    return Matrices::tensmult(C, E);
+    return Hooke::evaluate_stress(lambda, mu, std::forward<s_t>(E));
   }
 
   /* ---------------------------------------------------------------------- */
@@ -198,7 +197,7 @@ namespace muSpectre {
 			  const Real & mu)
   {
     auto C = Hooke::compute_C_T4(lambda, mu);
-    return std::make_tuple(Matrices::tensmult(C, E), C);
+    return std::make_tuple(this->evaluate_stress(std::forward<s_t>(E), lambda, mu), C);
   }
 
 
