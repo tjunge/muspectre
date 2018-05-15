@@ -29,6 +29,7 @@
 #include "solver/solvers.hh"
 #include "solver/new_solvers.hh"
 #include "solver/new_solver_cg.hh"
+#include "solver/new_solver_eigen.hh"
 #include "solver/solver_cg.hh"
 #include "solver/solver_cg_eigen.hh"
 #include "fft/fftw_engine.hh"
@@ -37,6 +38,8 @@
 #include "common/iterators.hh"
 #include "common/ccoord_operations.hh"
 #include "cell/cell_factory.hh"
+
+#include <boost/mpl/list.hpp>
 
 namespace muSpectre {
 
@@ -192,7 +195,22 @@ namespace muSpectre {
     }
   }
 
-  BOOST_AUTO_TEST_CASE(small_strain_patch_test_dynamic_solver) {
+
+  template <class SolverType>
+  struct SolverFixture {
+    using type = SolverType;
+  };
+
+  using SolverList = boost::mpl::list<SolverFixture<SolverCGDyn>,
+                                      SolverFixture<SolverCGEigenDyn>,
+                                      SolverFixture<SolverGMRESEigenDyn>,
+                                      SolverFixture<SolverDGMRESEigenDyn>,
+                                      SolverFixture<SolverBiCGSTABEigenDyn>,
+                                      SolverFixture<SolverMINRESEigenDyn>>;
+
+  BOOST_FIXTURE_TEST_CASE_TEMPLATE(small_strain_patch_dynamic_solver,
+                                   Fix, SolverList, Fix) {
+    //  BOOST_AUTO_TEST_CASE(small_strain_patch_test_dynamic_solver) {
     constexpr Dim_t dim{twoD};
     using Ccoord = Ccoord_t<dim>;
     using Rcoord = Rcoord_t<dim>;
@@ -235,7 +253,8 @@ namespace muSpectre {
     constexpr Uint maxiter{dim*10};
     constexpr Dim_t verbose{0};
 
-    SolverCGDyn cg{sys, cg_tol, maxiter, bool(verbose)};
+    using Solver_t = typename Fix::type;
+    Solver_t cg{sys, cg_tol, maxiter, bool(verbose)};
     auto result = newton_cg_dyn(sys, delEps0, cg, newton_tol,
                                 equil_tol, verbose);
     if (verbose) {
@@ -280,7 +299,7 @@ namespace muSpectre {
     delEps0 = Grad_t<dim>::Zero();
     delEps0(0, 1) = delEps0(1, 0) = eps0;
 
-    SolverCGDyn cg2{sys, cg_tol, maxiter, bool(verbose)};
+    Solver_t cg2{sys, cg_tol, maxiter, bool(verbose)};
     result = de_geus_dyn(sys, delEps0, cg2, newton_tol,
                          equil_tol, verbose);
     Eps_hard << 0, eps_hard, eps_hard, 0;

@@ -63,6 +63,8 @@ namespace muSpectre {
   class Cell
   {
   public:
+    //! sparse matrix emulation
+    using Adaptor = CellAdaptor<Cell>;
 
     //! dynamic vector type for interactions with numpy/scipy/solvers etc.
     using Vector_t = Eigen::Matrix<Real, Eigen::Dynamic, 1>;
@@ -172,6 +174,9 @@ namespace muSpectre {
      * set uniform strain (typically used to initialise problems
      */
     virtual void set_uniform_strain(const Eigen::Ref<const Matrix_t> &) = 0;
+
+    //! get a sparse matrix view on the cell
+    virtual Adaptor get_adaptor() = 0;
   protected:
     bool initialised{false}; //!< to handle double initialisation right
 
@@ -224,7 +229,7 @@ namespace muSpectre {
 
 
     //! sparse matrix emulation
-    using Adaptor = CellAdaptor<Cell>;
+    using Adaptor = Parent::Adaptor;
 
     //! Default constructor
     CellBase() = delete;
@@ -405,7 +410,7 @@ namespace muSpectre {
     constexpr static Dim_t get_sdim() {return DimS;};
 
     //! return a sparse matrix adaptor to the cell
-    Adaptor get_adaptor();
+    Adaptor get_adaptor() override;
     //! returns the number of degrees of freedom in the cell
     Dim_t get_nb_dof() const override {return this->size()*ipow(DimS, 2);};
 
