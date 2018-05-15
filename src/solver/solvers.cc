@@ -1,5 +1,5 @@
 /**
- * file   new_solvers.cc
+ * file   solvers.cc
  *
  * @author Till Junge <till.junge@epfl.ch>
  *
@@ -27,7 +27,7 @@
  * Boston, MA 02111-1307, USA.
  */
 
-#include "new_solvers.hh"
+#include "solvers.hh"
 
 #include <Eigen/Dense>
 
@@ -37,9 +37,9 @@ namespace muSpectre {
 
   //----------------------------------------------------------------------------//
   std::vector<OptimizeResult>
-  newton_cg_dyn(Cell & cell, const LoadSteps_t & load_steps,
-                SolverBaseDyn & solver, Real newton_tol,
-                Real equil_tol, Dim_t verbose) {
+  newton_cg(Cell & cell, const LoadSteps_t & load_steps,
+            SolverBase & solver, Real newton_tol,
+            Real equil_tol, Dim_t verbose) {
     const Communicator & comm = cell.get_communicator();
 
     using Vector_t = Eigen::Matrix<Real, Eigen::Dynamic, 1>;
@@ -201,8 +201,8 @@ namespace muSpectre {
 
       // store results
       ret_val.emplace_back(OptimizeResult{F, cell.get_stress_vector(),
-                               convergence_test(), Int(convergence_test()),
-                               message, newt_iter, solver.get_counter()});
+            convergence_test(), Int(convergence_test()),
+            message, newt_iter, solver.get_counter()});
 
       // store history variables for next load increment
       cell.save_history_variables();
@@ -213,11 +213,11 @@ namespace muSpectre {
 
   //----------------------------------------------------------------------------//
   std::vector<OptimizeResult>
-  de_geus_dyn(Cell & cell,
-              const LoadSteps_t & load_steps,
-              SolverBaseDyn & solver, Real newton_tol,
-              Real equil_tol,
-              Dim_t verbose) {
+  de_geus(Cell & cell,
+          const LoadSteps_t & load_steps,
+          SolverBase & solver, Real newton_tol,
+          Real equil_tol,
+          Dim_t verbose) {
     const Communicator & comm = cell.get_communicator();
 
     using Vector_t = Eigen::Matrix<Real, Eigen::Dynamic, 1>;
@@ -347,8 +347,8 @@ namespace muSpectre {
 
         if (newt_iter == 0) {
           for (auto && strain: StrainMap_t(DeltaF, shape[0], shape[1])) {
-              strain = macro_strain -previous_macro_strain;
-            }
+            strain = macro_strain -previous_macro_strain;
+          }
           rhs = - cell.evaluate_projected_directional_stiffness(DeltaF);
           stress_norm = std::sqrt(comm.sum(rhs.matrix().squaredNorm()));
           if (convergence_test()) {
@@ -392,8 +392,8 @@ namespace muSpectre {
 
       // store results
       ret_val.emplace_back(OptimizeResult{F, cell.get_stress_vector(),
-                               convergence_test(), Int(convergence_test()),
-                               message, newt_iter, solver.get_counter()});
+            convergence_test(), Int(convergence_test()),
+            message, newt_iter, solver.get_counter()});
 
       // store history variables for next load increment
       cell.save_history_variables();

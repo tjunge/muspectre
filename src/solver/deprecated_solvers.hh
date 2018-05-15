@@ -25,8 +25,8 @@
  * Boston, MA 02111-1307, USA.
  */
 
-#ifndef SOLVERS_H
-#define SOLVERS_H
+#ifndef DEPRECATED_SOLVERS_H
+#define DEPRECATED_SOLVERS_H
 
 #include "solver/solver_common.hh"
 #include "solver/deprecated_solver_base.hh"
@@ -37,19 +37,6 @@
 #include <string>
 
 namespace muSpectre {
-
-  /**
-   * Field type that solvers expect gradients to be expressed in
-   */
-  template <Dim_t Dim>
-  using Grad_t = Matrices::Tens2_t<Dim>;
-  /**
-   * multiple increments can be submitted at once (useful for
-   * path-dependent materials)
-   */
-  template <Dim_t Dim>
-  using GradIncrements = std::vector<Grad_t<Dim>,
-                                     Eigen::aligned_allocator<Grad_t<Dim>>>;
 
   /* ---------------------------------------------------------------------- */
   /**
@@ -114,4 +101,4 @@ namespace muSpectre {
 
 }  // muSpectre
 
-#endif /* SOLVERS_H */
+#endif /* DEPRECATED_SOLVERS_H */

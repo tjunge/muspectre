@@ -25,10 +25,11 @@
  * Boston, MA 02111-1307, USA.
  */
 
-#ifndef DEPRECATED_SOLVER_COMMON_H
-#define DEPRECATED_SOLVER_COMMON_H
+#ifndef SOLVER_COMMON_H
+#define SOLVER_COMMON_H
 
 #include "common/common.hh"
+#include "common/tensor_algebra.hh"
 
 #include <Eigen/Dense>
 
@@ -58,6 +59,18 @@ namespace muSpectre {
     Uint nb_fev;
   };
 
+  /**
+   * Field type that solvers expect gradients to be expressed in
+   */
+  template <Dim_t Dim>
+  using Grad_t = Matrices::Tens2_t<Dim>;
+  /**
+   * multiple increments can be submitted at once (useful for
+   * path-dependent materials)
+   */
+  template <Dim_t Dim>
+  using GradIncrements = std::vector<Grad_t<Dim>,
+                                     Eigen::aligned_allocator<Grad_t<Dim>>>;
 
 
   /* ---------------------------------------------------------------------- */
@@ -81,4 +94,4 @@ namespace muSpectre {
 }  // muSpectre
 
 
-#endif /* DEPRECATED_SOLVER_COMMON_H */
+#endif /* SOLVER_COMMON_H */

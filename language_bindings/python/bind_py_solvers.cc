@@ -26,9 +26,9 @@
  */
 
 #include "common/common.hh"
-#include "solver/new_solvers.hh"
-#include "solver/new_solver_cg.hh"
-#include "solver/new_solver_eigen.hh"
+#include "solver/solvers.hh"
+#include "solver/solver_cg.hh"
+#include "solver/solver_eigen.hh"
 
 #include <pybind11/pybind11.h>
 #include <pybind11/stl.h>
@@ -56,19 +56,19 @@ void add_iterative_solver_helper(py::module & mod, std::string name) {
 void add_iterative_solver(py::module & mod) {
   std::stringstream name{};
   name << "SolverBase";
-  py::class_<SolverBaseDyn>(mod, name.str().c_str());
-  add_iterative_solver_helper<SolverCGDyn>(mod, "SolverCG");
-  add_iterative_solver_helper<SolverCGEigenDyn>(mod, "SolverCGEigen");
-  add_iterative_solver_helper<SolverGMRESEigenDyn>(mod, "SolverGMRESEigen");
-  add_iterative_solver_helper<SolverBiCGSTABEigenDyn>(mod, "SolverBiCGSTABEigen");
-  add_iterative_solver_helper<SolverDGMRESEigenDyn>(mod, "SolverDGMRESEigen");
-  add_iterative_solver_helper<SolverMINRESEigenDyn>(mod, "SolverMINRESEigen");
+  py::class_<SolverBase>(mod, name.str().c_str());
+  add_iterative_solver_helper<SolverCG>(mod, "SolverCG");
+  add_iterative_solver_helper<SolverCGEigen>(mod, "SolverCGEigen");
+  add_iterative_solver_helper<SolverGMRESEigen>(mod, "SolverGMRESEigen");
+  add_iterative_solver_helper<SolverBiCGSTABEigen>(mod, "SolverBiCGSTABEigen");
+  add_iterative_solver_helper<SolverDGMRESEigen>(mod, "SolverDGMRESEigen");
+  add_iterative_solver_helper<SolverMINRESEigen>(mod, "SolverMINRESEigen");
 }
 
 void add_newton_cg_helper(py::module & mod) {
 
   const char name []{"newton_cg"};
-  using solver = SolverBaseDyn;
+  using solver = SolverBase;
   using grad = py::EigenDRef<Eigen::MatrixXd>;
   using grad_vec = LoadSteps_t;
 
@@ -76,7 +76,7 @@ void add_newton_cg_helper(py::module & mod) {
           [](Cell & s, const grad & g, solver & so, Real nt,
              Real eqt, Dim_t verb) -> OptimizeResult {
             Eigen::MatrixXd tmp{g};
-            return newton_cg_dyn(s, tmp, so, nt, eqt, verb);
+            return newton_cg(s, tmp, so, nt, eqt, verb);
 
           },
           "cell"_a,
@@ -88,7 +88,7 @@ void add_newton_cg_helper(py::module & mod) {
   mod.def(name,
           [](Cell & s, const grad_vec & g, solver & so, Real nt,
              Real eqt, Dim_t verb) -> std::vector<OptimizeResult> {
-            return newton_cg_dyn(s, g, so, nt, eqt, verb);
+            return newton_cg(s, g, so, nt, eqt, verb);
           },
           "cell"_a,
           "ΔF₀"_a,
@@ -100,7 +100,7 @@ void add_newton_cg_helper(py::module & mod) {
 
 void add_de_geus_helper(py::module & mod) {
   const char name []{"de_geus"};
-  using solver = SolverBaseDyn;
+  using solver = SolverBase;
   using grad = py::EigenDRef<Eigen::MatrixXd>;
   using grad_vec = LoadSteps_t;
 
@@ -108,7 +108,7 @@ void add_de_geus_helper(py::module & mod) {
           [](Cell & s, const grad & g, solver & so, Real nt,
              Real eqt, Dim_t verb) -> OptimizeResult {
             Eigen::MatrixXd tmp{g};
-            return de_geus_dyn(s, tmp, so, nt, eqt, verb);
+            return de_geus(s, tmp, so, nt, eqt, verb);
 
           },
           "cell"_a,
@@ -120,7 +120,7 @@ void add_de_geus_helper(py::module & mod) {
   mod.def(name,
           [](Cell & s, const grad_vec & g, solver & so, Real nt,
              Real eqt, Dim_t verb) -> std::vector<OptimizeResult> {
-            return de_geus_dyn(s, g, so, nt, eqt, verb);
+            return de_geus(s, g, so, nt, eqt, verb);
           },
           "cell"_a,
           "ΔF₀"_a,

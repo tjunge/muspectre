@@ -1,11 +1,11 @@
 /**
- * file   new_solver_cg.cc
+ * file   solver_cg.cc
  *
  * @author Till Junge <till.junge@epfl.ch>
  *
  * @date   24 Apr 2018
  *
- * @brief  implements SolverCGDyn
+ * @brief  implements SolverCG
  *
  * @section LICENSE
  *
@@ -27,7 +27,7 @@
  * Boston, MA 02111-1307, USA.
  */
 
-#include "solver/new_solver_cg.hh"
+#include "solver/solver_cg.hh"
 #include "common/communicator.hh"
 
 #include <iomanip>
@@ -37,7 +37,7 @@
 namespace muSpectre {
 
   /* ---------------------------------------------------------------------- */
-  SolverCGDyn::SolverCGDyn(Cell & cell, Real tol, Uint maxiter, bool verbose):
+  SolverCG::SolverCG(Cell & cell, Real tol, Uint maxiter, bool verbose):
     Parent(cell, tol, maxiter, verbose),
     r_k(cell.get_nb_dof()),
     p_k(cell.get_nb_dof()),
@@ -46,7 +46,7 @@ namespace muSpectre {
   {}
 
   /* ---------------------------------------------------------------------- */
-  auto SolverCGDyn::solve(const ConstVector_ref rhs) -> Vector_map {
+  auto SolverCG::solve(const ConstVector_ref rhs) -> Vector_map {
     this->x_k.setZero();
     const Communicator & comm = this->cell.get_communicator();
 

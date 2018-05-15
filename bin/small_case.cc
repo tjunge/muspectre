@@ -29,8 +29,8 @@
 #include "common/iterators.hh"
 #include "cell/cell_factory.hh"
 #include "materials/material_linear_elastic1.hh"
-#include "solver/new_solvers.hh"
-#include "solver/new_solver_cg.hh"
+#include "solver/solvers.hh"
+#include "solver/solver_cg.hh"
 
 #include <iostream>
 
@@ -76,8 +76,8 @@ int main()
   Uint maxiter{31};
   Dim_t verbose{3};
 
-  SolverCGDyn cg{rve, tol, maxiter, bool(verbose)};
-  auto res = de_geus_dyn(rve, Del0, cg, tol, verbose);
+  SolverCG cg{rve, tol, maxiter, bool(verbose)};
+  auto res = de_geus(rve, Del0, cg, tol, verbose);
   std::cout << res.grad.transpose() << std::endl;
   return 0;
 }

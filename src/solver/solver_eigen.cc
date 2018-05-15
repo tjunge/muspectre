@@ -1,5 +1,5 @@
 /**
- * file   new_solver_eigen.cc
+ * file   solver_eigen.cc
  *
  * @author Till Junge <till.junge@epfl.ch>
  *
@@ -27,7 +27,7 @@
  * Boston, MA 02111-1307, USA.
  */
 
-#include "solver/new_solver_eigen.hh"
+#include "solver/solver_eigen.hh"
 
 #include <iomanip>
 #include <sstream>
@@ -37,7 +37,7 @@ namespace muSpectre {
 
   /* ---------------------------------------------------------------------- */
   template <class SolverType>
-  SolverEigenDyn<SolverType>::SolverEigenDyn(Cell& cell, Real tol,
+  SolverEigen<SolverType>::SolverEigen(Cell& cell, Real tol,
                                              Uint maxiter, bool verbose):
     Parent(cell, tol, maxiter, verbose),
     adaptor{cell.get_adaptor()},
@@ -47,7 +47,7 @@ namespace muSpectre {
 
   /* ---------------------------------------------------------------------- */
   template <class SolverType>
-  void SolverEigenDyn<SolverType>::initialise() {
+  void SolverEigen<SolverType>::initialise() {
     this->solver.setTolerance(this->get_tol());
     this->solver.setMaxIterations(this->get_maxiter());
     this->solver.compute(this->adaptor);
@@ -55,7 +55,7 @@ namespace muSpectre {
 
   /* ---------------------------------------------------------------------- */
   template <class SolverType>
-  auto SolverEigenDyn<SolverType>::solve(const ConstVector_ref rhs)
+  auto SolverEigen<SolverType>::solve(const ConstVector_ref rhs)
     -> Vector_map {
     // for crtp
     auto & this_solver = static_cast<SolverType&> (*this);
@@ -84,10 +84,10 @@ namespace muSpectre {
 
 
   /* ---------------------------------------------------------------------- */
-  template class SolverEigenDyn<SolverCGEigenDyn>;
-  template class SolverEigenDyn<SolverGMRESEigenDyn>;
-  template class SolverEigenDyn<SolverBiCGSTABEigenDyn>;
-  template class SolverEigenDyn<SolverDGMRESEigenDyn>;
-  template class SolverEigenDyn<SolverMINRESEigenDyn>;
+  template class SolverEigen<SolverCGEigen>;
+  template class SolverEigen<SolverGMRESEigen>;
+  template class SolverEigen<SolverBiCGSTABEigen>;
+  template class SolverEigen<SolverDGMRESEigen>;
+  template class SolverEigen<SolverMINRESEigen>;
 
 }  // muSpectre

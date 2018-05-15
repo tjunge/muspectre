@@ -1,5 +1,5 @@
 /**
- * file   new_solver_eigen.hh
+ * file   solver_eigen.hh
  *
  * @author Till Junge <till.junge@epfl.ch>
  *
@@ -27,10 +27,10 @@
  * Boston, MA 02111-1307, USA.
  */
 
-#ifndef NEW_SOLVER_EIGEN_H
-#define NEW_SOLVER_EIGEN_H
+#ifndef SOLVER_EIGEN_H
+#define SOLVER_EIGEN_H
 
-#include "solver/new_solver_base.hh"
+#include "solver/solver_base.hh"
 #include "cell/cell_base.hh"
 
 #include <Eigen/IterativeLinearSolvers>
@@ -39,27 +39,27 @@
 namespace muSpectre {
 
   template <class SolverType>
-  class SolverEigenDyn;
+  class SolverEigen;
 
-  class SolverCGEigenDyn;
+  class SolverCGEigen;
 
-  class SolverGMRESEigenDyn;
+  class SolverGMRESEigen;
 
-  class SolverBiCGSTABEigenDyn;
+  class SolverBiCGSTABEigen;
 
-  class SolverDGMRESEigenDyn;
+  class SolverDGMRESEigen;
 
-  class SolverMINRESEigenDyn;
+  class SolverMINRESEigen;
 
   namespace internal {
 
     template <class Solver>
-    struct SolverDyn_traits {
+    struct Solver_traits {
     };
 
     //! traits for the Eigen conjugate gradient solver
     template<>
-    struct SolverDyn_traits<SolverCGEigenDyn> {
+    struct Solver_traits<SolverCGEigen> {
       //! Eigen Iterative Solver
       using Solver =
         Eigen::ConjugateGradient<typename Cell::Adaptor,
@@ -69,7 +69,7 @@ namespace muSpectre {
 
     //! traits for the Eigen GMRES solver
     template<>
-    struct SolverDyn_traits<SolverGMRESEigenDyn> {
+    struct Solver_traits<SolverGMRESEigen> {
       //! Eigen Iterative Solver
       using Solver =
         Eigen::GMRES<typename Cell::Adaptor,
@@ -78,7 +78,7 @@ namespace muSpectre {
 
     //! traits for the Eigen BiCGSTAB solver
     template<>
-    struct SolverDyn_traits<SolverBiCGSTABEigenDyn> {
+    struct Solver_traits<SolverBiCGSTABEigen> {
       //! Eigen Iterative Solver
       using Solver =
         Eigen::BiCGSTAB<typename Cell::Adaptor,
@@ -87,7 +87,7 @@ namespace muSpectre {
 
     //! traits for the Eigen DGMRES solver
     template<>
-    struct SolverDyn_traits<SolverDGMRESEigenDyn> {
+    struct Solver_traits<SolverDGMRESEigen> {
       //! Eigen Iterative Solver
       using Solver =
         Eigen::DGMRES<typename Cell::Adaptor,
@@ -96,7 +96,7 @@ namespace muSpectre {
 
     //! traits for the Eigen MINRES solver
     template<>
-    struct SolverDyn_traits<SolverMINRESEigenDyn> {
+    struct Solver_traits<SolverMINRESEigen> {
       //! Eigen Iterative Solver
       using Solver =
         Eigen::MINRES<typename Cell::Adaptor,
@@ -110,12 +110,12 @@ namespace muSpectre {
    * base class for iterative solvers from Eigen
    */
   template <class SolverType>
-  class SolverEigenDyn: public SolverBaseDyn
+  class SolverEigen: public SolverBase
   {
   public:
-    using Parent = SolverBaseDyn; //!< base class
+    using Parent = SolverBase; //!< base class
     //! traits obtained from CRTP
-    using Solver = typename internal::SolverDyn_traits<SolverType>::Solver;
+    using Solver = typename internal::Solver_traits<SolverType>::Solver;
     //! Input vectors for solver
     using ConstVector_ref = Parent::ConstVector_ref;
     //! Output vector for solver
@@ -124,25 +124,25 @@ namespace muSpectre {
     using Vector_t = Parent::Vector_t;
 
     //! Default constructor
-    SolverEigenDyn() = delete;
+    SolverEigen() = delete;
 
     //! Constructor with domain resolutions, etc,
-    SolverEigenDyn(Cell& cell, Real tol, Uint maxiter=0, bool verbose =false);
+    SolverEigen(Cell& cell, Real tol, Uint maxiter=0, bool verbose =false);
 
     //! Copy constructor
-    SolverEigenDyn(const SolverEigenDyn &other) = delete;
+    SolverEigen(const SolverEigen &other) = delete;
 
     //! Move constructor
-    SolverEigenDyn(SolverEigenDyn &&other) = default;
+    SolverEigen(SolverEigen &&other) = default;
 
     //! Destructor
-    virtual ~SolverEigenDyn() = default;
+    virtual ~SolverEigen() = default;
 
     //! Copy assignment operator
-    SolverEigenDyn& operator=(const SolverEigenDyn &other) = delete;
+    SolverEigen& operator=(const SolverEigen &other) = delete;
 
     //! Move assignment operator
-    SolverEigenDyn& operator=(SolverEigenDyn &&other) = default;
+    SolverEigen& operator=(SolverEigen &&other) = default;
 
     //! Allocate fields used during the solution
     void initialise() override final;
@@ -160,30 +160,30 @@ namespace muSpectre {
   /**
    * Binding to Eigen's conjugate gradient solver
    */
-  class SolverCGEigenDyn:
-    public SolverEigenDyn<SolverCGEigenDyn> {
+  class SolverCGEigen:
+    public SolverEigen<SolverCGEigen> {
   public:
-    using SolverEigenDyn<SolverCGEigenDyn>::SolverEigenDyn;
+    using SolverEigen<SolverCGEigen>::SolverEigen;
     std::string get_name() const override final {return "CG";}
   };
 
   /**
    * Binding to Eigen's GMRES solver
    */
-  class SolverGMRESEigenDyn:
-    public SolverEigenDyn<SolverGMRESEigenDyn> {
+  class SolverGMRESEigen:
+    public SolverEigen<SolverGMRESEigen> {
   public:
-    using SolverEigenDyn<SolverGMRESEigenDyn>::SolverEigenDyn;
+    using SolverEigen<SolverGMRESEigen>::SolverEigen;
     std::string get_name() const override final {return "GMRES";}
   };
 
   /**
    * Binding to Eigen's BiCGSTAB solver
    */
-  class SolverBiCGSTABEigenDyn:
-    public SolverEigenDyn<SolverBiCGSTABEigenDyn> {
+  class SolverBiCGSTABEigen:
+    public SolverEigen<SolverBiCGSTABEigen> {
   public:
-    using SolverEigenDyn<SolverBiCGSTABEigenDyn>::SolverEigenDyn;
+    using SolverEigen<SolverBiCGSTABEigen>::SolverEigen;
     //! Solver's name
     std::string get_name() const override final {return "BiCGSTAB";}
   };
@@ -191,10 +191,10 @@ namespace muSpectre {
   /**
    * Binding to Eigen's DGMRES solver
    */
-  class SolverDGMRESEigenDyn:
-    public SolverEigenDyn<SolverDGMRESEigenDyn> {
+  class SolverDGMRESEigen:
+    public SolverEigen<SolverDGMRESEigen> {
   public:
-    using SolverEigenDyn<SolverDGMRESEigenDyn>::SolverEigenDyn;
+    using SolverEigen<SolverDGMRESEigen>::SolverEigen;
     //! Solver's name
     std::string get_name() const override final {return "DGMRES";}
   };
@@ -202,14 +202,14 @@ namespace muSpectre {
   /**
    * Binding to Eigen's MINRES solver
    */
-  class SolverMINRESEigenDyn:
-    public SolverEigenDyn<SolverMINRESEigenDyn> {
+  class SolverMINRESEigen:
+    public SolverEigen<SolverMINRESEigen> {
   public:
-    using SolverEigenDyn<SolverMINRESEigenDyn>::SolverEigenDyn;
+    using SolverEigen<SolverMINRESEigen>::SolverEigen;
     //! Solver's name
     std::string get_name() const override final {return "MINRES";}
   };
 
 }  // muSpectre
 
-#endif /* NEW_SOLVER_EIGEN_H */
+#endif /* SOLVER_EIGEN_H */

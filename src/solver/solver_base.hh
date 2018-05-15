@@ -1,5 +1,5 @@
 /**
- * file   new_solver_base.hh
+ * file   solver_base.hh
  *
  * @author Till Junge <till.junge@epfl.ch>
  *
@@ -27,8 +27,8 @@
  * Boston, MA 02111-1307, USA.
  */
 
-#ifndef NEW_SOLVER_BASE_H
-#define NEW_SOLVER_BASE_H
+#ifndef SOLVER_BASE_H
+#define SOLVER_BASE_H
 
 #include "solver/solver_common.hh"
 #include "cell/cell_base.hh"
@@ -41,7 +41,7 @@ namespace muSpectre {
    * Virtual base class for solvers. An implementation of this interface
    * can be used with the solution strategies in solvers.hh
    */
-  class SolverBaseDyn
+  class SolverBase
   {
   public:
 
@@ -55,28 +55,28 @@ namespace muSpectre {
     using Vector_map = Eigen::Map<Vector_t>;
 
     //! Default constructor
-    SolverBaseDyn() = delete;
+    SolverBase() = delete;
 
     /**
      * Constructor takes a Cell, tolerance, max number of iterations
      * and verbosity flag as input
      */
-    SolverBaseDyn(Cell & cell, Real tol, Uint maxiter, bool verbose=false);
+    SolverBase(Cell & cell, Real tol, Uint maxiter, bool verbose=false);
 
     //! Copy constructor
-    SolverBaseDyn(const SolverBaseDyn &other) = delete;
+    SolverBase(const SolverBase &other) = delete;
 
     //! Move constructor
-    SolverBaseDyn(SolverBaseDyn &&other) = default;
+    SolverBase(SolverBase &&other) = default;
 
     //! Destructor
-    virtual ~SolverBaseDyn() = default;
+    virtual ~SolverBase() = default;
 
     //! Copy assignment operator
-    SolverBaseDyn& operator=(const SolverBaseDyn &other) = delete;
+    SolverBase& operator=(const SolverBase &other) = delete;
 
     //! Move assignment operator
-    SolverBaseDyn& operator=(SolverBaseDyn &&other) = default;
+    SolverBase& operator=(SolverBase &&other) = default;
 
     //! Allocate fields used during the solution
     virtual void initialise() = 0;
@@ -117,4 +117,4 @@ namespace muSpectre {
 
 }  // muSpectre
 
-#endif /* NEW_SOLVER_BASE_H */
+#endif /* SOLVER_BASE_H */

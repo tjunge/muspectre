@@ -1,5 +1,5 @@
 /**
- * file   new_solver_cg.hh
+ * file   solver_cg.hh
  *
  * @author Till Junge <till.junge@epfl.ch>
  *
@@ -29,24 +29,24 @@
  * Boston, MA 02111-1307, USA.
  */
 
-#ifndef NEW_SOLVER_CG_H
-#define NEW_SOLVER_CG_H
+#ifndef SOLVER_CG_H
+#define SOLVER_CG_H
 
-#include "solver/new_solver_base.hh"
+#include "solver/solver_base.hh"
 
 namespace muSpectre {
 
   /**
-   * implements the `muSpectre::SolverBaseDyn` interface using a
+   * implements the `muSpectre::SolverBase` interface using a
    * conjugate gradient solver. This particular class is useful for
    * trouble shooting, as it can be made very verbose, but for
    * production runs, it is probably better to use
    * `muSpectre::SolverCGEigen`.
    */
-  class SolverCGDyn: public SolverBaseDyn
+  class SolverCG: public SolverBase
   {
   public:
-    using Parent = SolverBaseDyn; //!< standard short-hand for base class
+    using Parent = SolverBase; //!< standard short-hand for base class
     //! for storage of fields
     using Vector_t = Parent::Vector_t;
     //! Input vector for solvers
@@ -57,28 +57,28 @@ namespace muSpectre {
     using Vector_map = Parent::Vector_map;
 
     //! Default constructor
-    SolverCGDyn() = delete;
+    SolverCG() = delete;
 
     //! Copy constructor
-    SolverCGDyn(const SolverCGDyn &other) = delete;
+    SolverCG(const SolverCG &other) = delete;
 
     /**
      * Constructor takes a Cell, tolerance, max number of iterations
      * and verbosity flag as input
      */
-    SolverCGDyn(Cell & cell, Real tol, Uint maxiter, bool verbose=false);
+    SolverCG(Cell & cell, Real tol, Uint maxiter, bool verbose=false);
 
     //! Move constructor
-    SolverCGDyn(SolverCGDyn &&other) = default;
+    SolverCG(SolverCG &&other) = default;
 
     //! Destructor
-    virtual ~SolverCGDyn() = default;
+    virtual ~SolverCG() = default;
 
     //! Copy assignment operator
-    SolverCGDyn& operator=(const SolverCGDyn &other) = delete;
+    SolverCG& operator=(const SolverCG &other) = delete;
 
     //! Move assignment operator
-    SolverCGDyn& operator=(SolverCGDyn &&other) = default;
+    SolverCG& operator=(SolverCG &&other) = default;
 
     //! initialisation does not need to do anything in this case
     void initialise() override final {};
@@ -102,4 +102,4 @@ namespace muSpectre {
 
 }  // muSpectre
 
-#endif /* NEW_SOLVER_CG_H */
+#endif /* SOLVER_CG_H */

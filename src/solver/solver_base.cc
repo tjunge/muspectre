@@ -1,11 +1,11 @@
 /**
- * file   new_solver_base.cc
+ * file   solver_base.cc
  *
  * @author Till Junge <till.junge@epfl.ch>
  *
  * @date   24 Apr 2018
  *
- * @brief  implementation of SolverBaseDyn
+ * @brief  implementation of SolverBase
  *
  * @section LICENSE
  *
@@ -27,38 +27,38 @@
  * Boston, MA 02111-1307, USA.
  */
 
-#include "solver/new_solver_base.hh"
+#include "solver/solver_base.hh"
 
 namespace muSpectre {
 
   /* ---------------------------------------------------------------------- */
-  SolverBaseDyn::SolverBaseDyn(Cell & cell, Real tol, Uint maxiter, bool verbose):
+  SolverBase::SolverBase(Cell & cell, Real tol, Uint maxiter, bool verbose):
     cell(cell), tol{tol}, maxiter{maxiter}, verbose{verbose}
   {}
 
   /* ---------------------------------------------------------------------- */
-  bool SolverBaseDyn::has_converged() const {
+  bool SolverBase::has_converged() const {
     return this->converged;
   }
 
   /* ---------------------------------------------------------------------- */
-  void SolverBaseDyn::reset_counter() {
+  void SolverBase::reset_counter() {
     this->counter = 0;
     this->converged = false;
   }
 
   /* ---------------------------------------------------------------------- */
-  Uint SolverBaseDyn::get_counter() const {
+  Uint SolverBase::get_counter() const {
     return this->counter;
   }
 
   /* ---------------------------------------------------------------------- */
-  Real SolverBaseDyn::get_tol() const {
+  Real SolverBase::get_tol() const {
     return this->tol;
   }
 
   /* ---------------------------------------------------------------------- */
-  Uint SolverBaseDyn::get_maxiter() const {
+  Uint SolverBase::get_maxiter() const {
     return this->maxiter;
   }
 

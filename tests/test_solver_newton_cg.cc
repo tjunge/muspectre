@@ -26,9 +26,9 @@
  */
 
 #include "tests.hh"
-#include "solver/new_solvers.hh"
-#include "solver/new_solver_cg.hh"
-#include "solver/new_solver_eigen.hh"
+#include "solver/solvers.hh"
+#include "solver/solver_cg.hh"
+#include "solver/solver_eigen.hh"
 #include "solver/deprecated_solvers.hh"
 #include "solver/deprecated_solver_cg.hh"
 #include "solver/deprecated_solver_cg_eigen.hh"
@@ -201,12 +201,12 @@ namespace muSpectre {
     using type = SolverType;
   };
 
-  using SolverList = boost::mpl::list<SolverFixture<SolverCGDyn>,
-                                      SolverFixture<SolverCGEigenDyn>,
-                                      SolverFixture<SolverGMRESEigenDyn>,
-                                      SolverFixture<SolverDGMRESEigenDyn>,
-                                      SolverFixture<SolverBiCGSTABEigenDyn>,
-                                      SolverFixture<SolverMINRESEigenDyn>>;
+  using SolverList = boost::mpl::list<SolverFixture<SolverCG>,
+                                      SolverFixture<SolverCGEigen>,
+                                      SolverFixture<SolverGMRESEigen>,
+                                      SolverFixture<SolverDGMRESEigen>,
+                                      SolverFixture<SolverBiCGSTABEigen>,
+                                      SolverFixture<SolverMINRESEigen>>;
 
   BOOST_FIXTURE_TEST_CASE_TEMPLATE(small_strain_patch_dynamic_solver,
                                    Fix, SolverList, Fix) {
@@ -255,7 +255,7 @@ namespace muSpectre {
 
     using Solver_t = typename Fix::type;
     Solver_t cg{sys, cg_tol, maxiter, bool(verbose)};
-    auto result = newton_cg_dyn(sys, delEps0, cg, newton_tol,
+    auto result = newton_cg(sys, delEps0, cg, newton_tol,
                                 equil_tol, verbose);
     if (verbose) {
       std::cout << "result:" << std::endl << result.grad << std::endl;
@@ -300,7 +300,7 @@ namespace muSpectre {
     delEps0(0, 1) = delEps0(1, 0) = eps0;
 
     Solver_t cg2{sys, cg_tol, maxiter, bool(verbose)};
-    result = de_geus_dyn(sys, delEps0, cg2, newton_tol,
+    result = de_geus(sys, delEps0, cg2, newton_tol,
                          equil_tol, verbose);
     Eps_hard << 0, eps_hard, eps_hard, 0;
     Eps_soft << 0, eps_soft, eps_soft, 0;

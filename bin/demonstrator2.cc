@@ -33,8 +33,8 @@
 #include "common/ccoord_operations.hh"
 #include "cell/cell_factory.hh"
 #include "materials/material_linear_elastic1.hh"
-#include "solver/new_solvers.hh"
-#include "solver/new_solver_cg.hh"
+#include "solver/solvers.hh"
+#include "solver/solver_cg.hh"
 
 using namespace muSpectre;
 
@@ -80,8 +80,8 @@ int main()
   Dim_t verbose {1};
 
   auto start = std::chrono::high_resolution_clock::now();
-  SolverCGDyn cg{cell, cg_tol, maxiter, bool(verbose)};
-  auto res = de_geus_dyn(cell, DeltaF, cg, newton_tol, verbose);
+  SolverCG cg{cell, cg_tol, maxiter, bool(verbose)};
+  auto res = de_geus(cell, DeltaF, cg, newton_tol, verbose);
   std::chrono::duration<Real> dur = std::chrono::high_resolution_clock::now() - start;
   std::cout << "Resolution time = " << dur.count() << "s" << std::endl;
 
