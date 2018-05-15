@@ -30,7 +30,7 @@
 #ifndef NEW_SOLVER_BASE_H
 #define NEW_SOLVER_BASE_H
 
-#include "solver/solver_error.hh"
+#include "solver/solver_common.hh"
 #include "cell/cell_base.hh"
 
 #include <Eigen/Dense>

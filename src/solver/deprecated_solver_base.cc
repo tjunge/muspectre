@@ -1,5 +1,5 @@
 /**
- * @file   solver_base.cc
+ * @file   deprecated_solver_base.cc
  *
  * @author Till Junge <till.junge@epfl.ch>
  *
@@ -25,8 +25,8 @@
  * Boston, MA 02111-1307, USA.
  */
 
-#include "solver/solver_base.hh"
-#include "solver/solver_cg.hh"
+#include "solver/deprecated_solver_base.hh"
+#include "solver/deprecated_solver_cg.hh"
 #include "common/field.hh"
 #include "common/iterators.hh"
 
@@ -38,7 +38,7 @@ namespace muSpectre {
 
   //----------------------------------------------------------------------------//
   template <Dim_t DimS, Dim_t DimM>
-  SolverBase<DimS, DimM>::SolverBase(Cell_t & cell, Real tol, Uint maxiter,
+  DeprecatedSolverBase<DimS, DimM>::DeprecatedSolverBase(Cell_t & cell, Real tol, Uint maxiter,
                                      bool verbose )
     : cell{cell}, tol{tol}, maxiter{maxiter}, verbose{verbose}
   {}
@@ -46,18 +46,18 @@ namespace muSpectre {
 
   /* ---------------------------------------------------------------------- */
   template <Dim_t DimS, Dim_t DimM>
-  void SolverBase<DimS, DimM>::reset_counter() {
+  void DeprecatedSolverBase<DimS, DimM>::reset_counter() {
     this->counter = 0;
   }
 
   /* ---------------------------------------------------------------------- */
   template <Dim_t DimS, Dim_t DimM>
-  Uint SolverBase<DimS, DimM>::get_counter() const {
+  Uint DeprecatedSolverBase<DimS, DimM>::get_counter() const {
     return this->counter;
   }
 
-  template class SolverBase<twoD, twoD>;
-  //template class SolverBase<twoD, threeD>;
-  template class SolverBase<threeD, threeD>;
+  template class DeprecatedSolverBase<twoD, twoD>;
+  //template class DeprecatedSolverBase<twoD, threeD>;
+  template class DeprecatedSolverBase<threeD, threeD>;
 
 }  // muSpectre

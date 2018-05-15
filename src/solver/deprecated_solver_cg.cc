@@ -1,5 +1,5 @@
 /**
- * @file   solver_cg.cc
+ * @file   deprecated_solver_cg.cc
  *
  * @author Till Junge <till.junge@epfl.ch>
  *
@@ -25,8 +25,8 @@
  * Boston, MA 02111-1307, USA.
  */
 
-#include "solver/solver_cg.hh"
-#include "solver/solver_error.hh"
+#include "solver/deprecated_solver_cg.hh"
+#include "solver/solver_common.hh"
 
 #include <iomanip>
 #include <cmath>
@@ -36,7 +36,7 @@ namespace muSpectre {
 
   /* ---------------------------------------------------------------------- */
   template <Dim_t DimS, Dim_t DimM>
-  SolverCG<DimS, DimM>::SolverCG(Cell_t& cell, Real tol, Uint maxiter,
+  DeprecatedSolverCG<DimS, DimM>::DeprecatedSolverCG(Cell_t& cell, Real tol, Uint maxiter,
                                  bool verbose)
     :Parent(cell, tol, maxiter, verbose),
      r_k{make_field<Field_t>("residual r_k", this->collection)},
@@ -47,15 +47,15 @@ namespace muSpectre {
 
   /* ---------------------------------------------------------------------- */
   template <Dim_t DimS, Dim_t DimM>
-  void SolverCG<DimS, DimM>::solve(const Field_t & rhs,
+  void DeprecatedSolverCG<DimS, DimM>::solve(const Field_t & rhs,
                                    Field_t & x_f) {
     x_f.eigenvec() = this->solve(rhs.eigenvec(), x_f.eigenvec());
   };
 
   //----------------------------------------------------------------------------//
   template <Dim_t DimS, Dim_t DimM>
-  typename SolverCG<DimS, DimM>::SolvVectorOut
-  SolverCG<DimS, DimM>::solve(const SolvVectorInC rhs, SolvVectorIn x_0) {
+  typename DeprecatedSolverCG<DimS, DimM>::SolvVectorOut
+  DeprecatedSolverCG<DimS, DimM>::solve(const SolvVectorInC rhs, SolvVectorIn x_0) {
     const Communicator & comm = this->cell.get_communicator();
     // Following implementation of algorithm 5.2 in Nocedal's Numerical Optimization (p. 112)
 
@@ -118,12 +118,12 @@ namespace muSpectre {
 
   /* ---------------------------------------------------------------------- */
   template <Dim_t DimS, Dim_t DimM>
-  typename SolverCG<DimS, DimM>::Tg_req_t
-  SolverCG<DimS, DimM>::get_tangent_req() const {
+  typename DeprecatedSolverCG<DimS, DimM>::Tg_req_t
+  DeprecatedSolverCG<DimS, DimM>::get_tangent_req() const {
     return tangent_requirement;
   }
 
-  template class SolverCG<twoD, twoD>;
-  //template class SolverCG<twoD, threeD>;
-  template class SolverCG<threeD, threeD>;
+  template class DeprecatedSolverCG<twoD, twoD>;
+  //template class DeprecatedSolverCG<twoD, threeD>;
+  template class DeprecatedSolverCG<threeD, threeD>;
 }  // muSpectre

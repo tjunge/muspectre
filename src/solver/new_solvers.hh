@@ -31,7 +31,6 @@
 #ifndef NEW_SOLVERS_H
 #define NEW_SOLVERS_H
 
-#include "solvers.hh"
 #include "solver/new_solver_base.hh"
 
 #include <Eigen/Dense>
@@ -40,6 +39,7 @@
 #include <string>
 
 namespace muSpectre {
+
   using LoadSteps_t = std::vector<Eigen::MatrixXd>;
 
   /**

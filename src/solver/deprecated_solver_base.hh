@@ -1,5 +1,5 @@
 /**
- * @file   solver_base.hh
+ * @file   deprecated_solver_base.hh
  *
  * @author Till Junge <till.junge@epfl.ch>
  *
@@ -25,10 +25,10 @@
  * Boston, MA 02111-1307, USA.
  */
 
-#ifndef SOLVER_BASE_H
-#define SOLVER_BASE_H
+#ifndef DEPRECATED_SOLVER_BASE_H
+#define DEPRECATED_SOLVER_BASE_H
 
-#include "solver/solver_error.hh"
+#include "solver/solver_common.hh"
 #include "common/common.hh"
 #include "cell/cell_base.hh"
 #include "common/tensor_algebra.hh"
@@ -43,7 +43,7 @@ namespace muSpectre {
    * Virtual base class for solvers. Any implementation of this interface can be used with the solver functions prototyped in solvers.hh
    */
   template <Dim_t DimS, Dim_t DimM=DimS>
-  class SolverBase
+  class DeprecatedSolverBase
   {
   public:
     /**
@@ -63,25 +63,25 @@ namespace muSpectre {
 
 
     //! Default constructor
-    SolverBase() = delete;
+    DeprecatedSolverBase() = delete;
 
     //! Constructor with domain resolutions
-    SolverBase(Cell_t & cell, Real tol, Uint maxiter=0, bool verbose =false);
+    DeprecatedSolverBase(Cell_t & cell, Real tol, Uint maxiter=0, bool verbose =false);
 
     //! Copy constructor
-    SolverBase(const SolverBase &other) = delete;
+    DeprecatedSolverBase(const DeprecatedSolverBase &other) = delete;
 
     //! Move constructor
-    SolverBase(SolverBase &&other) = default;
+    DeprecatedSolverBase(DeprecatedSolverBase &&other) = default;
 
     //! Destructor
-    virtual ~SolverBase() = default;
+    virtual ~DeprecatedSolverBase() = default;
 
     //! Copy assignment operator
-    SolverBase& operator=(const SolverBase &other) = delete;
+    DeprecatedSolverBase& operator=(const DeprecatedSolverBase &other) = delete;
 
     //! Move assignment operator
-    SolverBase& operator=(SolverBase &&other) = default;
+    DeprecatedSolverBase& operator=(DeprecatedSolverBase &&other) = default;
 
     //! Allocate fields used during the solution
     virtual void initialise() {
@@ -145,4 +145,4 @@ namespace muSpectre {
 
 }  // muSpectre
 
-#endif /* SOLVER_BASE_H */
+#endif /* DEPRECATED_SOLVER_BASE_H */

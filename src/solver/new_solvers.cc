@@ -98,7 +98,7 @@ namespace muSpectre {
           std::stringstream err{};
           err << "Load increments need to be given in " << shape[0] << "×"
               << shape[1] << " matrices, but I got a " << delF.rows() << "×"
-              << delF.cols() << " matrix.";
+              << delF.cols() << " matrix:" << std::endl << delF;
           throw SolverError(err.str());
         }
       }
@@ -111,7 +111,7 @@ namespace muSpectre {
           std::stringstream err{};
           err << "Load increments need to be given in " << shape[0] << "×"
               << shape[1] << " matrices, but I got a " << delF.rows() << "×"
-              << delF.cols() << " matrix.";
+              << delF.cols() << " matrix:" << std::endl << delF;
           throw SolverError(err.str());
         }
         if (not check_symmetry(delF)) {
@@ -275,11 +275,13 @@ namespace muSpectre {
     case Formulation::finite_strain: {
       cell.set_uniform_strain(Matrix_t::Identity(shape[0], shape[1]));
       for (const auto & delF: load_steps) {
-        if (not (delF.rows() == shape[0]) and (delF.cols() == shape[1])) {
+        auto rows = delF.rows();
+        auto cols = delF.cols();
+        if (not ((rows == shape[0]) and (cols == shape[1]))) {
           std::stringstream err{};
           err << "Load increments need to be given in " << shape[0] << "×"
               << shape[1] << " matrices, but I got a " << delF.rows() << "×"
-              << delF.cols() << " matrix.";
+              << delF.cols() << " matrix:" << std::endl << delF;
           throw SolverError(err.str());
         }
       }
@@ -288,11 +290,11 @@ namespace muSpectre {
     case Formulation::small_strain: {
       cell.set_uniform_strain(Matrix_t::Zero(shape[0], shape[1]));
       for (const auto & delF: load_steps) {
-        if (not (delF.rows() == shape[0]) and (delF.cols() == shape[1])) {
+        if (not ((delF.rows() == shape[0]) and (delF.cols() == shape[1]))) {
           std::stringstream err{};
           err << "Load increments need to be given in " << shape[0] << "×"
               << shape[1] << " matrices, but I got a " << delF.rows() << "×"
-              << delF.cols() << " matrix.";
+              << delF.cols() << " matrix:" << std::endl << delF;
           throw SolverError(err.str());
         }
         if (not check_symmetry(delF)) {
@@ -399,5 +401,4 @@ namespace muSpectre {
 
     return ret_val;
   }
-
-  }  // muSpectre
+}  // muSpectre

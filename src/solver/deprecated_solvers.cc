@@ -25,8 +25,8 @@
  * Boston, MA 02111-1307, USA.
  */
 
-#include "solver/solvers.hh"
-#include "solver/solver_cg.hh"
+#include "solver/deprecated_solvers.hh"
+#include "solver/deprecated_solver_cg.hh"
 #include "common/iterators.hh"
 
 #include <Eigen/IterativeLinearSolvers>
@@ -39,7 +39,7 @@ namespace muSpectre {
   template <Dim_t DimS, Dim_t DimM>
   std::vector<OptimizeResult>
   de_geus (CellBase<DimS, DimM> & cell, const GradIncrements<DimM> & delFs,
-           SolverBase<DimS, DimM> & solver, Real newton_tol,
+           DeprecatedSolverBase<DimS, DimM> & solver, Real newton_tol,
            Real equil_tol,
            Dim_t verbose) {
     using Field_t = typename MaterialBase<DimS, DimM>::StrainField_t;
@@ -215,7 +215,7 @@ namespace muSpectre {
   //! instantiation for two-dimensional cells
   template std::vector<OptimizeResult>
   de_geus (CellBase<twoD, twoD> & cell, const GradIncrements<twoD>& delF0,
-           SolverBase<twoD, twoD> & solver, Real newton_tol,
+           DeprecatedSolverBase<twoD, twoD> & solver, Real newton_tol,
            Real equil_tol,
            Dim_t verbose);
 
@@ -227,7 +227,7 @@ namespace muSpectre {
   //! instantiation for three-dimensional cells
   template std::vector<OptimizeResult>
   de_geus (CellBase<threeD, threeD> & cell, const GradIncrements<threeD>& delF0,
-           SolverBase<threeD, threeD> & solver, Real newton_tol,
+           DeprecatedSolverBase<threeD, threeD> & solver, Real newton_tol,
            Real equil_tol,
            Dim_t verbose);
 
@@ -235,7 +235,7 @@ namespace muSpectre {
   template <Dim_t DimS, Dim_t DimM>
   std::vector<OptimizeResult>
   newton_cg (CellBase<DimS, DimM> & cell, const GradIncrements<DimM> & delFs,
-             SolverBase<DimS, DimM> & solver, Real newton_tol,
+             DeprecatedSolverBase<DimS, DimM> & solver, Real newton_tol,
              Real equil_tol,
              Dim_t verbose) {
     using Field_t = typename MaterialBase<DimS, DimM>::StrainField_t;
@@ -396,7 +396,7 @@ namespace muSpectre {
   //! instantiation for two-dimensional cells
   template std::vector<OptimizeResult>
   newton_cg (CellBase<twoD, twoD> & cell, const GradIncrements<twoD>& delF0,
-             SolverBase<twoD, twoD> & solver, Real newton_tol,
+             DeprecatedSolverBase<twoD, twoD> & solver, Real newton_tol,
              Real equil_tol,
              Dim_t verbose);
 
@@ -408,17 +408,8 @@ namespace muSpectre {
   //! instantiation for three-dimensional cells
   template std::vector<OptimizeResult>
   newton_cg (CellBase<threeD, threeD> & cell, const GradIncrements<threeD>& delF0,
-             SolverBase<threeD, threeD> & solver, Real newton_tol,
+             DeprecatedSolverBase<threeD, threeD> & solver, Real newton_tol,
              Real equil_tol,
              Dim_t verbose);
-
-
-  /* ---------------------------------------------------------------------- */
-  bool check_symmetry(const Eigen::Ref<const Eigen::ArrayXXd>& eps,
-                      Real rel_tol){
-    return (rel_tol >= (eps-eps.transpose()).matrix().norm()/eps.matrix().norm() ||
-            rel_tol >= eps.matrix().norm());
-  }
-
 
 }  // muSpectre

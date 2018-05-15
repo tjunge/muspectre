@@ -1,5 +1,5 @@
 /**
- * @file   solver_cg.hh
+ * @file   deprecated_solver_cg.hh
  *
  * @author Till Junge <till.junge@epfl.ch>
  *
@@ -27,10 +27,10 @@
  * Boston, MA 02111-1307, USA.
  */
 
-#ifndef SOLVER_CG_H
-#define SOLVER_CG_H
+#ifndef DEPRECATED_SOLVER_CG_H
+#define DEPRECATED_SOLVER_CG_H
 
-#include "solver/solver_base.hh"
+#include "solver/deprecated_solver_base.hh"
 #include "common/communicator.hh"
 #include "common/field.hh"
 
@@ -39,17 +39,17 @@
 namespace muSpectre {
 
   /**
-   * implements the `muSpectre::SolverBase` interface using a
+   * implements the `muSpectre::DeprecatedSolverBase` interface using a
    * conjugate gradient solver. This particular class is useful for
    * trouble shooting, as it can be made very verbose, but for
    * production runs, it is probably better to use
-   * `muSpectre::SolverCGEigen`.
+   * `muSpectre::DeprecatedSolverCGEigen`.
    */
   template <Dim_t DimS, Dim_t DimM=DimS>
-  class SolverCG: public SolverBase<DimS, DimM>
+  class DeprecatedSolverCG: public DeprecatedSolverBase<DimS, DimM>
   {
   public:
-    using Parent = SolverBase<DimS, DimM>; //!< base class
+    using Parent = DeprecatedSolverBase<DimS, DimM>; //!< base class
     //! Input vector for solvers
     using SolvVectorIn = typename Parent::SolvVectorIn;
     //! Input vector for solvers
@@ -67,25 +67,25 @@ namespace muSpectre {
     //! conjugate gradient needs directional stiffness
     constexpr static Tg_req_t tangent_requirement{Tg_req_t::NeedEffect};
     //! Default constructor
-    SolverCG() = delete;
+    DeprecatedSolverCG() = delete;
 
     //! Constructor with domain resolutions, etc,
-    SolverCG(Cell_t& cell, Real tol, Uint maxiter=0, bool verbose=false);
+    DeprecatedSolverCG(Cell_t& cell, Real tol, Uint maxiter=0, bool verbose=false);
 
     //! Copy constructor
-    SolverCG(const SolverCG &other) = delete;
+    DeprecatedSolverCG(const DeprecatedSolverCG &other) = delete;
 
     //! Move constructor
-    SolverCG(SolverCG &&other) = default;
+    DeprecatedSolverCG(DeprecatedSolverCG &&other) = default;
 
     //! Destructor
-    virtual ~SolverCG() = default;
+    virtual ~DeprecatedSolverCG() = default;
 
     //! Copy assignment operator
-    SolverCG& operator=(const SolverCG &other) = delete;
+    DeprecatedSolverCG& operator=(const DeprecatedSolverCG &other) = delete;
 
     //! Move assignment operator
-    SolverCG& operator=(SolverCG &&other) = default;
+    DeprecatedSolverCG& operator=(DeprecatedSolverCG &&other) = default;
 
     bool has_converged() const override final {return this->converged;}
 
@@ -111,4 +111,4 @@ namespace muSpectre {
 
 }  // muSpectre
 
-#endif /* SOLVER_CG_H */
+#endif /* DEPRECATED_SOLVER_CG_H */

@@ -28,7 +28,8 @@
 #ifndef SOLVERS_H
 #define SOLVERS_H
 
-#include "solver/solver_base.hh"
+#include "solver/solver_common.hh"
+#include "solver/deprecated_solver_base.hh"
 
 #include <Eigen/Dense>
 
@@ -36,28 +37,6 @@
 #include <string>
 
 namespace muSpectre {
-
-  /**
-   * emulates scipy.optimize.OptimizeResult
-   */
-  struct OptimizeResult
-  {
-    //! Strain ε or Gradient F at solution
-    Eigen::ArrayXXd grad;
-    //! Cauchy stress σ or first Piola-Kirchhoff stress P at solution
-    Eigen::ArrayXXd stress;
-    //! whether or not the solver exited successfully
-    bool success;
-    //! Termination status of the optimizer. Its value depends on the
-    //! underlying solver. Refer to message for details.
-    Int status;
-    //! Description of the cause of the termination.
-    std::string message;
-    //! number of iterations
-    Uint nb_it;
-    //! number of cell evaluations
-    Uint nb_fev;
-  };
 
   /**
    * Field type that solvers expect gradients to be expressed in
@@ -81,7 +60,7 @@ namespace muSpectre {
   std::vector<OptimizeResult>
   newton_cg (CellBase<DimS, DimM> & cell,
              const GradIncrements<DimM> & delF0,
-             SolverBase<DimS, DimM> & solver, Real newton_tol,
+             DeprecatedSolverBase<DimS, DimM> & solver, Real newton_tol,
              Real equil_tol,
              Dim_t verbose = 0);
 
@@ -93,7 +72,7 @@ namespace muSpectre {
   template <Dim_t DimS, Dim_t DimM=DimS>
   inline OptimizeResult
   newton_cg (CellBase<DimS, DimM> & cell, const Grad_t<DimM> & delF0,
-             SolverBase<DimS, DimM> & solver, Real newton_tol,
+             DeprecatedSolverBase<DimS, DimM> & solver, Real newton_tol,
              Real equil_tol,
              Dim_t verbose = 0){
     return newton_cg(cell, GradIncrements<DimM>{delF0},
@@ -109,7 +88,7 @@ namespace muSpectre {
   std::vector<OptimizeResult>
   de_geus (CellBase<DimS, DimM> & cell,
            const GradIncrements<DimM> & delF0,
-           SolverBase<DimS, DimM> & solver, Real newton_tol,
+           DeprecatedSolverBase<DimS, DimM> & solver, Real newton_tol,
            Real equil_tol,
            Dim_t verbose = 0);
 
@@ -121,20 +100,13 @@ namespace muSpectre {
   template <Dim_t DimS, Dim_t DimM=DimS>
   OptimizeResult
   de_geus (CellBase<DimS, DimM> & cell, const Grad_t<DimM> & delF0,
-           SolverBase<DimS, DimM> & solver, Real newton_tol,
+           DeprecatedSolverBase<DimS, DimM> & solver, Real newton_tol,
            Real equil_tol,
            Dim_t verbose = 0){
     return de_geus(cell, GradIncrements<DimM>{delF0},
                    solver, newton_tol, equil_tol, verbose)[0];
   }
 
-  /* ---------------------------------------------------------------------- */
-  /**
-   * check whether a strain is symmetric, for the purposes of small
-   * strain problems
-   */
-  bool check_symmetry(const Eigen::Ref<const Eigen::ArrayXXd>& eps,
-                      Real rel_tol = 1e-8);
 
 }  // muSpectre
 

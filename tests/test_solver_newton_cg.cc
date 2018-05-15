@@ -26,12 +26,12 @@
  */
 
 #include "tests.hh"
-#include "solver/solvers.hh"
 #include "solver/new_solvers.hh"
 #include "solver/new_solver_cg.hh"
 #include "solver/new_solver_eigen.hh"
-#include "solver/solver_cg.hh"
-#include "solver/solver_cg_eigen.hh"
+#include "solver/deprecated_solvers.hh"
+#include "solver/deprecated_solver_cg.hh"
+#include "solver/deprecated_solver_cg_eigen.hh"
 #include "fft/fftw_engine.hh"
 #include "fft/projection_finite_strain_fast.hh"
 #include "materials/material_linear_elastic1.hh"
@@ -83,10 +83,10 @@ namespace muSpectre {
     constexpr bool verbose{false};
 
     GradIncrements<dim> grads; grads.push_back(delF0);
-    SolverCG<dim> cg{sys, cg_tol, maxiter, bool(verbose)};
+    DeprecatedSolverCG<dim> cg{sys, cg_tol, maxiter, bool(verbose)};
     Eigen::ArrayXXd res1{de_geus(sys, grads, cg, newton_tol, verbose)[0].grad};
 
-    SolverCG<dim> cg2{sys, cg_tol, maxiter, bool(verbose)};
+    DeprecatedSolverCG<dim> cg2{sys, cg_tol, maxiter, bool(verbose)};
     Eigen::ArrayXXd res2{newton_cg(sys, grads, cg2, newton_tol, verbose)[0].grad};
     BOOST_CHECK_LE(abs(res1-res2).mean(), cg_tol);
   }
@@ -134,7 +134,7 @@ namespace muSpectre {
     constexpr Uint maxiter{dim*10};
     constexpr Dim_t verbose{0};
 
-    SolverCGEigen<dim> cg{sys, cg_tol, maxiter, bool(verbose)};
+    DeprecatedSolverCGEigen<dim> cg{sys, cg_tol, maxiter, bool(verbose)};
     auto result = newton_cg(sys, delEps0, cg, newton_tol,//de_geus(sys, delEps0, cg, newton_tol,
                           equil_tol, verbose);
     if (verbose) {
@@ -179,7 +179,7 @@ namespace muSpectre {
     delEps0 = Grad_t<dim>::Zero();
     delEps0(0, 1) = delEps0(1, 0) = eps0;
 
-    SolverCG<dim> cg2{sys, cg_tol, maxiter, bool(verbose)};
+    DeprecatedSolverCG<dim> cg2{sys, cg_tol, maxiter, bool(verbose)};
     result = newton_cg(sys, delEps0, cg2, newton_tol,
                        equil_tol, verbose);
     Eps_hard << 0, eps_hard, eps_hard, 0;
@@ -357,7 +357,7 @@ namespace muSpectre {
     constexpr Uint maxiter{dim*10};
     constexpr Dim_t verbose{0};
 
-    SolverCGEigen<dim> cg{sys, cg_tol, maxiter, bool(verbose)};
+    DeprecatedSolverCGEigen<dim> cg{sys, cg_tol, maxiter, bool(verbose)};
     auto F = sys.get_strain_vector();
     F.setZero();
     sys.evaluate_stress_tangent();
@@ -415,7 +415,7 @@ namespace muSpectre {
     delEps0.setZero();
     delEps0(0, 1) = delEps0(1, 0) = eps0;
 
-    SolverCG<dim> cg2{sys, cg_tol, maxiter, bool(verbose)};
+    DeprecatedSolverCG<dim> cg2{sys, cg_tol, maxiter, bool(verbose)};
     F.setZero();
     sys.evaluate_stress_tangent();
     for (auto tmp: RMap_t(DelF)) {
