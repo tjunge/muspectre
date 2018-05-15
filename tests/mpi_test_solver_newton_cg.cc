@@ -83,10 +83,10 @@ namespace muSpectre {
 
     GradIncrements<dim> grads; grads.push_back(delF0);
     DeprecatedSolverCG<dim> cg{sys, cg_tol, maxiter, bool(verbose)};
-    Eigen::ArrayXXd res1{de_geus(sys, grads, cg, newton_tol, verbose)[0].grad};
+    Eigen::ArrayXXd res1{deprecated_de_geus(sys, grads, cg, newton_tol, verbose)[0].grad};
 
     DeprecatedSolverCG<dim> cg2{sys, cg_tol, maxiter, bool(verbose)};
-    Eigen::ArrayXXd res2{newton_cg(sys, grads, cg2, newton_tol, verbose)[0].grad};
+    Eigen::ArrayXXd res2{deprecated_newton_cg(sys, grads, cg2, newton_tol, verbose)[0].grad};
     BOOST_CHECK_LE(abs(res1-res2).mean(), cg_tol);
   }
 
@@ -135,7 +135,7 @@ namespace muSpectre {
     constexpr Dim_t verbose{0};
 
     DeprecatedSolverCGEigen<dim> cg{sys, cg_tol, maxiter, bool(verbose)};
-    auto result = de_geus(sys, delEps0, cg, newton_tol,
+    auto result = deprecated_de_geus(sys, delEps0, cg, newton_tol,
                           equil_tol, verbose);
     if (verbose) {
       std::cout << "result:" << std::endl << result.grad << std::endl;
@@ -180,7 +180,7 @@ namespace muSpectre {
     delEps0(0, 1) = delEps0(1, 0) = eps0;
 
     DeprecatedSolverCG<dim> cg2{sys, cg_tol, maxiter, bool(verbose)};
-    result = newton_cg(sys, delEps0, cg2, newton_tol,
+    result = deprecated_newton_cg(sys, delEps0, cg2, newton_tol,
                        equil_tol, verbose);
     Eps_hard << 0, eps_hard, eps_hard, 0;
     Eps_soft << 0, eps_soft, eps_soft, 0;

@@ -38,10 +38,12 @@ namespace muSpectre {
 
   template <Dim_t DimS, Dim_t DimM>
   std::vector<OptimizeResult>
-  de_geus (CellBase<DimS, DimM> & cell, const GradIncrements<DimM> & delFs,
-           DeprecatedSolverBase<DimS, DimM> & solver, Real newton_tol,
-           Real equil_tol,
-           Dim_t verbose) {
+  deprecated_de_geus (CellBase<DimS, DimM> & cell,
+                      const GradIncrements<DimM> & delFs,
+                      DeprecatedSolverBase<DimS, DimM> & solver,
+                      Real newton_tol,
+                      Real equil_tol,
+                      Dim_t verbose) {
     using Field_t = typename MaterialBase<DimS, DimM>::StrainField_t;
     const Communicator & comm = cell.get_communicator();
     auto solver_fields{std::make_unique<GlobalFieldCollection<DimS>>()};
@@ -214,30 +216,30 @@ namespace muSpectre {
 
   //! instantiation for two-dimensional cells
   template std::vector<OptimizeResult>
-  de_geus (CellBase<twoD, twoD> & cell, const GradIncrements<twoD>& delF0,
-           DeprecatedSolverBase<twoD, twoD> & solver, Real newton_tol,
-           Real equil_tol,
-           Dim_t verbose);
-
-  // template typename CellBase<twoD, threeD>::StrainField_t &
-  // de_geus (CellBase<twoD, threeD> & cell, const GradIncrements<threeD>& delF0,
-  //            const Real cg_tol, const Real newton_tol, Uint maxiter,
-  //            Dim_t verbose);
+  deprecated_de_geus (CellBase<twoD, twoD> & cell,
+                      const GradIncrements<twoD>& delF0,
+                      DeprecatedSolverBase<twoD, twoD> & solver, Real newton_tol,
+                      Real equil_tol,
+                      Dim_t verbose);
 
   //! instantiation for three-dimensional cells
   template std::vector<OptimizeResult>
-  de_geus (CellBase<threeD, threeD> & cell, const GradIncrements<threeD>& delF0,
-           DeprecatedSolverBase<threeD, threeD> & solver, Real newton_tol,
-           Real equil_tol,
-           Dim_t verbose);
+  deprecated_de_geus (CellBase<threeD, threeD> & cell,
+                      const GradIncrements<threeD>& delF0,
+                      DeprecatedSolverBase<threeD, threeD> & solver,
+                      Real newton_tol,
+                      Real equil_tol,
+                      Dim_t verbose);
 
   /* ---------------------------------------------------------------------- */
   template <Dim_t DimS, Dim_t DimM>
   std::vector<OptimizeResult>
-  newton_cg (CellBase<DimS, DimM> & cell, const GradIncrements<DimM> & delFs,
-             DeprecatedSolverBase<DimS, DimM> & solver, Real newton_tol,
-             Real equil_tol,
-             Dim_t verbose) {
+  deprecated_newton_cg (CellBase<DimS, DimM> & cell,
+                        const GradIncrements<DimM> & delFs,
+                        DeprecatedSolverBase<DimS, DimM> & solver,
+                        Real newton_tol,
+                        Real equil_tol,
+                        Dim_t verbose) {
     using Field_t = typename MaterialBase<DimS, DimM>::StrainField_t;
     const Communicator & comm = cell.get_communicator();
     auto solver_fields{std::make_unique<GlobalFieldCollection<DimS>>()};
@@ -395,21 +397,20 @@ namespace muSpectre {
 
   //! instantiation for two-dimensional cells
   template std::vector<OptimizeResult>
-  newton_cg (CellBase<twoD, twoD> & cell, const GradIncrements<twoD>& delF0,
-             DeprecatedSolverBase<twoD, twoD> & solver, Real newton_tol,
-             Real equil_tol,
-             Dim_t verbose);
-
-  // template typename CellBase<twoD, threeD>::StrainField_t &
-  // newton_cg (CellBase<twoD, threeD> & cell, const GradIncrements<threeD>& delF0,
-  //            const Real cg_tol, const Real newton_tol, Uint maxiter,
-  //            Dim_t verbose);
+  deprecated_newton_cg (CellBase<twoD, twoD> & cell,
+                        const GradIncrements<twoD>& delF0,
+                        DeprecatedSolverBase<twoD, twoD> & solver,
+                        Real newton_tol,
+                        Real equil_tol,
+                        Dim_t verbose);
 
   //! instantiation for three-dimensional cells
   template std::vector<OptimizeResult>
-  newton_cg (CellBase<threeD, threeD> & cell, const GradIncrements<threeD>& delF0,
-             DeprecatedSolverBase<threeD, threeD> & solver, Real newton_tol,
-             Real equil_tol,
-             Dim_t verbose);
+  deprecated_newton_cg (CellBase<threeD, threeD> & cell,
+                        const GradIncrements<threeD>& delF0,
+                        DeprecatedSolverBase<threeD, threeD> & solver,
+                        Real newton_tol,
+                        Real equil_tol,
+                        Dim_t verbose);
 
 }  // muSpectre

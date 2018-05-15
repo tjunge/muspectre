@@ -131,7 +131,7 @@ int main(int argc, char *argv[])
   auto start = std::chrono::high_resolution_clock::now();
   GradIncrements<dim> grads{DeltaF};
   DeprecatedSolverCG<dim> cg{cell, cg_tol, maxiter, bool(verbose)};
-  newton_cg(cell, grads, cg, newton_tol, verbose);
+  deprecated_newton_cg(cell, grads, cg, newton_tol, verbose);
   std::chrono::duration<Real> dur = std::chrono::high_resolution_clock::now() - start;
   std::cout << "Resolution time = " << dur.count() << "s" << std::endl;
 
