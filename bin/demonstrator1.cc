@@ -34,8 +34,8 @@
 #include "common/ccoord_operations.hh"
 #include "cell/cell_factory.hh"
 #include "materials/material_linear_elastic1.hh"
-#include "solver/solvers.hh"
-#include "solver/solver_cg.hh"
+#include "solver/deprecated_solvers.hh"
+#include "solver/deprecated_solver_cg.hh"
 
 
 using opt_ptr = std::unique_ptr<cxxopts::Options>;
@@ -130,7 +130,7 @@ int main(int argc, char *argv[])
 
   auto start = std::chrono::high_resolution_clock::now();
   GradIncrements<dim> grads{DeltaF};
-  SolverCG<dim> cg{cell, cg_tol, maxiter, bool(verbose)};
+  DeprecatedSolverCG<dim> cg{cell, cg_tol, maxiter, bool(verbose)};
   newton_cg(cell, grads, cg, newton_tol, verbose);
   std::chrono::duration<Real> dur = std::chrono::high_resolution_clock::now() - start;
   std::cout << "Resolution time = " << dur.count() << "s" << std::endl;

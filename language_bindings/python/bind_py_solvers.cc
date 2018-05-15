@@ -51,14 +51,6 @@ void add_iterative_solver_helper(py::module & mod, std::string name) {
          "maxiter"_a,
          "verbose"_a=false)
     .def("name", &Solver::get_name);
-  // mod.def(name.c_str(),
-  //         [](Cell& cell, Real tol, Uint maxiter, bool verbose) {
-  //           return std::make_unique<Solver>(cell, tol, maxiter, verbose);
-  //         },
-  //         "cell"_a,
-  //         "tol"_a,
-  //         "maxiter"_a,
-  //         "verbose"_a=false);
 }
 
 void add_iterative_solver(py::module & mod) {
