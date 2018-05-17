@@ -272,17 +272,20 @@ namespace muSpectre {
       return this->h0*q_matrix*(ColMatrix_t::Ones()-Tauy_temp/this->s_infty).array().pow(this->a_par).matrix(); };
     ColArray_t s_dot_old{(compute_hmatrix(Tauy.current())*Gammadot.old()).array()};
     
+    SlipMat_t drdgammadot{SlipMat_t::Identity()};
+    ColArray_t dr_stress{ColArray_t::Zeros()};
+    
     Int counter{};
-
+    
     while (abs(res).max()/this->gammadot0 > tolerance){
       if(counter ++ > this->maxiter){
 	throw std::runtime_error("Max. number of iteration for plastic slip reached without convergence");
       }
 
-      ColArray_t dr_stress{abs(tau_inc).pow((1-this->m_par)/this->m_par)*Tauy.current().pow(-1/this->m_par)*sign(tau_inc)};
+      dr_stress = abs(tau_inc).pow((1-this->m_par)/this->m_par)*Tauy.current().pow(-1/this->m_par)*sign(tau_inc);
       ColArray_t dr_hard{abs(tau_inc).pow(1/this->m_par)*tauy.pow(-1-1/this->m_par)*sign(tau_inc)}
-      SlipMat_t drdgammadot{I+0.5*this->DeltaT*this->gammadot0/this->m_par*dr_stress.asDiagonal()*pl_corr_proj.transpose()
-	  +0.5*this->DeltaT*this->gammadot0/this->m_par*dr_hard.asDiagonal()*h_matrix*sign(Gammadot.current()).asDiagonal()};
+      drdgammadot = I+0.5*this->DeltaT*this->gammadot0/this->m_par*dr_stress.asDiagonal()*pl_corr_proj.transpose()
+	  +0.5*this->DeltaT*this->gammadot0/this->m_par*dr_hard.asDiagonal()*h_matrix*sign(Gammadot.current()).asDiagonal();
       Gammadot.current() -= drdgammadot.inverse()*res;
       
       tau_inc = tau_star - 0.5*this->DeltaT*(Gammadot.current()+Gammadot.old())*pl_corr_proj.transpose();
@@ -312,7 +315,7 @@ namespace muSpectre {
     Fp.current() = (T2_t::Identity()+this->DeltaT*Lp)*Fp.old();
 
     auto PK2 = Rot.loc_to_glob(Fp.current().inverse()*SPK*Fp.current().inverse().transpose());
-
+`
     // Stiffness matrix calculation begins
 
     // A4: elastic trial consistent tangent
@@ -336,7 +339,75 @@ namespace muSpectre {
       return Return_value;
     };
 
-    T4_t A4{.5*ddot((C_el,odot(dot(Fp.old().inverse().transpose(),IRT),Fe_star))+odot(dot(Fe_star.transpose(),I4),Fp.old().inverse()))};
+    T4_t dAdF{odot(dot(Fp.old().inverse().transpose(),IRT),Fe_star)+odot(dot(Fe_star.transpose(),I4),Fp.old().inverse())};
+    T4_t A4{.5*ddot(C_el,dAdF)};
+  
+    // E4: Tangent of the projector
+
+    T4_t E4{T4_t:Zeros()};
+    for (Int i{0}; i < nb_slip; ++i) {
+      T4_t dBprojdF{odot(dAdF,SchmidT[i]) + dot(SchmidT[i].transpose(),dAdF)};
+      E4 -= .5*this->DeltaT*(Gammadot.current()(i)+Gammadot.old()(i))*ddot(C_el,dBprojdF);
+    }
+
+    // G4: Tangent of slip rate
+
+    // dgammadot/dtau
+    SlipMat_t dgammadotdtau{-drdgammadot.inverse()*(-this->gammadot0/this->m_par*dr_stress.asDiagonal())};
+
+    T4_t G4p1{T4_t::Zeros()};
+    
+    for (Int k{0}; k < nb_slip; ++k) {
+      for (Int mu{0}; mu < nb_slip; ++mu) {
+
+	G4p1 += outer(pl_corr[k],dgammadotdtau(k,mu)*SchmidT[mu]);
+	
+      }
+    }
+
+    T4_t G4p2{odot(dAdF,SPK)+dot(CGe_star,A4+E4)};
+    T4_t G4_RHS{.5*DeltaT*G4p1*G4p2};
+
+    auto xdot = [] (auto && T4, auto && T2) {
+      T4_t Return_value(T4_t::Zeros());
+      for (Int i = 0; i < DimM; ++i) {
+	for (Int j = 0; j < DimM; ++j) {
+	  for (Int k = 0; k < DimM; ++k) {
+	    for (Int l = 0; l < DimM; ++l) {
+	      for (Int m = 0; m < DimM; ++m) {
+		get(Return_value,i,j,k,l) += get(T4,i,j,m,l)*T2(m,k);
+	      }
+	    }
+	  }
+	}
+      }
+      return Return_value;
+    };
+    
+    T4_t G4_LHS{I4-.5*DeltaT*xdot(G4p1,CGe_star)};
+
+    T4_t G4{G4_LHS.inverse()*G4_RHS};
+
+    // Plastic contribution to geometric tangent
+
+    T4_t F4p1{T4_t::Zeros()};
+    T4_t F4p2{T4_t::Zeros()};
+    
+    for (Int k{0}; k < nb_slip; ++k) {
+      for (Int mu{0}; mu < nb_slip; ++mu) {
+
+	F4p1 += outer(SchmidT[k],dgammadotdtau(k,mu)*SchmidT[mu]);
+	F4p2 += outer(SchmidT[k].transpose(),dgammadotdtau(k,mu)*SchmidT[mu]);
+	
+      }
+    }
+
+    T4_t F4L{-.5*DeltaT*odot(dot(Fp.old(),F4p1*(A4+E4+G4)),SPK*Fp.current().inverse().transpose())};
+    T4_t F4R{-.5*DeltaT*(dot(Fp.current().inverse()*SPK,odot(F4p2*(A4+E4+G4),Fp.old().inverse().transpose())))};
+      
+    T4_t K4{dot(F,Rot.loc_to_glob(F4L + odot(dot(Fp.current().inverse(),A4+E4+G4),Fp.current().inverse().transpose())  + F4R))};
+
+    return std::make_tuple(std::move(PK2), std::move(K4));
     
   }
 
