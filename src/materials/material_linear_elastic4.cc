@@ -49,7 +49,7 @@ namespace muSpectre {
   void MaterialLinearElastic4<DimS, DimM>::
   add_pixel(const Ccoord_t<DimS> & /*pixel*/) {
     throw std::runtime_error
-      ("this material needs pixels with Youngs modulus and Poisson ratio.");
+      ("This material needs pixels with Youngs modulus and Poisson ratio.");
   }
 
   /* ---------------------------------------------------------------------- */

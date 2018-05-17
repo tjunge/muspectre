@@ -71,6 +71,14 @@ namespace muSpectre {
     this->save_history_variables();
   }
 
+  /* ---------------------------------------------------------------------- */
+  template <Dim_t DimS, Dim_t DimM>
+  void MaterialHyperElastoPlastic1<DimS, DimM>::
+  add_pixel(const Ccoord_t<DimS> & pixel) {
+    this->internal_fields.add_pixel(pixel);
+  }
+
+
   template class MaterialHyperElastoPlastic1<  twoD,   twoD>;
   template class MaterialHyperElastoPlastic1<  twoD, threeD>;
   template class MaterialHyperElastoPlastic1<threeD, threeD>;

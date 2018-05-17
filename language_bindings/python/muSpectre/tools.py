@@ -35,7 +35,7 @@ import itertools
 
 def compute_displacements(F, resolutions, lengths, order=0):
     """
-    Method to compute the real space displacements 'u' from the deformation
+    Method to compute the real space deformed structure from the deformation
     gradient 'F' and the lengths 'lengths' of the system.
 
     Parameters
@@ -63,17 +63,19 @@ def compute_displacements(F, resolutions, lengths, order=0):
 
     Returns
     -------
-    displacements: list
-        Displacement vectors 'u' pointing from the initial 'X' to the final
-        position 'U' of each gridpoint. To get the displacements 'u' one has to
-        integrate F=du/dX by a fourier transformation.
+    nonaffine_displacements: list
+        Nonaffine displacement vectors 'u' pointing from the affine deformed
+        initial positions 'X + <F>*X' to the final position 'U' of each
+        gridpoint. For a uniform material the nonaffine displacements should
+        become zero. To get the nonaffine displacements 'u' one has to integrate
+        F=du/dX by a fourier transformation.
     final_positions: list
         Positions 'U' after applying the deformation, according to the
         deformation gradient F, to the initial positions 'X'. U=u+<F>*X.
 
     Caution!
     --------
-        Up to now only for 3D grids implemented!
+        Up to now only for 3Dgrids implemented!
 
     TODO:
     -----
@@ -172,10 +174,10 @@ def compute_displacements(F, resolutions, lengths, order=0):
     U  = u + fx
 
     #give mor meaningfull names to the results
-    displacements   = u
-    final_positions = U
+    nonaffine_displacements   = u
+    final_positions           = U
 
-    return displacements, final_positions
+    return nonaffine_displacements, final_positions
 
 
 def write_structure_as_vtk(file_name, positions, cellData=None, pointData=None):
