@@ -185,6 +185,8 @@ namespace muSpectre {
   decltype(auto)
   MaterialLinearElastic4<DimS, DimM>::
   evaluate_stress(s_t && E, const Real & lambda, const Real & mu) {
+    std::cout << "stress\n" <<
+      Hooke::evaluate_stress(lambda, mu, std::forward<s_t>(E)) << std::endl;
     return Hooke::evaluate_stress(lambda, mu, std::forward<s_t>(E));
   }
 
@@ -196,7 +198,11 @@ namespace muSpectre {
   evaluate_stress_tangent(s_t && E, const Real & lambda,
 			  const Real & mu)
   {
+    std::cout << "evaluate_stress_tangent; E:\n" << E << std::endl;
     auto C = Hooke::compute_C_T4(lambda, mu);
+    //auto stress{this->evaluate_stress(E)};
+    //std::cout << "stress:\n" << stress << std::endl;
+    std::cout << "C:\n" << C << std::endl;
     return std::make_tuple(this->evaluate_stress(std::forward<s_t>(E), lambda, mu), C);
   }
 

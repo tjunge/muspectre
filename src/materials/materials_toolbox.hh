@@ -556,6 +556,19 @@ namespace muSpectre {
         }
       };
 
+      /**
+       * Specialisation K(λ, µ)
+       */
+      template <>
+      struct Converter<ElasticModulus::Bulk,
+                       ElasticModulus::lambda,
+                       ElasticModulus::Shear> {
+        //! wrapped function (raison d'être)
+        inline constexpr static Real compute(const Real & lambda, const Real & G) {
+          return lambda + (2*G)/3 ;
+        }
+      };
+
     }  // internal
 
     /**

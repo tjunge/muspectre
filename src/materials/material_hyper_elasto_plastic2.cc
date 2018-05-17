@@ -43,8 +43,6 @@ namespace muSpectre {
 					this->internal_fields )},
       mu_field{make_field<Field_t>("local second lame constant",
 					this->internal_fields )},
-      K_field{make_field<Field_t>("local shear modulus",
-					this->internal_fields )},
       tau_y0_field{make_field<Field_t>("local yield stress",
 				       this->internal_fields )},
       H_field{make_field<Field_t>("local hardening modulus",
@@ -52,8 +50,8 @@ namespace muSpectre {
 
       internal_variables{F_prev_field.get_map(), be_prev_field.get_map(),
           plast_flow_field.get_map(), lambda_field.get_const_map(),
-	  mu_field.get_const_map(), K_field.get_const_map(),
-	  tau_y0_field.get_const_map(), H_field.get_const_map()}
+	  mu_field.get_const_map(), tau_y0_field.get_const_map(),
+	  H_field.get_const_map()}
   {}
 
   /* ---------------------------------------------------------------------- */
@@ -94,14 +92,12 @@ namespace muSpectre {
     this->tau_y0_field.push_back(tau_y0);
     this->H_field.push_back(H);
 
-    // compute lambda, mu and K
+    // compute lambda and mu
     auto lambda{Hooke::compute_lambda(Youngs_modulus, Poisson_ratio)};
     auto mu{Hooke::compute_mu(Youngs_modulus, Poisson_ratio)};
-    auto K{Hooke::compute_K(Youngs_modulus, Poisson_ratio)};
 
     this->lambda_field.push_back(lambda);
     this->mu_field.push_back(mu);
-    this->K_field.push_back(K);
   }
 
 
