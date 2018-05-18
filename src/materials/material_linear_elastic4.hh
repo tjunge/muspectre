@@ -166,7 +166,7 @@ namespace muSpectre {
      * overload add_pixel to write into local stiffness tensor
      */
     void add_pixel(const Ccoord_t<DimS> & pixel,
-                   const Real & Poisson_ratio, const Real & Youngs_modulus);
+                   const Real & Youngs_modulus, const Real & Poisson_ratio);
 
   protected:
     //! storage for first Lame constant 'lambda'
@@ -199,10 +199,10 @@ namespace muSpectre {
 			  const Real & mu)
   {
     std::cout << "evaluate_stress_tangent; E:\n" << E << std::endl;
-    auto C = Hooke::compute_C_T4(lambda, mu);
+    T4Mat<Real, DimM> C = Hooke::compute_C_T4(lambda, mu);
     //auto stress{this->evaluate_stress(E)};
     //std::cout << "stress:\n" << stress << std::endl;
-    std::cout << "C:\n" << C << std::endl;
+    //std::cout << "C:\n" << C << std::endl;
     return std::make_tuple(this->evaluate_stress(std::forward<s_t>(E), lambda, mu), C);
   }
 
