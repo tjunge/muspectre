@@ -95,16 +95,28 @@ namespace muSpectre {
     Rotator& operator=(Rotator &&other) = default;
 
     /**
-     * Applies the rotation @param input is a first-, second-, or
-     * fourth-rank tensor (column vector, square matrix, or T4Matrix,
-     * or a Eigen::Map of either of these, or an expression that
-     * evaluates into any of these)
+     * Applies the rotation into the frame define my the rotation
+     * matrix
+     *
+     * @param input is a first-, second-, or fourth-rank tensor
+     * (column vector, square matrix, or T4Matrix, or a Eigen::Map of
+     * either of these, or an expression that evaluates into any of
+     * these)
      */
     template<class In_t>
-    inline decltype(auto) rotate_into(In_t && input);
+    inline decltype(auto) rotate(In_t && input);
 
+    /**
+     * Applies the rotation back out from the frame define my the
+     * rotation matrix
+     *
+     * @param input is a first-, second-, or fourth-rank tensor
+     * (column vector, square matrix, or T4Matrix, or a Eigen::Map of
+     * either of these, or an expression that evaluates into any of
+     * these)
+     */
     template<class In_t>
-    inline decltype(auto) rotate_outof(In_t && input);
+    inline decltype(auto) rotate_back(In_t && input);
 
   protected:
 
@@ -196,8 +208,9 @@ namespace muSpectre {
       template <class In_t, class Rot_t>
       inline static decltype(auto) rotate(In_t && input,
                                    Rot_t && R) {
-        auto && rotator_forward = Matrices::outer_under(R, R);
-        auto && rotator_back = Matrices::outer_under(R.transpose(), R.transpose());
+        auto && rotator_forward = Matrices::outer_under(R.transpose(), R.transpose());
+        auto && rotator_back = Matrices::outer_under(R, R);
+
         return rotator_back * input * rotator_forward;
       }
     };
@@ -206,7 +219,7 @@ namespace muSpectre {
   /* ---------------------------------------------------------------------- */
   template <Dim_t Dim, RotationOrder Order>
   template <class In_t>
-  auto Rotator<Dim, Order>::rotate_into(In_t && input) -> decltype(auto) {
+  auto Rotator<Dim, Order>::rotate(In_t && input) -> decltype(auto) {
     constexpr Dim_t tensor_rank{EigenCheck::tensor_rank<In_t, Dim>::value};
 
     return internal::RotationHelper<tensor_rank>::
@@ -216,7 +229,7 @@ namespace muSpectre {
   /* ---------------------------------------------------------------------- */
   template <Dim_t Dim, RotationOrder Order>
   template <class In_t>
-  auto Rotator<Dim, Order>::rotate_outof(In_t && input) -> decltype(auto) {
+  auto Rotator<Dim, Order>::rotate_back(In_t && input) -> decltype(auto) {
     constexpr Dim_t tensor_rank{EigenCheck::tensor_rank<In_t, Dim>::value};
 
     return internal::RotationHelper<tensor_rank>::

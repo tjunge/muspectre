@@ -451,7 +451,7 @@ namespace muSpectre {
                         "it here below as a specialisation of this function "
                         "template. Check "
                         "https://en.wikipedia.org/wiki/Lam%C3%A9_parameters for "
-                        "// TODO: he formula.");
+                        "the formula.");
           return 0;
         }
       };
@@ -553,6 +553,19 @@ namespace muSpectre {
         //! wrapped function (raison d'être)
         inline constexpr static Real compute(const Real & lambda, const Real & G) {
           return G * (3*lambda + 2*G)/(lambda + G);
+        }
+      };
+
+      /**
+       * Specialisation λ(K, µ)
+       */
+      template <>
+      struct Converter<ElasticModulus::lambda,
+                       ElasticModulus::Bulk,
+                       ElasticModulus::Shear> {
+        //! wrapped function (raison d'être)
+        inline constexpr static Real compute(const Real & K, const Real & mu) {
+          return K - 2. * mu / 3.;
         }
       };
 

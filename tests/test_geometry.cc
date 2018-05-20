@@ -51,13 +51,13 @@ namespace muSpectre {
       std::cos(angle), -std::sin(angle),
       std::sin(angle),  std::cos(angle);
 
-    Vec_t v{}; v.setRandom();
-    Mat_t m{}; m.setRandom();
-    Ten_t t{}; t.setRandom();
+    Vec_t v{Vec_t::Random()};
+    Mat_t m{Mat_t::Random()};
+    Ten_t t{Ten_t::Random()};
 
     Vec_t v_ref{R * v};
     Mat_t m_ref{R * m * R.transpose()};
-    Ten_t t_ref{}; t_ref.setZero();
+    Ten_t t_ref{Ten_t::Zero()};
     for (int i = 0; i < twoD; ++i) {
       for (int a = 0; a < twoD; ++a) {
         for (int l = 0; l < twoD; ++l) {
@@ -66,8 +66,8 @@ namespace muSpectre {
               for (int n = 0; n < twoD; ++n) {
                 for (int o = 0; o < twoD; ++o) {
                   for (int p = 0; p < twoD; ++p) {
-                    get(t_ref, a, b, o, p) =
-                      R(a, i) * R(b, l) * get(t, i, l, m, n) * R(o, m) * R(n, p);
+                    get(t_ref, a, b, o, p) +=
+                      R(a, i) * R(b, l) * get(t, i, l, m, n) * R(o, m) * R(p, n);
                   }
                 }
               }
@@ -79,9 +79,38 @@ namespace muSpectre {
 
     Eigen::Matrix<Real, 1, 1> angle_vec{}; angle_vec << angle;
     Rotator<twoD> rotator(angle_vec);
-    Vec_t v_rotator(rotator.rotate_into(v));
-    Mat_t m_rotator(rotator.rotate_into(m));
-    Ten_t t_rotator(rotator.rotate_into(t));
+    Vec_t v_rotator(rotator.rotate(v));
+    Mat_t m_rotator(rotator.rotate(m));
+    Ten_t t_rotator(rotator.rotate(t));
+
+    auto v_error{(v_rotator-v_ref).norm()/v_ref.norm()};
+    BOOST_CHECK_LT(v_error, tol);
+
+    auto m_error{(m_rotator-m_ref).norm()/m_ref.norm()};
+    BOOST_CHECK_LT(m_error, tol);
+
+    auto t_error{(t_rotator-t_ref).norm()/t_ref.norm()};
+    BOOST_CHECK_LT(t_error, tol);
+    if (t_error >= tol) {
+      std::cout << "t4_reference:" << std::endl
+                << t_ref << std::endl;
+      std::cout << "t4_rotator:" << std::endl
+                << t_rotator << std::endl;
+    }
+
+    Vec_t v_back{rotator.rotate_back(v_rotator)};
+    Mat_t m_back{rotator.rotate_back(m_rotator)};
+    Ten_t t_back{rotator.rotate_back(t_rotator)};
+
+    v_error = (v_back-v).norm()/v.norm();
+    BOOST_CHECK_LT(v_error, tol);
+
+    m_error = (m_back-m).norm()/m.norm();
+    BOOST_CHECK_LT(m_error, tol);
+
+    t_error = (t_back-t).norm()/t.norm();
+    BOOST_CHECK_LT(t_error, tol);
+
   }
 
 

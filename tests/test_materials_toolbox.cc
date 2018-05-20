@@ -258,6 +258,13 @@ namespace muSpectre {
                                    ElasticModulus::Shear>(K, mu);
     BOOST_CHECK_EQUAL(mu, comp);
 
+    // check alternative calculation of computed values
+
+    comp = convert_elastic_modulus<ElasticModulus::lambda,
+                                   ElasticModulus::K, // alternative for "Bulk"
+                                   ElasticModulus::mu>(K, mu);// alternative for "Shear"
+    BOOST_CHECK_LE(std::abs((comp - lambda)/lambda), tol);
+
   }
 
   BOOST_AUTO_TEST_SUITE_END();
