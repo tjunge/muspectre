@@ -118,6 +118,8 @@ namespace muSpectre {
     template<class In_t>
     inline decltype(auto) rotate_back(In_t && input);
 
+    const RotMat_t & get_rot_mat() const {return rot_mat;}
+
   protected:
 
     inline RotMat_t compute_rotation_matrix();
@@ -162,6 +164,14 @@ namespace muSpectre {
                            Eigen::AngleAxisd(angles(1), Eigen::Vector3d::UnitX()) *
                            Eigen::AngleAxisd(angles(2), Eigen::Vector3d::UnitZ())));
           break;
+        }
+        case RotationOrder::ZXYTaitBryan: {
+          return RotMat_t((Eigen::AngleAxisd(angles(0), Eigen::Vector3d::UnitZ()) *
+                           Eigen::AngleAxisd(angles(1), Eigen::Vector3d::UnitX()) *
+                           Eigen::AngleAxisd(angles(2), Eigen::Vector3d::UnitY())));
+        }
+        default: {
+          throw std::runtime_error("not yet implemented.");
         }
         }
       }

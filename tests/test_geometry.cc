@@ -33,6 +33,7 @@
 #include "common/T4_map_proxy.hh"
 
 #include <Eigen/Dense>
+#include <boost/mpl/list.hpp>
 
 #include <cmath>
 
@@ -40,32 +41,61 @@ namespace muSpectre {
 
   BOOST_AUTO_TEST_SUITE(geometry);
 
-  BOOST_AUTO_TEST_CASE(twoD_rotation_test) {
-    using Vec_t = Eigen::Vector2d;
-    using Mat_t = Eigen::Matrix2d;
-    using Ten_t = T4Mat<Real, twoD>;
+  /* ---------------------------------------------------------------------- */
+  template <Dim_t Dim_, RotationOrder Rot>
+  struct RotationFixture {
+    static constexpr Dim_t Dim{Dim_};
+    using Vec_t = Eigen::Matrix<Real, Dim, 1>;
+    using Mat_t = Eigen::Matrix<Real, Dim, Dim>;
+    using Ten_t = T4Mat<Real, Dim>;
+    using Angles_t = Eigen::Matrix<Real, (Dim == threeD ? 3: 1), 1>;
+    using Rot_t = Rotator<Dim, Rot>;
+    static constexpr RotationOrder EulerOrder{Rot};
+    RotationFixture():
+      rotator{euler}
+      {}
 
     testGoodies::RandRange<Real> rr{};
-    Real angle{rr.randval(0, 2 * pi)};
-    Mat_t R{}; R <<
-      std::cos(angle), -std::sin(angle),
-      std::sin(angle),  std::cos(angle);
-
+    Angles_t euler{2*pi*Angles_t::Random()};
     Vec_t v{Vec_t::Random()};
     Mat_t m{Mat_t::Random()};
     Ten_t t{Ten_t::Random()};
+    Rot_t rotator;
+  };
+
+  /* ---------------------------------------------------------------------- */
+  using fix_list = boost::mpl::list
+    <RotationFixture<  twoD, RotationOrder::Z>,
+     RotationFixture<threeD, RotationOrder::ZXYTaitBryan>>;
+
+  /* ---------------------------------------------------------------------- */
+  BOOST_FIXTURE_TEST_CASE_TEMPLATE(rotation_test, Fix, fix_list, Fix) {
+
+    using Vec_t = typename Fix::Vec_t;
+    using Mat_t = typename Fix::Mat_t;
+    using Ten_t = typename Fix::Ten_t;
+
+    constexpr const Dim_t& Dim{Fix::Dim};
+
+    Vec_t &v{Fix::v};
+    Mat_t &m{Fix::m};
+    Ten_t &t{Fix::t};
+    const Mat_t &R{Fix::rotator.get_rot_mat()};
+
+
+
 
     Vec_t v_ref{R * v};
     Mat_t m_ref{R * m * R.transpose()};
     Ten_t t_ref{Ten_t::Zero()};
-    for (int i = 0; i < twoD; ++i) {
-      for (int a = 0; a < twoD; ++a) {
-        for (int l = 0; l < twoD; ++l) {
-          for (int b = 0; b < twoD; ++b) {
-            for (int m = 0; m < twoD; ++m) {
-              for (int n = 0; n < twoD; ++n) {
-                for (int o = 0; o < twoD; ++o) {
-                  for (int p = 0; p < twoD; ++p) {
+    for (int i = 0; i < Dim; ++i) {
+      for (int a = 0; a < Dim; ++a) {
+        for (int l = 0; l < Dim; ++l) {
+          for (int b = 0; b < Dim; ++b) {
+            for (int m = 0; m < Dim; ++m) {
+              for (int n = 0; n < Dim; ++n) {
+                for (int o = 0; o < Dim; ++o) {
+                  for (int p = 0; p < Dim; ++p) {
                     get(t_ref, a, b, o, p) +=
                       R(a, i) * R(b, l) * get(t, i, l, m, n) * R(o, m) * R(p, n);
                   }
@@ -77,11 +107,9 @@ namespace muSpectre {
       }
     }
 
-    Eigen::Matrix<Real, 1, 1> angle_vec{}; angle_vec << angle;
-    Rotator<twoD> rotator(angle_vec);
-    Vec_t v_rotator(rotator.rotate(v));
-    Mat_t m_rotator(rotator.rotate(m));
-    Ten_t t_rotator(rotator.rotate(t));
+    Vec_t v_rotator(Fix::rotator.rotate(v));
+    Mat_t m_rotator(Fix::rotator.rotate(m));
+    Ten_t t_rotator(Fix::rotator.rotate(t));
 
     auto v_error{(v_rotator-v_ref).norm()/v_ref.norm()};
     BOOST_CHECK_LT(v_error, tol);
@@ -98,9 +126,9 @@ namespace muSpectre {
                 << t_rotator << std::endl;
     }
 
-    Vec_t v_back{rotator.rotate_back(v_rotator)};
-    Mat_t m_back{rotator.rotate_back(m_rotator)};
-    Ten_t t_back{rotator.rotate_back(t_rotator)};
+    Vec_t v_back{Fix::rotator.rotate_back(v_rotator)};
+    Mat_t m_back{Fix::rotator.rotate_back(m_rotator)};
+    Ten_t t_back{Fix::rotator.rotate_back(t_rotator)};
 
     v_error = (v_back-v).norm()/v.norm();
     BOOST_CHECK_LT(v_error, tol);
@@ -113,7 +141,42 @@ namespace muSpectre {
 
   }
 
+  /* ---------------------------------------------------------------------- */
+  using threeD_list = boost::mpl::list
+    <RotationFixture<threeD, RotationOrder::ZXYTaitBryan>>;
 
+  /* ---------------------------------------------------------------------- */
+  BOOST_FIXTURE_TEST_CASE_TEMPLATE(rotation_matrix_test,
+                                   Fix, threeD_list, Fix) {
+    using Mat_t = typename Fix::Mat_t;
+    auto c{Eigen::cos(Fix::euler.array())};
+    Real c_1{c[0]}, c_2{c[1]}, c_3{c[2]};
+    auto s{Eigen::sin(Fix::euler.array())};
+    Real s_1{s[0]}, s_2{s[1]}, s_3{s[2]};
+    Mat_t rot_ref;
+
+
+    switch (Fix::EulerOrder) {
+    case RotationOrder::ZXYTaitBryan: {
+      rot_ref <<  c_1 * c_3 - s_1 * s_2 * s_3, - c_2 * s_1, c_1 * s_3 + c_3 * s_1 * s_2 ,
+        c_3 * s_1 + c_1 * s_2 * s_3 , c_1 * c_2, s_1 * s_3 - c_1 * c_3 * s_2 ,
+        - c_2 * s_3, s_2, c_2 * c_3;
+
+      break;
+    }
+    default: {
+      BOOST_CHECK(false);
+      break;
+    }
+    }
+    auto err{(rot_ref - Fix::rotator.get_rot_mat()).norm()};
+    BOOST_CHECK_LT(err, tol);
+    if (err >= tol) {
+      std::cout << "Reference:" << std::endl << rot_ref << std::endl;
+      std::cout << "Rotator:" << std::endl << Fix::rotator.get_rot_mat()
+                << std::endl;
+    }
+  }
 
   BOOST_AUTO_TEST_SUITE_END();
 
