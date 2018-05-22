@@ -123,14 +123,15 @@ namespace muSpectre {
 
     auto & mat{Fix::mat};
 
-    Euler_t angles = 2*pi*Euler_t::Random();
+    Euler_t angles = 2*pi*Euler_t::Random()*0;
+    std::cout << "angles = " << angles << std::endl;
 
     constexpr Ccoord pixel{0};
 
     mat.add_pixel(pixel, angles);
 
     T2_t F{T2_t::Identity()};
-    F(0,1) += .2;
+    F(0,1) += .01;
 
 
     T2_t E{.5*(F.transpose()*F - T2_t::Identity())};
@@ -141,6 +142,7 @@ namespace muSpectre {
          ElasticModulus::Bulk>(Fix::shear_m, Fix::bulk_m)};
 
     T2_t stress_ref{Hooke::evaluate_stress(lambda, Fix::shear_m, E)};
+    T4_t tangent_ref{Hooke::compute_C_T4(lambda, Fix::shear_m)};
 
     auto & internals{mat.get_internals()};
 
@@ -159,10 +161,34 @@ namespace muSpectre {
 
     Real error{(stress-stress_ref).norm()/stress_ref.norm()};
     BOOST_CHECK_LT(error, tol);
-    if (error >= tol) {
+    if (not(error < tol)) {
       std::cout << "stress_ref =" << std::endl << stress_ref << std::endl;
       std::cout << "stress =" << std::endl << stress << std::endl;
     }
+
+    auto stress_tgt = mat.evaluate_stress_tangent(F,
+                                                  *Fp_map.begin(),
+                                                  *gamma_dot_map.begin(),
+                                                  *tau_y_map.begin(),
+                                                  *Euler_map.begin());
+    T2_t & stress_2{get<0>(stress_tgt)};
+    T4_t & tangent{get<1>(stress_tgt)};
+
+    error = (stress_2-stress_ref).norm()/stress_ref.norm();
+    BOOST_CHECK_LT(error, tol);
+    if (not (error < tol)) {
+      std::cout << "stress_ref =" << std::endl << stress_ref << std::endl;
+      std::cout << "stress_2 =" << std::endl << stress_2 << std::endl;
+    }
+
+    error = (tangent-tangent_ref).norm()/tangent_ref.norm();
+    BOOST_CHECK_LT(error, tol);
+    if (not (error < tol)) {
+      std::cout << "Francesco: It seems we missed the plastic-elastic switch." << std::endl;
+      std::cout << "tangent_ref =" << std::endl << tangent_ref << std::endl;
+      std::cout << "tangent =" << std::endl << tangent << std::endl;
+    }
+
 
 
   }
