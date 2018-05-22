@@ -34,7 +34,7 @@ set (materials_SRC
   ${CMAKE_CURRENT_SOURCE_DIR}/material_linear_elastic3.cc
   ${CMAKE_CURRENT_SOURCE_DIR}/material_linear_elastic4.cc
   ${CMAKE_CURRENT_SOURCE_DIR}/material_hyper_elasto_plastic1.cc
-  #${CMAKE_CURRENT_SOURCE_DIR}/material_crystal_plasticity_finite.cc
+  ${CMAKE_CURRENT_SOURCE_DIR}/material_crystal_plasticity_finite.cc
   )
 
 target_sources(muSpectre PRIVATE ${materials_SRC})

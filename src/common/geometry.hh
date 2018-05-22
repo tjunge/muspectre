@@ -76,7 +76,7 @@ namespace muSpectre {
     //! Default constructor
     Rotator() = delete;
 
-    Rotator(Eigen::Ref<Angles_t> angles):
+    Rotator(const Eigen::Ref<const Angles_t> & angles):
       angles{angles}, rot_mat{this->compute_rotation_matrix()} {}
 
     //! Copy constructor

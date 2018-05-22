@@ -33,8 +33,11 @@
 #include "common/field.hh"
 #include "common/geometry.hh"
 #include "common/statefield.hh"
+#include "common/eigen_tools.hh"
 
 #include <Eigen/Dense>
+
+#include <cmath>
 
 namespace muSpectre {
 
@@ -222,7 +225,7 @@ namespace muSpectre {
   MaterialCrystalPlasticityFinite<DimS, DimM, NbSlip>::
   evaluate_stress(s_t && F, Fp_ref Fp, Gammadot_ref Gammadot, Tauy_ref Tauy,
                   Gamma_ref Gamma, Euler_ref Euler) {
-    return std::get<1>(this->evaluate_stress_tangent(std::forward<s_t>(F),
+    return std::get<0>(this->evaluate_stress_tangent(std::forward<s_t>(F),
                                                      Fp, Gammadot, Tauy, Gamma,
                                                      Euler));
   }
@@ -237,7 +240,7 @@ namespace muSpectre {
     T2_t Floc{Rot.rotate(F)};
     std::array<T2_t, NbSlip> SchmidT;
     for (Int i{0}; i < NbSlip; ++i) {
-      SchmidT[i]=this->Slip0.col(i)*this->Normal0.col(i).transpose();
+      SchmidT[i] = this->Slip0.row(i).transpose() * this->Normal0.row(i);
     }
 
     // trial elastic deformation
@@ -255,10 +258,10 @@ namespace muSpectre {
     SlipMat_t pl_corr_proj;
 
     for (Int i{0}; i < NbSlip; ++i) {
-      tau_star(i)=(CGe_star*SPK_star*SchmidT[i].transpose()).trace();
-      pl_corr[i]=tensmult(C_el,.5*(CGe_star*SchmidT[i]+SchmidT[i].transpose()*CGe_star));
+      tau_star(i) = (CGe_star*SPK_star*SchmidT[i].transpose()).trace();
+      pl_corr[i] = Matrices::tensmult(C_el,.5*(CGe_star*SchmidT[i]+SchmidT[i].transpose()*CGe_star));
       for (Int j{0}; j < NbSlip; ++j) {
-        pl_corr_proj(i,j)=(C_el*pl_corr[i]*SchmidT[j].transpose()).trace();
+        pl_corr_proj(i,j)=(Matrices::tensmult(C_el,pl_corr[i]*SchmidT[j].transpose())).trace();
       }
     }
 
@@ -271,30 +274,33 @@ namespace muSpectre {
     ColArray_t tau_inc{tau_star};
 
     auto compute_gamma_dot = [this, &Gammadot, &tau_inc, &Tauy] () {
-      return Gammadot.current().array()-this->gammadot_0*std::pow(abs(tau_inc())/Tauy.current(),this->m_par)*sign(tau_inc.array()); };
+      return Gammadot.current().array()-this->gammadot_0*(abs(tau_inc).array()/Tauy.current().array()).pow(this->m_par)*sign(tau_inc.array()); };
     ColArray_t res{compute_gamma_dot()};
 
-    auto compute_hmatrix = [this] (const ColMatrix_t & Tauy_temp) {
-      return this->h0*q_matrix*(ColMatrix_t::Ones()-Tauy_temp/this->s_infty).array().pow(this->a_par).matrix(); };
-    ColArray_t s_dot_old{(compute_hmatrix(Tauy.current())*Gammadot.old()).array()};
+    auto compute_h_matrix = [this, &q_matrix] (const ColMatrix_t & Tauy_temp) {
+      auto && parens =
+      (ColMatrix_t::Ones()-Tauy_temp/this->s_infty).array()
+      .pow(this->a_par).matrix();
+      return this->h0*parens.asDiagonal()*q_matrix; };
+    ColArray_t s_dot_old{(compute_h_matrix(Tauy.current())*Gammadot.old()).array()};
 
     SlipMat_t drdgammadot{SlipMat_t::Identity()};
-    ColArray_t dr_stress{ColArray_t::Zeros()};
+    ColArray_t dr_stress{ColArray_t::Zero()};
 
     Int counter{};
 
-    while (abs(res).max()/this->gammadot_0 > tolerance){
+    while (abs(res).maxCoeff()/this->gammadot_0 > tolerance){
       if(counter ++ > this->maxiter){
         throw std::runtime_error("Max. number of iteration for plastic slip reached without convergence");
       }
 
-      dr_stress = abs(tau_inc).pow((1-this->m_par)/this->m_par)*Tauy.current().pow(-1/this->m_par)*sign(tau_inc);
-      ColArray_t dr_hard{abs(tau_inc).pow(1/this->m_par)*Tauy.pow(-1-1/this->m_par)*sign(tau_inc)};
-      drdgammadot = I+0.5*this->DeltaT*this->gammadot_0/this->m_par*dr_stress.asDiagonal()*pl_corr_proj.transpose()
-        +0.5*this->DeltaT*this->gammadot_0/this->m_par*dr_hard.asDiagonal()*compute_h_matrix(Tauy.current())*sign(Gammadot.current()).asDiagonal();
-      Gammadot.current() -= drdgammadot.inverse()*res;
-
-      tau_inc = tau_star - 0.5*this->DeltaT*(Gammadot.current()+Gammadot.old())*pl_corr_proj.transpose();
+      dr_stress = abs(tau_inc).pow((1-this->m_par)/this->m_par)*Tauy.current().array().pow(-1/this->m_par)*sign(tau_inc);
+      ColArray_t dr_hard{abs(tau_inc).pow(1/this->m_par)*Tauy.current().array().pow(-1-1/this->m_par)*sign(tau_inc)};
+      drdgammadot = I+0.5*this->DeltaT*this->gammadot_0/this->m_par*dr_stress.matrix().asDiagonal()*pl_corr_proj.transpose()
+        +0.5*this->DeltaT*this->gammadot_0/this->m_par*dr_hard.matrix().asDiagonal()*compute_h_matrix(Tauy.current())*Eigen::sign(Gammadot.current().array()).matrix().asDiagonal();
+      Gammadot.current() -= drdgammadot.inverse() * res.matrix();
+      // TODO: Check with Francesco whether the transposition of this guy is correct
+      tau_inc = tau_star - (0.5*this->DeltaT*(Gammadot.current()+Gammadot.old()).transpose()*pl_corr_proj.transpose()).array().transpose();
 
       Int counter_h{};
       ColMatrix_t Tauy_temp{};
@@ -302,8 +308,8 @@ namespace muSpectre {
         if(counter_h ++ > this->maxiter){
           throw std::runtime_error("Max. number of iteration for hardening reached without convergence");
         }
-        Tauy_temp = {Tauy.current()};
-        Tauy.current() = Tauy.old() + 0.5*this->DeltaT*(s_dot_old + compute_hmatrix(Tauy_temp)*Gammadot.current());
+        Tauy_temp = Tauy.current();
+        Tauy.current() = Tauy.old() + 0.5*this->DeltaT*(s_dot_old.matrix() + compute_h_matrix(Tauy_temp)*Gammadot.current());
       } while ((Tauy.current() - Tauy_temp).norm() > tolerance);
 
       res = compute_gamma_dot();
@@ -314,14 +320,14 @@ namespace muSpectre {
       SPK -= .5*DeltaT*(Gammadot.current()(i)+Gammadot.old()(i))*pl_corr[i];
     }
 
-    T2_t Lp{T2_t::Zeros()};
+    T2_t Lp{T2_t::Zero()};
     for (Int i{0}; i < NbSlip; ++i) {
       Lp += .5*(Gammadot.current()(i)+Gammadot.old()(i))*SchmidT[i];
     }
 
     Fp.current() = (T2_t::Identity()+this->DeltaT*Lp)*Fp.old();
 
-    auto PK2 = Rot.rotate_back(Fp.current().inverse()*SPK*Fp.current().inverse().transpose());
+    T2_t PK2 = Rot.rotate_back(Fp.current().inverse()*SPK*Fp.current().inverse().transpose());
 
       // Stiffness matrix calculation begins
 
@@ -330,7 +336,7 @@ namespace muSpectre {
     auto IRT = Matrices::Itrns<DimM>();
     auto I4 = Matrices::Iiden<DimM>();
     auto odot = [] (auto && T4, auto && T2) {
-      T4_t Return_value(T4_t::Zeros());
+      T4_t Return_value(T4_t::Zero());
       for (Int i = 0; i < DimM; ++i) {
         for (Int j = 0; j < DimM; ++j) {
           for (Int k = 0; k < DimM; ++k) {
@@ -345,12 +351,14 @@ namespace muSpectre {
       return Return_value;
     };
 
+    auto dot = [] (auto && a, auto && b) {return Matrices::dot<DimM>(a, b);};
+    auto ddot = [] (auto && a, auto && b) {return Matrices::ddot<DimM>(a, b);};
     T4_t dAdF{odot(dot(Fp.old().inverse().transpose(),IRT),Fe_star)+odot(dot(Fe_star.transpose(),I4),Fp.old().inverse())};
     T4_t A4{.5*ddot(C_el,dAdF)};
 
     // E4: Tangent of the projector
 
-    T4_t E4{T4_t::Zeros()};
+    T4_t E4{T4_t::Zero()};
     for (Int i{0}; i < NbSlip; ++i) {
       T4_t dBprojdF{odot(dAdF,SchmidT[i]) + dot(SchmidT[i].transpose(),dAdF)};
       E4 -= .5*this->DeltaT*(Gammadot.current()(i)+Gammadot.old()(i))*ddot(C_el,dBprojdF);
@@ -359,23 +367,23 @@ namespace muSpectre {
     // G4: Tangent of slip rate
 
     // dgammadot/dtau
-    SlipMat_t dgammadotdtau{-drdgammadot.inverse()*(-this->gammadot_0/this->m_par*dr_stress.asDiagonal())};
+    SlipMat_t dgammadotdtau{-drdgammadot.inverse()*(-this->gammadot_0/this->m_par*dr_stress.matrix().asDiagonal())};
 
-    T4_t G4p1{T4_t::Zeros()};
+    T4_t G4p1{T4_t::Zero()};
 
     for (Int k{0}; k < NbSlip; ++k) {
       for (Int mu{0}; mu < NbSlip; ++mu) {
 
-        G4p1 += outer(pl_corr[k],dgammadotdtau(k,mu)*SchmidT[mu]);
+        G4p1 += Matrices::outer(pl_corr[k],dgammadotdtau(k,mu)*SchmidT[mu]);
 
       }
     }
 
-    T4_t G4p2{odot(dAdF,SPK)+dot(CGe_star,A4+E4)};
+    T4_t G4p2{odot(dAdF,SPK)+dot(CGe_star,(A4+E4).eval())};
     T4_t G4_RHS{.5*DeltaT*G4p1*G4p2};
 
     auto xdot = [] (auto && T4, auto && T2) {
-      T4_t Return_value(T4_t::Zeros());
+      T4_t Return_value(T4_t::Zero());
       for (Int i = 0; i < DimM; ++i) {
         for (Int j = 0; j < DimM; ++j) {
           for (Int k = 0; k < DimM; ++k) {
@@ -396,22 +404,22 @@ namespace muSpectre {
 
     // Plastic contribution to geometric tangent
 
-    T4_t F4p1{T4_t::Zeros()};
-    T4_t F4p2{T4_t::Zeros()};
+    T4_t F4p1{T4_t::Zero()};
+    T4_t F4p2{T4_t::Zero()};
 
     for (Int k{0}; k < NbSlip; ++k) {
       for (Int mu{0}; mu < NbSlip; ++mu) {
 
-        F4p1 += outer(SchmidT[k],dgammadotdtau(k,mu)*SchmidT[mu]);
-        F4p2 += outer(SchmidT[k].transpose(),dgammadotdtau(k,mu)*SchmidT[mu]);
+        F4p1 += Matrices::outer(SchmidT[k],dgammadotdtau(k,mu)*SchmidT[mu]);
+        F4p2 += Matrices::outer(SchmidT[k].transpose(),dgammadotdtau(k,mu)*SchmidT[mu]);
 
       }
     }
 
-    T4_t F4L{-.5*DeltaT*odot(dot(Fp.old(),F4p1*(A4+E4+G4)),SPK*Fp.current().inverse().transpose())};
-    T4_t F4R{-.5*DeltaT*(dot(Fp.current().inverse()*SPK,odot(F4p2*(A4+E4+G4),Fp.old().inverse().transpose())))};
+    T4_t F4L{-.5*DeltaT*odot(dot(Fp.old(),(F4p1*(A4+E4+G4)).eval()),SPK*Fp.current().inverse().transpose())};
+    T4_t F4R{-.5*DeltaT*(dot((Fp.current().inverse()*SPK).eval(),odot((F4p2*(A4+E4+G4)).eval(),Fp.old().inverse().transpose())))};
 
-    T4_t K4{dot(F,Rot.rotate_back(F4L + odot(dot(Fp.current().inverse(),A4+E4+G4),Fp.current().inverse().transpose())  + F4R))};
+    T4_t K4{dot(F,Rot.rotate_back(F4L + odot(dot(Fp.current().inverse(),(A4+E4+G4).eval()),Fp.current().inverse().transpose())  + F4R))};
 
     return std::make_tuple(std::move(PK2), std::move(K4));
 

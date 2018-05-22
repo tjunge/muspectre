@@ -283,7 +283,8 @@ namespace muSpectre {
 
       /* ---------------------------------------------------------------------- */
       /**
-       * Specialisation for the case where we get material stress (PK2)
+       * Specialisation for the case where we get material stress
+       * (Piola-Kirchhoff-2, PK2)
        */
       template <Dim_t Dim, StrainMeasure StrainM>
       struct PK1_stress<Dim, StressMeasure::PK2, StrainM>:
@@ -300,8 +301,9 @@ namespace muSpectre {
 
       /* ---------------------------------------------------------------------- */
       /**
-       * Specialisation for the case where we get material stress (PK2) derived
-       * with respect to Green-Lagrange strain
+       * Specialisation for the case where we get material stress
+       * (Piola-Kirchhoff-2, PK2) derived with respect to
+       * Green-Lagrange strain
        */
       template <Dim_t Dim>
       struct PK1_stress<Dim, StressMeasure::PK2, StrainMeasure::GreenLagrange>:
@@ -330,6 +332,52 @@ namespace muSpectre {
                   for (int r = 0; r < Dim; ++r) {
                     for (int s = 0; s < Dim; ++s) {
                       get(Kmap,i,m,j,n) += F(i,r)*get(C,r,m,n,s)*(F(j,s));
+                    }
+                  }
+                }
+              }
+            }
+          }
+          auto && P = compute(std::forward<Strain_t>(F),
+                              std::forward<Stress_t>(S));
+          return std::make_tuple(std::move(P), std::move(K));
+        }
+      };
+
+      /* ---------------------------------------------------------------------- */
+      /**
+       * Specialisation for the case where we get material stress
+       * (Piola-Kirchhoff-2, PK2) derived with respect to
+       * the placement Gradient (F)
+       */
+      // TODO: check with Francesco
+      template <Dim_t Dim>
+      struct PK1_stress<Dim, StressMeasure::PK2, StrainMeasure::Gradient>:
+        public PK1_stress<Dim, StressMeasure::PK2,
+                          StrainMeasure::no_strain_> {
+        //! base class
+        using Parent = PK1_stress<Dim, StressMeasure::PK2,
+                                  StrainMeasure::no_strain_>;
+        using Parent::compute;
+
+        //! returns the converted stress and stiffness
+        template <class Strain_t, class Stress_t, class Tangent_t>
+        inline static decltype(auto)
+        compute(Strain_t && F, Stress_t && S, Tangent_t && C) {
+          using T4 = typename std::remove_reference_t<Tangent_t>::PlainObject;
+          using Tmap = T4MatMap<Real, Dim>;
+          T4 K;
+          Tmap Kmap{K.data()};
+          K.setZero();
+
+          for (int i = 0; i < Dim; ++i) {
+            for (int m = 0; m < Dim; ++m) {
+              for (int n = 0; n < Dim; ++n) {
+                get(Kmap,i,m,i,n) += S(m,n);
+                for (int j = 0; j < Dim; ++j) {
+                  for (int r = 0; r < Dim; ++r) {
+                    for (int s = 0; s < Dim; ++s) {
+                      get(Kmap,i,m,j,n) += F(i,r)*get(C,r,m,j,n);
                     }
                   }
                 }

@@ -80,7 +80,7 @@ namespace muSpectre {
 
 
   /* ---------------------------------------------------------------------- */
-  template class MaterialCrystalPlasticityFinite<  twoD,   twoD,  3>;
+  template class MaterialCrystalPlasticityFinite<  twoD,   twoD,  7>;
   template class MaterialCrystalPlasticityFinite<  twoD, threeD, 12>;
   template class MaterialCrystalPlasticityFinite<threeD, threeD, 12>;
 
