@@ -51,6 +51,7 @@ namespace muSpectre {
     using Angles_t = Eigen::Matrix<Real, (Dim == threeD ? 3: 1), 1>;
     using Rot_t = Rotator<Dim, Rot>;
     static constexpr RotationOrder EulerOrder{Rot};
+    static constexpr Dim_t get_Dim() {return Dim_;}
     RotationFixture():
       rotator{euler}
       {}
@@ -75,7 +76,7 @@ namespace muSpectre {
     using Mat_t = typename Fix::Mat_t;
     using Ten_t = typename Fix::Ten_t;
 
-    constexpr const Dim_t& Dim{Fix::Dim};
+    constexpr const Dim_t Dim{Fix::get_Dim()};
 
     Vec_t &v{Fix::v};
     Mat_t &m{Fix::m};

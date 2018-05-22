@@ -218,10 +218,15 @@ namespace muSpectre {
       template <class In_t, class Rot_t>
       inline static decltype(auto) rotate(In_t && input,
                                    Rot_t && R) {
-        auto && rotator_forward = Matrices::outer_under(R.transpose(), R.transpose());
+        constexpr Dim_t Dim{EigenCheck::tensor_dim<Rot_t>::value};
+        auto && rotator_forward{Matrices::outer_under(R.transpose(),
+                                                      R.transpose())};
         auto && rotator_back = Matrices::outer_under(R, R);
 
-        return rotator_back * input * rotator_forward;
+        // unclear behaviour. When I return this value as an
+        // expression, clange segfaults or returns an uninitialised
+        // tensor
+        return T4Mat<Real, Dim>(rotator_back * input * rotator_forward);
       }
     };
   }
