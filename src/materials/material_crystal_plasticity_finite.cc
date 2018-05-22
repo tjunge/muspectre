@@ -34,7 +34,7 @@ namespace muSpectre {
   /* ---------------------------------------------------------------------- */
   template <Dim_t DimS, Dim_t DimM, Int NbSlip>
   MaterialCrystalPlasticityFinite<DimS, DimM, NbSlip>::
-  MaterialCrystalPlasticityFinite(std::string name, Real bulk_m, Real shear_m, Real gamma_dot0, Real m_par, Real tau_y0, Real h0, Real s_infty, Real a_par, Real q_n, SlipVecs_ref Slip0, SlipVecs_ref Normal0, Real delta_t, Real tolerance, Int maxiter)
+  MaterialCrystalPlasticityFinite(std::string name, Real bulk_m, Real shear_m, Real gamma_dot0, Real m_par, Real tau_y0, Real h0, Real delta_tau_y_max, Real a_par, Real q_n, SlipVecs_ref Slip0, SlipVecs_ref Normal0, Real delta_t, Real tolerance, Int maxiter)
     : Parent{name},
       FpField("Plastic Deformation Gradient Fₚ(t)",this->internal_fields),
       GammaDotField("Plastic slip rates dγᵅ/dt",this->internal_fields),
@@ -46,7 +46,7 @@ namespace muSpectre {
         make_field<MatrixField<LColl_t, Real, NbEuler, 1>>
           ("Euler angles", this->internal_fields)},
       bulk_m{bulk_m}, shear_m{shear_m}, gamma_dot0{gamma_dot0}, m_par{m_par},
-      tau_y0{tau_y0}, h0{h0}, s_infty{s_infty}, a_par{a_par}, q_n{q_n},
+      tau_y0{tau_y0}, h0{h0}, tau_infty{tau_y0+delta_tau_y_max}, a_par{a_par}, q_n{q_n},
       delta_t{delta_t}, tolerance{tolerance}, maxiter{maxiter}, Slip0{Slip0},
       Normal0{Normal0},
       internal_variables{FpField.get_map(),
@@ -121,7 +121,7 @@ namespace muSpectre {
   }
 
   /* ---------------------------------------------------------------------- */
-  template class MaterialCrystalPlasticityFinite<  twoD,   twoD,  7>;
+  template class MaterialCrystalPlasticityFinite<  twoD,   twoD,  3>;
   template class MaterialCrystalPlasticityFinite<  twoD, threeD, 12>;
   template class MaterialCrystalPlasticityFinite<threeD, threeD, 12>;
 

@@ -139,7 +139,7 @@ namespace muSpectre {
      */
     MaterialCrystalPlasticityFinite(std::string name, Real bulk_m, Real shear_m,
                                     Real gamma_dot0, Real m_par, Real tau_y0,
-                                    Real h0, Real s_infty, Real a_par,
+                                    Real h0, Real delta_tau_y_max, Real a_par,
                                     Real q_n, SlipVecs_ref Slip0,
                                     SlipVecs_ref Normal0, Real delta_t,
                                     Real tolerance=1.e-4, Int maxiter=20);
@@ -228,7 +228,7 @@ namespace muSpectre {
     Real m_par;
     Real tau_y0;
     Real h0;
-    Real s_infty;
+    Real tau_infty;
     Real a_par;
     Real q_n;
     Real delta_t;
@@ -252,9 +252,11 @@ namespace muSpectre {
   MaterialCrystalPlasticityFinite<DimS, DimM, NbSlip>::
   evaluate_stress(s_t && F, Fp_ref Fp, GammaDot_ref gamma_dot, TauY_ref tau_y,
                   Euler_ref Euler) {
-    return std::get<0>(this->evaluate_stress_tangent(std::forward<s_t>(F),
-                                                     Fp, gamma_dot, tau_y,
-                                                     Euler));
+    Eigen::Matrix<Real, DimM, DimM> stress = std::get<0>
+      (this->evaluate_stress_tangent(std::forward<s_t>(F),
+                                     Fp, gamma_dot, tau_y,
+                                     Euler));
+    return stress;
   }
 
   /* ---------------------------------------------------------------------- */
@@ -312,7 +314,7 @@ namespace muSpectre {
 
     auto compute_h_matrix = [this, &q_matrix] (const ColMatrix_t & tau_y_temp) {
       auto && parens =
-      (ColMatrix_t::Ones()-tau_y_temp/this->s_infty).array()
+      (ColMatrix_t::Ones()-tau_y_temp/this->tau_infty).array()
       .pow(this->a_par).matrix();
       return this->h0*parens.asDiagonal()*q_matrix; };
     ColArray_t s_dot_old{(compute_h_matrix(tau_y.current())*gamma_dot.old()).array()};
