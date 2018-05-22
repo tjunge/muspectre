@@ -75,12 +75,10 @@ namespace muSpectre {
     using GammaDotMap_t = StateFieldMap<MatrixFieldMap<LFieldColl_t, Real, NbSlip, 1, false>>;
     //! critical resolved shear stresses (CRSS) τᵅy(t)
     using TauYMap_t = GammaDotMap_t;
-    //! plastic slips γᵅ(t)
-    using GammaMap_t = MatrixFieldMap<LFieldColl_t, Real, NbSlip, 1, false>;
     //! euler angles
     using EulerMap_t = ArrayFieldMap<LFieldColl_t, Real, (DimM==3) ? 3 : 1, 1, true>;
 
-    using InternalVariables = std::tuple<FpMap_t, GammaDotMap_t, TauYMap_t, GammaMap_t, EulerMap_t>;
+    using InternalVariables = std::tuple<FpMap_t, GammaDotMap_t, TauYMap_t, EulerMap_t>;
   };
 
   /**
@@ -118,8 +116,6 @@ namespace muSpectre {
     using GammaDot_ref = typename traits::GammaDotMap_t::reference;
     //! Type in which CRSS are referenced
     using TauY_ref = typename traits::TauYMap_t::reference;
-    //! Type in which accumulated slips are referenced
-    using Gamma_ref = typename traits::GammaMap_t::reference;
     //! Type in which Euler angles are referenced
     using Euler_ref = typename traits::EulerMap_t::reference;
     //! Type in which slip directions and normals are given
@@ -169,8 +165,7 @@ namespace muSpectre {
     template <class s_t>
     inline decltype(auto) evaluate_stress(s_t && F, Fp_ref Fp,
                                           GammaDot_ref gamma_dot,
-                                          TauY_ref tau_y, Gamma_ref Gamma,
-                                          Euler_ref Euler);
+                                          TauY_ref tau_y, Euler_ref Euler);
 
     /**
      * evaluates both second Piola-Kirchhoff stress and stiffness given
@@ -179,7 +174,7 @@ namespace muSpectre {
     template <class s_t>
     inline decltype(auto)
     evaluate_stress_tangent(s_t && F, Fp_ref Fp, GammaDot_ref gamma_dot,
-                            TauY_ref tau_y, Gamma_ref Gamma, Euler_ref Euler);
+                            TauY_ref tau_y, Euler_ref Euler);
 
     /**
      * return the internals tuple
@@ -203,6 +198,17 @@ namespace muSpectre {
      */
     constexpr static Dim_t get_NbSlip() {return NbSlip;}
 
+
+    /**
+     * set initial values for internal variables
+     */
+    void initialise() override;
+
+    /**
+     * material-specific update of internal (history) variables
+     */
+    void save_history_variables() override;
+
   protected:
     using LColl_t = typename traits::LFieldColl_t;
     //! Storage for F_p
@@ -220,7 +226,7 @@ namespace muSpectre {
     Real shear_m;
     Real gamma_dot0;
     Real m_par;
-    Real tau_y0; //// TODO: is not used? Francesco?
+    Real tau_y0;
     Real h0;
     Real s_infty;
     Real a_par;
@@ -245,9 +251,9 @@ namespace muSpectre {
   decltype(auto)
   MaterialCrystalPlasticityFinite<DimS, DimM, NbSlip>::
   evaluate_stress(s_t && F, Fp_ref Fp, GammaDot_ref gamma_dot, TauY_ref tau_y,
-                  Gamma_ref Gamma, Euler_ref Euler) {
+                  Euler_ref Euler) {
     return std::get<0>(this->evaluate_stress_tangent(std::forward<s_t>(F),
-                                                     Fp, gamma_dot, tau_y, Gamma,
+                                                     Fp, gamma_dot, tau_y,
                                                      Euler));
   }
 
@@ -257,8 +263,10 @@ namespace muSpectre {
   decltype(auto)
   MaterialCrystalPlasticityFinite<DimS, DimM, NbSlip>::
   evaluate_stress_tangent(s_t && F, Fp_ref Fp, GammaDot_ref gamma_dot,
-                          TauY_ref tau_y, Gamma_ref /*Gamma*/,
-                          Euler_ref Euler) {
+                          TauY_ref tau_y, Euler_ref Euler) {
+    auto dot = [] (auto && a, auto && b) {return Matrices::dot<DimM>(a, b);};
+    auto ddot = [] (auto && a, auto && b) {return Matrices::ddot<DimM>(a, b);};
+
     Rotator<DimM> Rot(Euler);
     T2_t Floc{Rot.rotate(F)};
     std::array<T2_t, NbSlip> SchmidT;
@@ -268,23 +276,25 @@ namespace muSpectre {
 
     // trial elastic deformation
     T2_t Fe_star{Floc*Fp.old().inverse()};
-    T2_t CGe_star{Fe_star.transpose()*Fe_star};
+    T2_t CGe_star{Fe_star.transpose()*Fe_star}; // elastic Cauchy-Green strain
     T2_t GLe_star{.5*(CGe_star - T2_t::Identity())};
     T2_t SPK_star{Matrices::tensmult(C_el,GLe_star)};
 
     using ColArray_t = Eigen::Array<Real, NbSlip, 1>;
     using ColMatrix_t = Eigen::Matrix<Real, NbSlip, 1>;
     ColArray_t tau_star;
-    // pl_corr is the plastic corrector
+    // pl_corr is the plastic corrector (Bᵅ)
     std::array<T2_t, NbSlip> pl_corr;
     using SlipMat_t = Eigen::Matrix<Real, NbSlip, NbSlip>;
     SlipMat_t pl_corr_proj;
 
     for (Int i{0}; i < NbSlip; ++i) {
       tau_star(i) = (CGe_star*SPK_star*SchmidT[i].transpose()).trace();
+
+      // eq (19)
       pl_corr[i] = Matrices::tensmult(C_el,.5*(CGe_star*SchmidT[i]+SchmidT[i].transpose()*CGe_star));
       for (Int j{0}; j < NbSlip; ++j) {
-        pl_corr_proj(i,j)=(Matrices::tensmult(C_el,pl_corr[i]*SchmidT[j].transpose())).trace();
+        pl_corr_proj(i,j)= ddot(CGe_star*pl_corr[i], SchmidT[j]);
       }
     }
 
@@ -322,8 +332,10 @@ namespace muSpectre {
       drdgammadot = I+0.5*this->delta_t*this->gamma_dot0/this->m_par*dr_stress.matrix().asDiagonal()*pl_corr_proj.transpose()
         +0.5*this->delta_t*this->gamma_dot0/this->m_par*dr_hard.matrix().asDiagonal()*compute_h_matrix(tau_y.current())*Eigen::sign(gamma_dot.current().array()).matrix().asDiagonal();
       gamma_dot.current() -= drdgammadot.inverse() * res.matrix();
-      // TODO: Check with Francesco whether the transposition of this guy is correct
-      tau_inc = tau_star - (0.5*this->delta_t*(gamma_dot.current()+gamma_dot.old()).transpose()*pl_corr_proj.transpose()).array().transpose();
+
+      tau_inc = tau_star -
+        (0.5*this->delta_t*(gamma_dot.current() + gamma_dot.old()).transpose() *
+         pl_corr_proj).array().transpose();
 
       Int counter_h{};
       ColMatrix_t tau_y_temp{};
@@ -374,8 +386,6 @@ namespace muSpectre {
       return Return_value;
     };
 
-    auto dot = [] (auto && a, auto && b) {return Matrices::dot<DimM>(a, b);};
-    auto ddot = [] (auto && a, auto && b) {return Matrices::ddot<DimM>(a, b);};
     T4_t dAdF{odot(dot(Fp.old().inverse().transpose(),IRT),Fe_star)+odot(dot(Fe_star.transpose(),I4),Fp.old().inverse())};
     T4_t A4{.5*ddot(C_el,dAdF)};
 

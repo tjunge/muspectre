@@ -27,6 +27,7 @@
  */
 
 #include "materials/material_crystal_plasticity_finite.hh"
+#include "common/iterators.hh"
 
 namespace muSpectre {
 
@@ -51,7 +52,6 @@ namespace muSpectre {
       internal_variables{FpField.get_map(),
           GammaDotField.get_map(),
           TauYField.get_map(),
-          GammaField.get_map(),
           ArrayFieldMap<LColl_t, Real, NbEuler, 1, true>(EulerField)}
   {
     // Enforce n₀ and s₀ to be unit vectors!
@@ -78,6 +78,47 @@ namespace muSpectre {
     this->EulerField.push_back(Euler);
   }
 
+
+  /* ---------------------------------------------------------------------- */
+  template <Dim_t DimS, Dim_t DimM, Int NbSlip>
+  void MaterialCrystalPlasticityFinite<DimS, DimM, NbSlip>::
+  initialise() {
+    if (not this->is_initialised) {
+      Parent::initialise();
+      using T2_t = Eigen::Matrix<Real, DimM, DimM>;
+      this->FpField.get_map().current() = T2_t::Identity();
+
+      using ColArray_t = Eigen::Matrix<Real, NbSlip, 1>;
+      this->GammaDotField.get_map().current() = ColArray_t::Zero();
+      this->TauYField.get_map().current() = ColArray_t::Constant(this->tau_y0);
+
+      this->GammaField.set_zero();
+
+      this->FpField.cycle();
+      this->GammaDotField.cycle();
+      this->TauYField.cycle();
+
+    }
+  }
+
+  /* ---------------------------------------------------------------------- */
+  template <Dim_t DimS, Dim_t DimM, Int NbSlip>
+  void MaterialCrystalPlasticityFinite<DimS, DimM, NbSlip>::
+  save_history_variables() {
+    auto GammaMap = this->GammaField.get_map();
+    auto GammaDotMap = this->GammaDotField.get_map();
+
+    for (auto && tup: akantu::zip(GammaMap, GammaDotMap)) {
+      auto & gamma = std::get<0>(tup);
+      auto & gamma_dot = std::get<1>(tup);
+      gamma += .5 * this->delta_t * (gamma_dot.current() + gamma_dot.old());
+    }
+
+    this->FpField.cycle();
+    this->GammaDotField.cycle();
+    this->TauYField.cycle();
+
+  }
 
   /* ---------------------------------------------------------------------- */
   template class MaterialCrystalPlasticityFinite<  twoD,   twoD,  7>;

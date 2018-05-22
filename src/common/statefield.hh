@@ -129,7 +129,7 @@ namespace muSpectre {
     //! Copy constructor
     StateField(const StateField &other) = delete;
 
-    //! Move constructor
+    //! Move coonstructor
     StateField(StateField &&other) = delete;
 
     //! Destructor
@@ -142,13 +142,14 @@ namespace muSpectre {
     StateField& operator=(StateField &&other) = delete;
 
     //! get (modifiable) current field
-    inline StateField& current() {
+    inline Field_t& current() {
+      // TODO: doesn't work
       return this->fields[this->indices[0]];
     }
 
     //! get (constant) previous field
     template <size_t nb_steps_ago=1>
-    inline const StateField& old() {
+    inline const Field_t& old() {
       static_assert(nb_steps_ago <= nb_memory,
                     "you can't go that far inte the past");
       static_assert(nb_steps_ago > 0,

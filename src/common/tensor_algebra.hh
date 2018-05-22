@@ -315,6 +315,15 @@ namespace muSpectre {
         }
       };
 
+      /* ---------------------------------------------------------------------- */
+      template<Dim_t Dim>
+      struct Dotter<Dim, secondOrder, secondOrder> {
+        template <class T1, class T2>
+        static constexpr decltype(auto) ddot(T1 && t1, T2 && t2) {
+          return (t1*t2.transpose()).trace();
+        }
+      };
+
     }  // internal
 
     /* ---------------------------------------------------------------------- */

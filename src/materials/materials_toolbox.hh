@@ -350,7 +350,6 @@ namespace muSpectre {
        * (Piola-Kirchhoff-2, PK2) derived with respect to
        * the placement Gradient (F)
        */
-      // TODO: check with Francesco
       template <Dim_t Dim>
       struct PK1_stress<Dim, StressMeasure::PK2, StrainMeasure::Gradient>:
         public PK1_stress<Dim, StressMeasure::PK2,
