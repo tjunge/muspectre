@@ -285,7 +285,7 @@ namespace muSpectre {
 
     // return mapping
     Real Del_gamma{phi_star/(H + 3 * mu)};
-    //auto && tau{tau_star - 2*Del_gamma*mu*N_star};
+    auto && tau{tau_star - 2*Del_gamma*mu*N_star};
     /////auto && tau_eq{tau_eq_star - 3*mu*Del_gamma};
 
     // update the previous values to the new ones
@@ -303,10 +303,9 @@ namespace muSpectre {
     std::cout << "tau_eq_star:\n" << tau_eq_star << std::endl;
     std::cout << "Del_gamma:\n" << Del_gamma << std::endl;
     std::cout << "N_star:\n" << N_star << std::endl;
-    auto tau_le{Hooke::evaluate_stress(lambda, mu, std::forward<grad_t>(F))};
 
     return std::tuple<Mat_t, Real, Real, Mat_t, bool>
-      (std::move(tau_le), std::move(tau_eq_star),
+      (std::move(tau), std::move(tau_eq_star),
        std::move(Del_gamma), std::move(N_star),
        std::move(is_plastic));
   }
@@ -322,12 +321,8 @@ namespace muSpectre {
     auto retval(std::move(std::get<0>(this->stress_n_internals_worker
 				      (std::forward<grad_t>(F), F_prev, be_prev,
 				       eps_p, lambda, mu, tau_y0, H))));
-    //return retval;
+    return retval;
 
-    // test purpose:
-    std::cout << "evaluate_stress; F:\n" << F << std::endl;
-    auto tau_test{Hooke::evaluate_stress(lambda, mu, std::forward<grad_t>(F))};
-    return std::move(tau_test);
   }
   //----------------------------------------------------------------------------//
   template <Dim_t DimS, Dim_t DimM>
@@ -342,16 +337,13 @@ namespace muSpectre {
     auto && vals{this->stress_n_internals_worker (std::forward<grad_t>(F),
 						  F_prev, be_prev, eps_p,
 						  lambda, mu, tau_y0, H)};
-    /*
     auto && tau        {std::get<0>(vals)};
     auto && tau_eq_star{std::get<1>(vals)};
     auto && Del_gamma  {std::get<2>(vals)};
     auto && N_star     {std::get<3>(vals)};
-    */
     auto && is_plastic {std::get<4>(vals)};
 
     if (is_plastic) {
-      /*
       auto && a0 = Del_gamma* mu/tau_eq_star;
       auto && a1 = mu/(H + 3*mu);
       // compute bulk modulus K from first(lambda) and second(mu) Lame constants
@@ -363,33 +355,17 @@ namespace muSpectre {
         ((K/2. - mu/3 + a0*mu)*Matrices::Itrac<DimM>() +
          (1 - 3*a0) * mu*Matrices::Isymm<DimM>() +
          2*mu * (a0 - a1)*Matrices::outer(N_star, N_star))});
-      */
-
-      std::cout << "plastic" << std::endl;
 
     } else {
       // compute stiffness tensor C
       // the factor .5 comes from equation (18) in Geers 2003
       // (https://doi.org/10.1016/j.cma.2003.07.014)
-      /*
       auto C{0.5*Hooke::compute_C_T4(lambda, mu)};
       return std::make_tuple(std::move(tau), T4Mat<Real, DimM>{C});
-      */
 
       std::cout << "elastic" << std::endl;
 
     }
-
-    // test purpose:
-    std::cout << "evaluate_stress_tangent; F:\n" << F << std::endl;
-    auto C_test{Hooke::compute_C_T4(lambda, mu)};
-    // compute Green-Lagrange strain
-    auto E{0.5*(F.transpose()*F - Eigen::Matrix<Real, DimM, DimM>::Identity())};
-    std::cout << E << std::endl;
-    auto tau_test{Hooke::evaluate_stress(lambda, mu, E)};
-    std::cout << "tau_test:\n" << tau_test << std::endl;
-    std::cout << "C_test:\n" << C_test << std::endl;
-    return std::make_tuple(std::move(tau_test), T4Mat<Real, DimM>{C_test});
   }
 
 
