@@ -57,7 +57,7 @@ namespace muSpectre {
    * Uses the Newton-conjugate Gradient method to find the static
    * equilibrium of a cell given a mean applied strain
    */
-  OptimizeResult
+  inline OptimizeResult
   newton_cg(Cell & cell,
             const Eigen::Ref<Eigen::MatrixXd> load_step,
             SolverBase & solver, Real newton_tol,
@@ -85,7 +85,7 @@ namespace muSpectre {
    * Uses the method proposed by de Geus method to find the static
    * equilibrium of a cell given a mean applied strain
    */
-  OptimizeResult
+  inline OptimizeResult
   de_geus(Cell & cell,
           const Eigen::Ref<Eigen::MatrixXd> load_step,
           SolverBase & solver, Real newton_tol,

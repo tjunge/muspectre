@@ -31,10 +31,18 @@
 
 #include "tests.hh"
 #include "materials/material_crystal_plasticity_finite.hh"
+#include "materials/material_linear_elastic1.hh"
+#include "materials/materials_toolbox.hh"
 #include "common/tensor_algebra.hh"
+
+#include "solver/solvers.hh"
+#include "solver/solver_cg.hh"
+#include "cell/cell_factory.hh"
+#include "common/iterators.hh"
 
 #include <boost/mpl/list.hpp>
 
+#include <vector>
 
 namespace muSpectre {
 
@@ -77,9 +85,14 @@ namespace muSpectre {
     constexpr static Dim_t get_DimM() {return Mat_t::mdim();}
     constexpr static Dim_t get_NbSlip() {return Mat_t::get_NbSlip();}
 
-      Crystal_non_plastFixture():
+    Crystal_non_plastFixture():
+      slip0{Mat_t::SlipVecs::Zero()},
+      normals{Mat_t::SlipVecs::Zero()},
       mat(name, bulk_m, shear_m, gamma_dot0, m_par, tau_y0, h0, delta_tau_y, a_par, q_n, slip0, normals, delta_t)
-    {}
+    {
+      this->slip0.col(0).setConstant(1.);
+      this->normals.col(1).setConstant(1.);
+    }
     std::string name{"material"};
     Real bulk_m{175e9};
     Real shear_m{120e9};
@@ -124,10 +137,20 @@ namespace muSpectre {
 
     auto & mat{Fix::mat};
 
-    Euler_t angles = 2*pi*Euler_t::Random()*0;
-    std::cout << "angles = " << angles << std::endl;
+    Euler_t angles = 2*pi*Euler_t::Random();
 
     constexpr Ccoord pixel{0};
+    using MatElast_t = MaterialLinearElastic1<Dim, Dim>;
+    Real Young{MatTB::convert_elastic_modulus<ElasticModulus::Young,
+                                              ElasticModulus::Bulk,
+                                              ElasticModulus::Shear>
+        (Fix::bulk_m, Fix::shear_m)};
+    Real Poisson{MatTB::convert_elastic_modulus<ElasticModulus::Poisson,
+                                                ElasticModulus::Bulk,
+                                                ElasticModulus::Shear>
+        (Fix::bulk_m, Fix::shear_m)};
+    MatElast_t mat_ref("hard", Young, Poisson);
+
 
     mat.add_pixel(pixel, angles);
 
@@ -149,32 +172,6 @@ namespace muSpectre {
       Matrices::ddot<Dim>(C,
                           (Matrices::outer_under(F.transpose(), T2_t::Identity())))};
 
-    auto odot = [] (auto && T4, auto && T2) {
-      T4_t ret_val(T4_t::Zero());
-      for (Int i = 0; i < Dim; ++i) {
-        for (Int j = 0; j < Dim; ++j) {
-          for (Int k = 0; k < Dim; ++k) {
-            for (Int l = 0; l < Dim; ++l) {
-              for (Int m = 0; m < Dim; ++m) {
-                get(ret_val,i,j,k,l) += get(T4,i,m,k,l)*T2(m,j);
-              }
-            }
-          }
-        }
-      }
-      return ret_val;
-    };
-
-    T4_t IRT{Matrices::Itrns<Dim>()};
-    T4_t I4{Matrices::Iiden<Dim>()};
-    T2_t I2{T2_t::Identity()};
-    T4_t dAdF1{odot(Matrices::dot<Dim>(T2_t::Identity(), IRT), F)};
-    T4_t dAdF2{odot(Matrices::dot<Dim>(F.transpose(), I4), T2_t::Identity())};
-    T4_t dAdF{dAdF1 + dAdF2};
-    T4_t tangent_ref2{.5*C*dAdF};
-    T4_t tmp{.5*(Matrices::outer_under(F.transpose(), I2) + Matrices::outer_over(I2, F.transpose()))};
-    std::cout << "tmp:" << std::endl << tmp << std::endl;
-    std::cout << "dAdF:" << std::endl << dAdF << std::endl;
     auto & internals{mat.get_internals()};
 
     mat.initialise();
@@ -202,8 +199,16 @@ namespace muSpectre {
                                                   *gamma_dot_map.begin(),
                                                   *tau_y_map.begin(),
                                                   *Euler_map.begin());
+
+    auto stress_tgt_ref = mat_ref.evaluate_stress_tangent(E);
+
     T2_t & stress_2{get<0>(stress_tgt)};
     T4_t & tangent{get<1>(stress_tgt)};
+
+    T2_t stress_2_lin{get<0>(stress_tgt_ref)};
+    T4_t C_lin{get<1>(stress_tgt_ref)};
+    T2_t I2{T2_t::Identity()};
+    T4_t tangent_lin{C_lin*Matrices::outer_under(F.transpose(), I2)};
 
     error = (stress_2-stress_ref).norm()/stress_ref.norm();
     BOOST_CHECK_LT(error, tol);
@@ -212,16 +217,124 @@ namespace muSpectre {
       std::cout << "stress_2 =" << std::endl << stress_2 << std::endl;
     }
 
+    error = (stress_2 - stress_2_lin).norm() / stress_2_lin.norm();
+    BOOST_CHECK_LT(error, tol);
+    if (not (error < tol)) {
+      std::cout << "stress_2 from linear elastic =" << std::endl << stress_2_lin << std::endl;
+      std::cout << "stress_2 =" << std::endl << stress_2 << std::endl;
+    }
+
+    
+
     error = (tangent-tangent_ref).norm()/tangent_ref.norm();
     BOOST_CHECK_LT(error, tol);
     if (not (error < tol)) {
-      std::cout << "Francesco: It seems we missed the plastic-elastic switch." << std::endl;
-      std::cout << "tangent_ref =" << std::endl << tangent_ref << std::endl;
-      std::cout << "tangent_ref2 =" << std::endl << tangent_ref2 << std::endl;
-      std::cout << "tangent =" << std::endl << tangent << std::endl;
+       std::cout << "tangent_ref =" << std::endl << tangent_ref << std::endl;
+       std::cout << "tangent =" << std::endl << tangent << std::endl;
     }
 
 
+    error = (tangent_lin-tangent_ref).norm()/tangent_ref.norm();
+    BOOST_CHECK_LT(error, tol);
+    if (not (error < tol)) {
+       std::cout << "tangent_ref =" << std::endl << tangent_ref << std::endl;
+       std::cout << "tangent from linear elastic =" << std::endl << tangent << std::endl;
+    }
+  }
+
+
+  BOOST_FIXTURE_TEST_CASE_TEMPLATE(elastic_bimaterial, Fix, elast_mat_list, Fix) {
+    constexpr Dim_t Dim{Fix::get_DimS()};
+    using Ccoord = Ccoord_t<Dim>;
+    using Rcoord = Rcoord_t<Dim>;
+
+
+    constexpr Ccoord resolutions{CcoordOps::get_cube<Dim>(3)};
+    constexpr Rcoord lengths{CcoordOps::get_cube<Dim>(1.)};
+    constexpr Formulation form{Formulation::finite_strain};
+    // number of layers in the hard material
+    constexpr Uint nb_lays{1};
+
+    static_assert(nb_lays < resolutions[0],
+                  "the number or layers in the hard material must be smaller "
+                  "than the total number of layers in dimension 0");
+
+    auto sys{make_cell(resolutions, lengths, form)};
+    auto sys_ref{make_cell(resolutions, lengths, form)};
+
+    using Mat_t = typename Fix::Mat_t;
+
+    Mat_t & hard = Mat_t::make(sys, "hard",
+                               2*Fix::bulk_m,
+                               2*Fix::shear_m,
+                               Fix::gamma_dot0,
+                               Fix::m_par,
+                               Fix::tau_y0,
+                               Fix::h0,
+                               Fix::delta_tau_y,
+                               Fix::a_par,
+                               Fix::q_n,
+                               Fix::slip0,
+                               Fix::normals,
+                               Fix::delta_t);
+
+    Mat_t & soft = Mat_t::make(sys, "soft",
+                               Fix::bulk_m,
+                               Fix::shear_m,
+                               Fix::gamma_dot0,
+                               Fix::m_par,
+                               Fix::tau_y0,
+                               Fix::h0,
+                               Fix::delta_tau_y,
+                               Fix::a_par,
+                               Fix::q_n,
+                               Fix::slip0,
+                               Fix::normals,
+                               Fix::delta_t);
+
+
+    using MatElast_t = MaterialLinearElastic1<Dim, Dim>;
+    Real Young{MatTB::convert_elastic_modulus<ElasticModulus::Young,
+                                              ElasticModulus::Bulk,
+                                              ElasticModulus::Shear>
+        (Fix::bulk_m, Fix::shear_m)};
+    Real Poisson{MatTB::convert_elastic_modulus<ElasticModulus::Poisson,
+                                                ElasticModulus::Bulk,
+                                                ElasticModulus::Shear>
+        (Fix::bulk_m, Fix::shear_m)};
+    MatElast_t & hard_ref = MatElast_t::make(sys_ref, "hard", 2*Young, Poisson);
+    MatElast_t & soft_ref = MatElast_t::make(sys_ref, "soft",   Young, Poisson);
+
+    using Euler_t = Eigen::Array<Real, Fix::Mat_t::NbEuler, 1>;
+    Euler_t angles = Euler_t::Zero();
+
+    for (const auto & pixel: sys) {
+      if (pixel[0] < Dim_t(nb_lays)) {
+        hard.add_pixel(pixel, angles);
+        hard_ref.add_pixel(pixel);
+      } else {
+        soft.add_pixel(pixel, angles);
+        soft_ref.add_pixel(pixel);
+      }
+    }
+
+    using Grad_t = Eigen::MatrixXd;
+    Grad_t F_bar{Grad_t::Identity(Dim, Dim) + Grad_t::Ones(Dim, Dim)*.1};
+
+    constexpr Real cg_tol{1e-4}, newton_tol{1e-4}, equil_tol{1e-4};
+    constexpr Uint maxiter{Dim*10};
+    constexpr Dim_t verbose{0};
+
+    SolverCG solver{sys, cg_tol, maxiter, bool(verbose)};
+    auto result = newton_cg(sys, F_bar, solver, newton_tol, equil_tol);
+    std::cout << result.message << std::endl;
+
+    SolverCG solver_ref{sys_ref, cg_tol, maxiter, bool(verbose)};
+    auto result_ref = newton_cg(sys_ref, F_bar, solver_ref, newton_tol, equil_tol);
+
+    Real error = (result.stress - result_ref.stress).matrix().norm() / result_ref.stress.matrix().norm();
+
+    BOOST_CHECK_LT(error, tol);
 
   }
   BOOST_AUTO_TEST_SUITE_END();

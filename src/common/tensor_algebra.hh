@@ -293,10 +293,8 @@ namespace muSpectre {
               for (Int j = 0; j < Dim; ++j) {
                 for (Int k = 0; k < Dim; ++k) {
                   for (Int l = 0; l < Dim; ++l) {
-                    for (Int m = 0; m < Dim; ++m) {
-                      get(ret_val, i,j,k,l) +=
-                        t1(i,a) * get(t2,a,j,k,l);
-                    }
+                    get(ret_val, i,j,k,l) +=
+                      t1(i,a) * get(t2,a,j,k,l);
                   }
                 }
               }
@@ -314,14 +312,12 @@ namespace muSpectre {
           using T4_t = T4Mat<typename std::remove_reference_t<T4>::Scalar, Dim>;
           T4_t ret_val{T4_t::Zero()};
           for (Int i = 0; i < Dim; ++i) {
-            for (Int a = 0; a < Dim; ++a) {
-              for (Int j = 0; j < Dim; ++j) {
-                for (Int k = 0; k < Dim; ++k) {
+            for (Int j = 0; j < Dim; ++j) {
+              for (Int k = 0; k < Dim; ++k) {
+                for (Int a = 0; a < Dim; ++a) {
                   for (Int l = 0; l < Dim; ++l) {
-                    for (Int m = 0; m < Dim; ++m) {
-                      get(ret_val, i,j,k,l) +=
-                        get(t4,i,j,k,a) * t2(a, i);
-                    }
+                    get(ret_val, i,j,k,l) +=
+                      get(t4,i,j,k,a) * t2(a, l);
                   }
                 }
               }

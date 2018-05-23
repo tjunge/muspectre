@@ -375,9 +375,7 @@ namespace muSpectre {
                 get(Kmap,i,m,i,n) += S(m,n);
                 for (int j = 0; j < Dim; ++j) {
                   for (int r = 0; r < Dim; ++r) {
-                    for (int s = 0; s < Dim; ++s) {
-                      get(Kmap,i,m,j,n) += F(i,r)*get(C,r,m,j,n);
-                    }
+                    get(Kmap,i,m,j,n) += F(i,r)*get(C,r,m,j,n);
                   }
                 }
               }
