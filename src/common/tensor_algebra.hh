@@ -308,6 +308,31 @@ namespace muSpectre {
 
       /* ---------------------------------------------------------------------- */
       template<Dim_t Dim>
+      struct Dotter<Dim, fourthOrder, secondOrder> {
+        template <class T4, class T2>
+        static constexpr decltype(auto) dot(T4 && t4, T2 && t2) {
+          using T4_t = T4Mat<typename std::remove_reference_t<T4>::Scalar, Dim>;
+          T4_t ret_val{T4_t::Zero()};
+          for (Int i = 0; i < Dim; ++i) {
+            for (Int a = 0; a < Dim; ++a) {
+              for (Int j = 0; j < Dim; ++j) {
+                for (Int k = 0; k < Dim; ++k) {
+                  for (Int l = 0; l < Dim; ++l) {
+                    for (Int m = 0; m < Dim; ++m) {
+                      get(ret_val, i,j,k,l) +=
+                        get(t4,i,j,k,a) * t2(a, i);
+                    }
+                  }
+                }
+              }
+            }
+          }
+          return ret_val;
+        }
+      };
+
+      /* ---------------------------------------------------------------------- */
+      template<Dim_t Dim>
       struct Dotter<Dim, fourthOrder, fourthOrder> {
         template <class T1, class T2>
         static constexpr decltype(auto) ddot(T1 && t1, T2 && t2) {

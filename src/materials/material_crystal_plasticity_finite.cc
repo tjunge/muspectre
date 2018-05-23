@@ -247,8 +247,9 @@ namespace muSpectre {
       }
       return ret_val;
     };
-
-    T4_t dAdF{odot(dot(Fp.old().inverse().transpose(),IRT),Fe_star)+odot(dot(Fe_star.transpose(),I4),Fp.old().inverse())};
+    T4_t dAdF1{odot(dot(Fp.old().inverse().transpose(),IRT),Fe_star)};
+    T4_t dAdF2{odot(dot(Fe_star.transpose(),I4),Fp.old().inverse()) };
+    T4_t dAdF{dAdF1 + dAdF2};
     T4_t A4{.5*ddot(C_el,dAdF)};
 
     // E4: Tangent of the projector

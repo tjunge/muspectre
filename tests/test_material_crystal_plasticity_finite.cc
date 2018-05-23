@@ -31,6 +31,7 @@
 
 #include "tests.hh"
 #include "materials/material_crystal_plasticity_finite.hh"
+#include "common/tensor_algebra.hh"
 
 #include <boost/mpl/list.hpp>
 
@@ -142,8 +143,38 @@ namespace muSpectre {
          ElasticModulus::Bulk>(Fix::shear_m, Fix::bulk_m)};
 
     T2_t stress_ref{Hooke::evaluate_stress(lambda, Fix::shear_m, E)};
-    T4_t tangent_ref{Hooke::compute_C_T4(lambda, Fix::shear_m)};
+    // for ∂E/∂F, see Curnier
+    T4_t C{Hooke::compute_C_T4(lambda, Fix::shear_m)};
+    T4_t tangent_ref{
+      Matrices::ddot<Dim>(C,
+                          (Matrices::outer_under(F.transpose(), T2_t::Identity())))};
 
+    auto odot = [] (auto && T4, auto && T2) {
+      T4_t ret_val(T4_t::Zero());
+      for (Int i = 0; i < Dim; ++i) {
+        for (Int j = 0; j < Dim; ++j) {
+          for (Int k = 0; k < Dim; ++k) {
+            for (Int l = 0; l < Dim; ++l) {
+              for (Int m = 0; m < Dim; ++m) {
+                get(ret_val,i,j,k,l) += get(T4,i,m,k,l)*T2(m,j);
+              }
+            }
+          }
+        }
+      }
+      return ret_val;
+    };
+
+    T4_t IRT{Matrices::Itrns<Dim>()};
+    T4_t I4{Matrices::Iiden<Dim>()};
+    T2_t I2{T2_t::Identity()};
+    T4_t dAdF1{odot(Matrices::dot<Dim>(T2_t::Identity(), IRT), F)};
+    T4_t dAdF2{odot(Matrices::dot<Dim>(F.transpose(), I4), T2_t::Identity())};
+    T4_t dAdF{dAdF1 + dAdF2};
+    T4_t tangent_ref2{.5*C*dAdF};
+    T4_t tmp{.5*(Matrices::outer_under(F.transpose(), I2) + Matrices::outer_over(I2, F.transpose()))};
+    std::cout << "tmp:" << std::endl << tmp << std::endl;
+    std::cout << "dAdF:" << std::endl << dAdF << std::endl;
     auto & internals{mat.get_internals()};
 
     mat.initialise();
@@ -186,6 +217,7 @@ namespace muSpectre {
     if (not (error < tol)) {
       std::cout << "Francesco: It seems we missed the plastic-elastic switch." << std::endl;
       std::cout << "tangent_ref =" << std::endl << tangent_ref << std::endl;
+      std::cout << "tangent_ref2 =" << std::endl << tangent_ref2 << std::endl;
       std::cout << "tangent =" << std::endl << tangent << std::endl;
     }
 
