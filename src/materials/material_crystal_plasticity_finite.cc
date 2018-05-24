@@ -50,8 +50,8 @@ namespace muSpectre {
       delta_t{delta_t}, tolerance{tolerance}, maxiter{maxiter}, Slip0{Slip0},
       Normal0{Normal0},
       internal_variables{FpField.get_map(),
-          GammaDotField.get_map(),
-          TauYField.get_map(),
+          ScalarPerSlip_map(GammaDotField),
+          ScalarPerSlip_map(TauYField),
           ArrayFieldMap<LColl_t, Real, NbEuler, 1, true>(EulerField)}
   {
     // Enforce n₀ and s₀ to be unit vectors!
@@ -89,8 +89,8 @@ namespace muSpectre {
       this->FpField.get_map().current() = T2_t::Identity();
 
       using ColArray_t = Eigen::Matrix<Real, NbSlip, 1>;
-      this->GammaDotField.get_map().current() = ColArray_t::Zero();
-      this->TauYField.get_map().current() = ColArray_t::Constant(this->tau_y0);
+      ScalarPerSlip_map(this->GammaDotField).current() = ColArray_t::Zero();
+      ScalarPerSlip_map(this->TauYField).current() = ColArray_t::Constant(this->tau_y0);
 
       this->GammaField.set_zero();
 
@@ -316,7 +316,7 @@ namespace muSpectre {
     T4_t F4R{-.5*delta_t*(dot((Fp.current().inverse()*SPK).eval(),odot((F4p2*(A4+E4+G4)).eval(),Fp.old().inverse().transpose())))};
 
     T4_t K4{Rot.rotate_back(F4L + odot(dot(Fp.current().inverse(),(A4+E4+G4).eval()),Fp.current().inverse().transpose())  + F4R)};
- 
+
     return std::make_tuple(std::move(PK2), std::move(K4));
 
   }
@@ -327,5 +327,7 @@ namespace muSpectre {
   template class MaterialCrystalPlasticityFinite<  twoD, threeD, 12>;
   template class MaterialCrystalPlasticityFinite<threeD, threeD, 12>;
 
+  // toy materials with a single slip system for testing
+  template class MaterialCrystalPlasticityFinite<  twoD,   twoD,  1>;
 
 } // muSpectre

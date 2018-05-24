@@ -210,6 +210,9 @@ namespace muSpectre {
     EIGEN_MAKE_ALIGNED_OPERATOR_NEW;
   protected:
     using LColl_t = typename traits::LFieldColl_t;
+    //! for degenerate case of 1 slip system
+    using ScalarPerSlip_map =
+      StateFieldMap<MatrixFieldMap<LColl_t, Real, NbSlip, 1>>;
     //! Storage for F_p
     StateField<TensorField<LColl_t, Real, secondOrder, DimM>> FpField;
     //! Storage for dγ/dt
