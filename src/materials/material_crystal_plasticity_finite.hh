@@ -207,7 +207,7 @@ namespace muSpectre {
      * material-specific update of internal (history) variables
      */
     void save_history_variables() override;
-
+    EIGEN_MAKE_ALIGNED_OPERATOR_NEW;
   protected:
     using LColl_t = typename traits::LFieldColl_t;
     //! Storage for F_p
@@ -234,9 +234,9 @@ namespace muSpectre {
     Real tolerance;
     Int maxiter;
     //! Storage for slip directions
-    alignas(16) Eigen::Matrix<Real, NbSlip, DimM> Slip0;
+    Eigen::Matrix<Real, NbSlip, DimM> Slip0;
     //! Storage for slip plane normals
-    alignas(16) Eigen::Matrix<Real, NbSlip, DimM> Normal0;
+    Eigen::Matrix<Real, NbSlip, DimM> Normal0;
     T4_t C_el{};
 
     //! tuple for iterable internal variables
