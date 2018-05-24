@@ -58,7 +58,7 @@ namespace muSpectre {
     Real delta_tau_y{100e6};
     Real a_par{0};
     Real q_n{1.4};
-    Real delta_t{1e-3};
+    Real delta_t{1e-4};
   };
 
   struct CPDefaultParamsElast: public CPDefaultParams {
@@ -386,9 +386,9 @@ namespace muSpectre {
     auto & Euler_map = std::get<3>(internals);
 
     T2_t F{T2_t::Identity()};
-    Real shear_incr = 5e-3;
+    Real shear_incr = 2e-3;
 
-    for (int i{}; i < 10; ++i) {
+    for (int i{}; i < 25; ++i) {
       F(0, 1) += shear_incr;
 
       T2_t stress = mat.evaluate_stress(F,
@@ -400,7 +400,7 @@ namespace muSpectre {
 
       //std::cout << "for F =\n" << F <<std::endl;
       //std::cout << "S =\n" << stress <<std::endl << std::endl;
-      std::cout << "τ_xy" << stress(0, 1) << std::endl;
+      std::cout << stress(0, 1) << std::endl;
     }
 
 

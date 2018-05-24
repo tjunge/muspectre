@@ -82,10 +82,23 @@ class MaterialCrystalPlasticityFinite1_Check(unittest.TestCase):
             self.mat.add_pixel(pixel, np.array([[0.]]))
 
         self.cell.initialise()
-        for gamma in np.linspace(5e-3, 5e-2, 10):
+        tau = list()
+        gammas = np.linspace(5e-3, 5e-2, 10)
+        for gamma in gammas:
             F = np.array([[1, gamma],
                           [0,     1]])
 
             stress = self.cell.evaluate_stress(F.T.reshape(-1))
             self.mat.save_history_variables()
             print ("stress:\n{}\n".format(stress))
+            tau.append(stress[2])
+        print("gamma = np.array([{}])".format(", ".join(
+            ("{}".format(g) for g in gammas))))
+        print("tau = np.array([{}])".format(", ".join(
+            ("{}".format(t) for t in tau))))
+
+
+if __name__ == '__main__':
+    mat = MaterialCrystalPlasticityFinite1_Check()
+    mat.setUp()
+    mat.test_stressStrain()
