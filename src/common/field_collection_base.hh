@@ -30,6 +30,7 @@
 
 #include "common/common.hh"
 #include "common/field.hh"
+#include "common/statefield.hh"
 
 #include <map>
 #include <vector>
@@ -96,6 +97,10 @@ namespace muSpectre {
     //! check whether a field is present
     bool check_field_exists(std::string unique_name);
 
+    /**
+     * list the names of all fields
+     */
+    std::vector<std::string> list_fields() const;
 
   protected:
     std::map<const std::string, Field_p> fields{}; //!< contains the field ptrs
@@ -119,9 +124,7 @@ namespace muSpectre {
   /* ---------------------------------------------------------------------- */
   template <Dim_t DimS, class FieldCollectionDerived>
   void FieldCollectionBase<DimS, FieldCollectionDerived>::register_field(Field_p &&field) {
-    auto&& search_it = this->fields.find(field->get_name());
-    auto&& does_exist = search_it != this->fields.end();
-    if (does_exist) {
+    if (this->check_field_exists(field->get_name())) {
       std::stringstream err_str;
       err_str << "a field named " << field->get_name()
               << "is already registered in this field collection. "
@@ -173,6 +176,18 @@ namespace muSpectre {
   FieldCollectionBase<DimS, FieldCollectionDerived>::
   check_field_exists(std::string unique_name) {
     return this->fields.find(unique_name) != this->fields.end();
+  }
+
+  /* ---------------------------------------------------------------------- */
+  template <Dim_t DimS, class FieldCollectionDerived>
+  std::vector<std::string>
+  FieldCollectionBase<DimS, FieldCollectionDerived>::
+  list_fields() const {
+    std::vector<std::string> ret_val{};
+    for (auto & key_val: this->fields) {
+      ret_val.push_back(key_val.first);
+    }
+    return ret_val;
   }
 
 

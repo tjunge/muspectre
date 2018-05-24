@@ -155,7 +155,12 @@ namespace muSpectre {
     /**
      * return an internal field identified by its name as an Eigen Array
      */
-    EigenMap get_field(std::string field_name);
+    EigenMap get_real_field(std::string field_name);
+
+    /**
+     * list the names of all internal fields
+     */
+    std::vector<std::string> list_fields() const;
 
 
   protected:

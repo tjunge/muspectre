@@ -78,7 +78,11 @@ namespace muSpectre {
     //! euler angles
     using EulerMap_t = ArrayFieldMap<LFieldColl_t, Real, (DimM==3) ? 3 : 1, 1, true>;
 
-    using InternalVariables = std::tuple<FpMap_t, GammaDotMap_t, TauYMap_t, EulerMap_t>;
+    //! dummies for debugging
+    using DummyGammaDot_t = MatrixFieldMap<LFieldColl_t, Real, NbSlip, 1, false>;
+    using DummyTauInc_T = DummyGammaDot_t;
+
+    using InternalVariables = std::tuple<FpMap_t, GammaDotMap_t, TauYMap_t, EulerMap_t, DummyGammaDot_t, DummyTauInc_T>;
   };
 
   /**
@@ -118,6 +122,7 @@ namespace muSpectre {
     using TauY_ref = typename traits::TauYMap_t::reference;
     //! Type in which Euler angles are referenced
     using Euler_ref = typename traits::EulerMap_t::reference;
+    using Dummy_ref = typename traits::DummyTauInc_T::reference;
     //! Type in which slip directions and normals are given
     using SlipVecs = Eigen::Matrix<Real, NbSlip, DimM>;
     using SlipVecs_ref = Eigen::Ref<SlipVecs>;
@@ -165,7 +170,8 @@ namespace muSpectre {
      */
     T2_t evaluate_stress(const T2_ref & F, Fp_ref Fp,
                          GammaDot_ref gamma_dot,
-                         TauY_ref tau_y, Euler_ref Euler);
+                         TauY_ref tau_y, Euler_ref Euler,
+                         Dummy_ref dummy_gamma_dot, Dummy_ref dummy_tau_inc);
 
     /**
      * evaluates both second Piola-Kirchhoff stress and stiffness given
@@ -173,7 +179,8 @@ namespace muSpectre {
      */
     std::tuple<T2_t, T4_t>
     evaluate_stress_tangent(const T2_ref & F, Fp_ref Fp, GammaDot_ref gamma_dot,
-                            TauY_ref tau_y, Euler_ref Euler);
+                            TauY_ref tau_y, Euler_ref Euler,
+                         Dummy_ref dummy_gamma_dot, Dummy_ref dummy_tau_inc);
 
     /**
      * return the internals tuple
@@ -242,6 +249,11 @@ namespace muSpectre {
     Eigen::Matrix<Real, NbSlip, DimM> Normal0;
     T4_t C_el{};
 
+    //! Storage for dummy γ_dot
+    MatrixField<LColl_t, Real, NbSlip, 1> & dummy_gamma_dot;
+    //! Storage for dummy τ_inc
+    MatrixField<LColl_t, Real, NbSlip, 1> & dummy_tau_inc;
+
     //! tuple for iterable internal variables
     InternalVariables internal_variables;
   private:
@@ -252,11 +264,13 @@ namespace muSpectre {
   auto
   MaterialCrystalPlasticityFinite<DimS, DimM, NbSlip>::
   evaluate_stress(const T2_ref & F, Fp_ref Fp, GammaDot_ref gamma_dot, TauY_ref tau_y,
-                  Euler_ref Euler) -> T2_t{
+                  Euler_ref Euler, Dummy_ref dummy_gamma_dot, Dummy_ref dummy_tau_inc) -> T2_t{
     return std::get<0>
       (this->evaluate_stress_tangent(std::move(F),
                                      Fp, gamma_dot, tau_y,
-                                     Euler));
+                                     Euler,
+                                     dummy_gamma_dot,
+                                     dummy_tau_inc));
   }
 
 }  // muSpectre

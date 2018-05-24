@@ -97,6 +97,13 @@ class MaterialCrystalPlasticityFinite1_Check(unittest.TestCase):
         print("tau = np.array([{}])".format(", ".join(
             ("{}".format(t) for t in tau))))
 
+    def test_get_field(self):
+        for pixel in self.cell:
+            self.mat.add_pixel(pixel, np.array([[0.]]))
+
+            print(self.mat.list_fields())
+
+
 
 if __name__ == '__main__':
     mat = MaterialCrystalPlasticityFinite1_Check()

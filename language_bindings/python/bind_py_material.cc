@@ -317,7 +317,10 @@ void add_material_helper(py::module & mod) {
   py::class_<Animal, PyAnimal /* <--- trampoline*/> animal(mod, name.c_str());
   animal
     .def(py::init<std::string>())
-    .def("save_history_variables", &Animal::save_history_variables);
+    .def("save_history_variables", &Animal::save_history_variables)
+    .def("list_fields", &Animal::list_fields)
+    .def("get_real_field", &Animal::get_real_field, "field_name"_a,
+         py::return_value_policy::reference_internal);
   add_material_linear_elastic1_helper<dim>(mod);
   add_material_linear_elastic2_helper<dim>(mod);
   add_material_linear_elastic3_helper<dim>(mod);

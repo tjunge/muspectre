@@ -49,10 +49,18 @@ namespace muSpectre {
       tau_y0{tau_y0}, h0{h0}, tau_infty{tau_y0+delta_tau_y_max}, a_par{a_par}, q_n{q_n},
       delta_t{delta_t}, tolerance{tolerance}, maxiter{maxiter}, Slip0{Slip0},
       Normal0{Normal0},
+      dummy_gamma_dot{
+        make_field<MatrixField<LColl_t, Real, NbSlip, 1>>
+          ("dummy γ_dot", this->internal_fields)},
+      dummy_tau_inc{
+        make_field<MatrixField<LColl_t, Real, NbSlip, 1>>
+          ("dummy τ_inc", this->internal_fields)},
       internal_variables{FpField.get_map(),
           ScalarPerSlip_map(GammaDotField),
           ScalarPerSlip_map(TauYField),
-          ArrayFieldMap<LColl_t, Real, NbEuler, 1, true>(EulerField)}
+          ArrayFieldMap<LColl_t, Real, NbEuler, 1, true>(EulerField),
+          MatrixFieldMap<LColl_t, Real, NbSlip, 1>(dummy_gamma_dot),
+          MatrixFieldMap<LColl_t, Real, NbSlip, 1>(dummy_tau_inc)}
   {
     // Enforce n₀ and s₀ to be unit vectors!
     auto lambda{MatTB::convert_elastic_modulus<ElasticModulus::lambda,
@@ -124,8 +132,11 @@ namespace muSpectre {
   template <Dim_t DimS, Dim_t DimM, Int NbSlip>
   auto
   MaterialCrystalPlasticityFinite<DimS, DimM, NbSlip>::
-  evaluate_stress_tangent(const Eigen::Ref<const T2_t>& F, Fp_ref Fp, GammaDot_ref gamma_dot,
-                          TauY_ref tau_y, Euler_ref Euler) -> std::tuple<T2_t, T4_t> {
+  evaluate_stress_tangent(const Eigen::Ref<const T2_t>& F, Fp_ref Fp,
+                          GammaDot_ref gamma_dot,
+                          TauY_ref tau_y, Euler_ref Euler,
+                          Dummy_ref dummy_gamma_dot, Dummy_ref dummy_tau_inc
+                          ) -> std::tuple<T2_t, T4_t> {
     auto dot = [] (auto && a, auto && b) {return Matrices::dot<DimM>(a, b);};
     auto ddot = [] (auto && a, auto && b) {return Matrices::ddot<DimM>(a, b);};
 
@@ -151,6 +162,7 @@ namespace muSpectre {
     SlipMat_t pl_corr_proj;
 
     for (Int i{0}; i < NbSlip; ++i) {
+      // first half of eq (19)
       tau_star(i) = (CGe_star*SPK_star*SchmidT[i].transpose()).trace();
 
       // eq (19)
@@ -168,17 +180,19 @@ namespace muSpectre {
     tau_y.current() = tau_y.old();
     ColArray_t tau_inc{tau_star};
 
-    auto compute_gamma_dot = [this, &gamma_dot, &tau_inc, &tau_y] () {
+    auto objective_fun = [this, &gamma_dot, &tau_inc, &tau_y] () {
       return (gamma_dot.current().array() -
               this->gamma_dot0*(abs(tau_inc).array()/tau_y.current().array()).pow(1./this->m_par)*sign(tau_inc.array()));
     };
-    ColArray_t res{compute_gamma_dot()};
+    ColArray_t res{objective_fun()};
 
     auto compute_h_matrix = [this, &q_matrix] (const ColMatrix_t & tau_y_temp) {
       auto && parens =
       (ColMatrix_t::Ones()-tau_y_temp/this->tau_infty).array()
       .pow(this->a_par).matrix();
       return this->h0*parens.asDiagonal()*q_matrix; };
+
+
     ColArray_t s_dot_old{(compute_h_matrix(tau_y.current())*gamma_dot.old()).array()};
 
     SlipMat_t drdgammadot{SlipMat_t::Identity()};
@@ -191,10 +205,20 @@ namespace muSpectre {
         throw std::runtime_error("Max. number of iteration for plastic slip reached without convergence");
       }
 
+      // in eq (27), term |τᵅ(tₙ₊₁)|^(¹⁻ᵐ/ₘ)·(sᵃ(tₙ₊₁))^(-¹/ₘ)·sgn(τᵅ(tₙ₊₁))
       dr_stress = abs(tau_inc).pow((1-this->m_par)/this->m_par)*tau_y.current().array().pow(-1/this->m_par)*sign(tau_inc);
+
+      // in eq (27), term |τᵅ(tₙ₊₁)|^(¹/ₘ)·(sᵅ(tₙ₊₁))^(-1-¹/ₘ)·sgn(τᵅ(tₙ₊₁))
       ColArray_t dr_hard{abs(tau_inc).pow(1/this->m_par)*tau_y.current().array().pow(-1-1/this->m_par)*sign(tau_inc)};
-      drdgammadot = I+0.5*this->delta_t*this->gamma_dot0/this->m_par*dr_stress.matrix().asDiagonal()*pl_corr_proj.transpose()
-        +0.5*this->delta_t*this->gamma_dot0/this->m_par*dr_hard.matrix().asDiagonal()*compute_h_matrix(tau_y.current())*Eigen::sign(gamma_dot.current().array()).matrix().asDiagonal();
+
+      //! eq (27)?
+      drdgammadot = ((I + 0.5*this->delta_t * this->gamma_dot0/this->m_par *
+                      dr_stress.matrix().asDiagonal()*pl_corr_proj.transpose()) +
+
+                     (0.5 * this->delta_t * this->gamma_dot0/this->m_par *
+                      dr_hard.matrix().asDiagonal() *
+                      compute_h_matrix(tau_y.current()) *
+                      Eigen::sign(gamma_dot.current().array()).matrix().asDiagonal()));
       gamma_dot.current() -= drdgammadot.inverse() * res.matrix();
 
       tau_inc = tau_star -
@@ -211,13 +235,16 @@ namespace muSpectre {
           }
           tau_y_temp = tau_y.current();
           tau_y.current() = tau_y.old() + 0.5*this->delta_t*(s_dot_old.matrix() + compute_h_matrix(tau_y_temp)*gamma_dot.current());
-          tau_y_residual = (tau_y.current() - tau_y_temp).norm();
+          //! // TODO: rediscuss with francesco why the second version is wrong (commented one)
+          //tau_y.current() += 0.5*this->delta_t*(s_dot_old.matrix() + compute_h_matrix(tau_y_temp)*gamma_dot.current());
+          tau_y_residual = (tau_y.current() - tau_y_temp).norm()/(tau_y.current().norm() + 1);
         } while (tau_y_residual > tolerance);
       }
 
-      res = compute_gamma_dot();
+      res = objective_fun();
     }
-
+    dummy_gamma_dot = gamma_dot.current();
+    dummy_tau_inc = tau_inc;
     T2_t SPK{SPK_star};
     for (Int i{0}; i < NbSlip; ++i) {
       SPK -= .5*delta_t*(gamma_dot.current()(i)+gamma_dot.old()(i))*pl_corr[i];

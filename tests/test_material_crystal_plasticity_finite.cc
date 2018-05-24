@@ -182,12 +182,16 @@ namespace muSpectre {
     auto & gamma_dot_map = std::get<1>(internals);
     auto & tau_y_map = std::get<2>(internals);
     auto & Euler_map = std::get<3>(internals);
+    auto & dummy_gamma_dot_map = std::get<4>(internals);
+    auto & dummy_tau_inc_map = std::get<5>(internals);
 
     T2_t stress = mat.evaluate_stress(F,
                                       *Fp_map.begin(),
                                       *gamma_dot_map.begin(),
                                       *tau_y_map.begin(),
-                                      *Euler_map.begin());
+                                      *Euler_map.begin(),
+                                      *dummy_gamma_dot_map.begin(),
+                                      *dummy_tau_inc_map.begin());
 
     Real error{(stress-stress_ref).norm()/stress_ref.norm()};
     BOOST_CHECK_LT(error, tol);
@@ -200,7 +204,9 @@ namespace muSpectre {
                                                   *Fp_map.begin(),
                                                   *gamma_dot_map.begin(),
                                                   *tau_y_map.begin(),
-                                                  *Euler_map.begin());
+                                                  *Euler_map.begin(),
+                                                  *dummy_gamma_dot_map.begin(),
+                                                  *dummy_tau_inc_map.begin());
 
     auto stress_tgt_ref = mat_ref.evaluate_stress_tangent(E);
 
@@ -384,6 +390,8 @@ namespace muSpectre {
     auto & gamma_dot_map = std::get<1>(internals);
     auto & tau_y_map = std::get<2>(internals);
     auto & Euler_map = std::get<3>(internals);
+    auto & dummy_gamma_dot_map = std::get<4>(internals);
+    auto & dummy_tau_inc_map = std::get<5>(internals);
 
     T2_t F{T2_t::Identity()};
     Real shear_incr = 2e-3;
@@ -395,7 +403,9 @@ namespace muSpectre {
                                         *Fp_map.begin(),
                                         *gamma_dot_map.begin(),
                                         *tau_y_map.begin(),
-                                        *Euler_map.begin());
+                                        *Euler_map.begin(),
+                                        *dummy_gamma_dot_map.begin(),
+                                        *dummy_tau_inc_map.begin());
       mat.save_history_variables();
 
       //std::cout << "for F =\n" << F <<std::endl;

@@ -74,7 +74,7 @@ namespace muSpectre {
 
   //----------------------------------------------------------------------------//
   template <Dim_t DimS, Dim_t DimM>
-  auto MaterialBase<DimS, DimM>::get_field(std::string field_name) -> EigenMap {
+  auto MaterialBase<DimS, DimM>::get_real_field(std::string field_name) -> EigenMap {
     if (not this->internal_fields.check_field_exists(field_name)) {
       std::stringstream err{};
       err << "Field '" << field_name << "' does not exist in material '"
@@ -89,6 +89,12 @@ namespace muSpectre {
     }
 
     return static_cast<TypedField<MFieldCollection_t, Real>&>(field).eigen();
+  }
+
+  /* ---------------------------------------------------------------------- */
+  template <Dim_t DimS, Dim_t DimM>
+  std::vector<std::string> MaterialBase<DimS, DimM>::list_fields() const {
+    return this->internal_fields.list_fields();
   }
 
   template class MaterialBase<2, 2>;
