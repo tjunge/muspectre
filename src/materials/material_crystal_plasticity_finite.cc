@@ -169,7 +169,9 @@ namespace muSpectre {
     ColArray_t tau_inc{tau_star};
 
     auto compute_gamma_dot = [this, &gamma_dot, &tau_inc, &tau_y] () {
-      return gamma_dot.current().array()-this->gamma_dot0*(abs(tau_inc).array()/tau_y.current().array()).pow(this->m_par)*sign(tau_inc.array()); };
+      return (gamma_dot.current().array() -
+              this->gamma_dot0*(abs(tau_inc).array()/tau_y.current().array()).pow(1./this->m_par)*sign(tau_inc.array()));
+    };
     ColArray_t res{compute_gamma_dot()};
 
     auto compute_h_matrix = [this, &q_matrix] (const ColMatrix_t & tau_y_temp) {
@@ -199,15 +201,19 @@ namespace muSpectre {
         (0.5*this->delta_t*(gamma_dot.current() + gamma_dot.old()).transpose() *
          pl_corr_proj).array().transpose();
 
-      Int counter_h{};
-      ColMatrix_t tau_y_temp{};
-      do {
-        if(counter_h ++ > this->maxiter){
-          throw std::runtime_error("Max. number of iteration for hardening reached without convergence");
-        }
-        tau_y_temp = tau_y.current();
-        tau_y.current() = tau_y.old() + 0.5*this->delta_t*(s_dot_old.matrix() + compute_h_matrix(tau_y_temp)*gamma_dot.current());
-      } while ((tau_y.current() - tau_y_temp).norm() > tolerance);
+      {
+        Int counter_h{};
+        ColMatrix_t tau_y_temp{};
+        Real tau_y_residual{};
+        do {
+          if(counter_h ++ > this->maxiter){
+            throw std::runtime_error("Max. number of iteration for hardening reached without convergence");
+          }
+          tau_y_temp = tau_y.current();
+          tau_y.current() = tau_y.old() + 0.5*this->delta_t*(s_dot_old.matrix() + compute_h_matrix(tau_y_temp)*gamma_dot.current());
+          tau_y_residual = (tau_y.current() - tau_y_temp).norm();
+        } while (tau_y_residual > tolerance);
+      }
 
       res = compute_gamma_dot();
     }

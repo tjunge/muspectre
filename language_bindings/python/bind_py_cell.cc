@@ -39,6 +39,7 @@
 
 #include <pybind11/pybind11.h>
 #include <pybind11/stl.h>
+#include <pybind11/stl_bind.h>
 #include "pybind11/eigen.h"
 
 #include <sstream>
@@ -166,8 +167,8 @@ void add_cell_base_helper(py::module & mod) {
          },
          "field"_a)
     .def("get_strain",[](sys_t & s) {
-        return Eigen::ArrayXXd(s.get_strain().eigen());
-      })
+        return s.get_strain().eigen();
+      }, py::return_value_policy::reference_internal)
     .def("get_stress",[](sys_t & s) {
         return Eigen::ArrayXXd(s.get_stress().eigen());
       })
@@ -184,9 +185,24 @@ void add_cell_base_helper(py::module & mod) {
            }
            auto & strain{cell.get_strain()};
            strain.eigen() = v;
-           cell.evaluate_stress_tangent(strain);
+           return cell.evaluate_stress_tangent(strain);
          },
-         "strain"_a)
+         "strain"_a, py::return_value_policy::reference_internal)
+    .def("evaluate_stress",
+         [](sys_t& cell, py::EigenDRef<Eigen::ArrayXXd>& v ) {
+           if ((size_t(v.cols()) != cell.size() ||
+                size_t(v.rows()) != dim*dim)) {
+             std::stringstream err{};
+             err << "need array of shape (" << dim*dim << ", "
+                 << cell.size() << ") but got (" << v.rows() << ", "
+                 << v.cols() << ").";
+             throw std::runtime_error(err.str());
+           }
+           auto & strain{cell.get_strain()};
+           strain.eigen() = v;
+           return cell.evaluate_stress();
+         },
+         "strain"_a, py::return_value_policy::reference_internal)
     .def("get_projection",
          &sys_t::get_projection)
     .def("get_subdomain_resolutions", &sys_t::get_subdomain_resolutions)

@@ -113,6 +113,9 @@ if (${MAKE_TESTS})
   add_executable(main_test_suite tests/main_test_suite.cc ${TEST_SRCS})
   target_link_libraries(main_test_suite ${Boost_LIBRARIES} muSpectre)
 
+  add_executable(cp_test tests/main_test_suite tests/test_material_crystal_plasticity_finite.cc)
+  target_link_libraries(cp_test ${Boost_LIBRARIES} muSpectre)
+
   muSpectre_add_test(main_test_suite TYPE BOOST main_test_suite --report_level=detailed)
 
   ##############################################################################

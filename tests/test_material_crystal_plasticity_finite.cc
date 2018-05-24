@@ -48,29 +48,41 @@ namespace muSpectre {
 
   BOOST_AUTO_TEST_SUITE(crystal_plasticity);
 
+  struct CPDefaultParams {
+    Real bulk_m{175e9};
+    Real shear_m{120e9};
+    Real gamma_dot0{10e-2};
+    Real m_par{.1};
+    Real tau_y0{200e6};
+    Real h0{0e9};
+    Real delta_tau_y{100e6};
+    Real a_par{0};
+    Real q_n{1.4};
+    Real delta_t{1e-3};
+  };
+
+  struct CPDefaultParamsElast: public CPDefaultParams {
+    CPDefaultParamsElast():
+      CPDefaultParams{}
+    {
+      this->tau_y0 = 1e200;
+    }
+  };
+
   template <class Material>
-  struct CrystalPlastFixture {
+  struct CrystalPlastFixture: public CPDefaultParams {
     using Mat_t = Material;
     constexpr static Dim_t get_DimS() {return Mat_t::sdim();}
     constexpr static Dim_t get_DimM() {return Mat_t::mdim();}
     constexpr static Dim_t get_NbSlip() {return Mat_t::get_NbSlip();}
 
     CrystalPlastFixture():
+      CPDefaultParams{},
       mat(name, bulk_m, shear_m, gamma_dot0, m_par, tau_y0, h0, delta_tau_y, a_par, q_n, slip0, normals, delta_t)
     {}
-    std::string name{"material"};
-    Real bulk_m{175e9};
-    Real shear_m{120e9};
-    Real gamma_dot0{10e-2};
-    Real m_par{.1};
-    Real tau_y0{200e6};
-    Real h0{10e9};
-    Real delta_tau_y{100e6};
-    Real a_par{2};
-    Real q_n{1.4};
+    std::string name{"mateerial"};
     typename Mat_t::SlipVecs slip0;
     typename Mat_t::SlipVecs normals;
-    Real delta_t{1e-2};
     Mat_t mat;
 
   };
@@ -79,13 +91,14 @@ namespace muSpectre {
    * material with ridiculously high yield strength to test elastic sanity
    */
   template <class Material>
-  struct Crystal_non_plastFixture {
+  struct Crystal_non_plastFixture: public CPDefaultParamsElast {
     using Mat_t = Material;
     constexpr static Dim_t get_DimS() {return Mat_t::sdim();}
     constexpr static Dim_t get_DimM() {return Mat_t::mdim();}
     constexpr static Dim_t get_NbSlip() {return Mat_t::get_NbSlip();}
 
     Crystal_non_plastFixture():
+      CPDefaultParamsElast{},
       slip0{Mat_t::SlipVecs::Zero()},
       normals{Mat_t::SlipVecs::Zero()},
       mat(name, bulk_m, shear_m, gamma_dot0, m_par, tau_y0, h0, delta_tau_y, a_par, q_n, slip0, normals, delta_t)
@@ -94,19 +107,8 @@ namespace muSpectre {
       this->normals.col(1).setConstant(1.);
     }
     std::string name{"material"};
-    Real bulk_m{175e9};
-    Real shear_m{120e9};
-    Real gamma_dot0{10e-2};
-    Real m_par{.1};
-    Real tau_y0{1e200};
-    Real h0{10e9};
-    Real delta_tau_y{300e6};
-    Real a_par{2};
-    Real q_n{1.4};
     typename Mat_t::SlipVecs slip0;
     typename Mat_t::SlipVecs normals;
-    Real delta_t{1e-2};
-
     Mat_t mat;
 
   };
@@ -224,7 +226,7 @@ namespace muSpectre {
       std::cout << "stress_2 =" << std::endl << stress_2 << std::endl;
     }
 
-    
+
 
     error = (tangent-tangent_ref).norm()/tangent_ref.norm();
     BOOST_CHECK_LT(error, tol);
@@ -327,7 +329,10 @@ namespace muSpectre {
 
     SolverCG solver{sys, cg_tol, maxiter, bool(verbose)};
     auto result = newton_cg(sys, F_bar, solver, newton_tol, equil_tol);
-    std::cout << result.message << std::endl;
+    BOOST_CHECK(result.success);
+    if (not result.success) {
+      std::cout << result.message << std::endl;
+    }
 
     SolverCG solver_ref{sys_ref, cg_tol, maxiter, bool(verbose)};
     auto result_ref = newton_cg(sys_ref, F_bar, solver_ref, newton_tol, equil_tol);
@@ -337,6 +342,71 @@ namespace muSpectre {
     BOOST_CHECK_LT(error, tol);
 
   }
+
+  //----------------------------------------------------------------------------//
+  BOOST_AUTO_TEST_CASE(stress_strain_single_slip_system) {
+    constexpr Dim_t Dim{twoD};
+    constexpr Dim_t NbSlip{1};
+    using Ccoord = Ccoord_t<Dim>;
+    using Mat_t = MaterialCrystalPlasticityFinite<Dim, Dim, NbSlip>;
+    using Euler_t = Eigen::Array<Real, Mat_t::NbEuler, 1>;
+    using T2_t = Eigen::Matrix<Real, Dim, Dim>;
+    using T4_t = T4Mat<Real, Dim>;
+
+    using SlipVecs = Eigen::Matrix<Real, NbSlip, Dim>;
+
+    CPDefaultParams params{};
+
+    SlipVecs normals{}; normals << 0, 1;
+    SlipVecs slip_dirs{}; slip_dirs << 1, 0;
+    Mat_t mat("material",
+              params.bulk_m,
+              params.shear_m,
+              params.gamma_dot0,
+              params.m_par,
+              params.tau_y0,
+              params.h0,
+              params.delta_tau_y,
+              params.a_par,
+              params.q_n,
+              slip_dirs,
+              normals,
+              params.delta_t);
+    Euler_t angles = Euler_t::Zero();
+
+    mat.add_pixel(Ccoord{}, angles);
+
+    auto & internals{mat.get_internals()};
+
+    mat.initialise();
+
+    auto & Fp_map = std::get<0>(internals);
+    auto & gamma_dot_map = std::get<1>(internals);
+    auto & tau_y_map = std::get<2>(internals);
+    auto & Euler_map = std::get<3>(internals);
+
+    T2_t F{T2_t::Identity()};
+    Real shear_incr = 5e-3;
+
+    for (int i{}; i < 10; ++i) {
+      F(0, 1) += shear_incr;
+
+      T2_t stress = mat.evaluate_stress(F,
+                                        *Fp_map.begin(),
+                                        *gamma_dot_map.begin(),
+                                        *tau_y_map.begin(),
+                                        *Euler_map.begin());
+      mat.save_history_variables();
+
+      //std::cout << "for F =\n" << F <<std::endl;
+      //std::cout << "S =\n" << stress <<std::endl << std::endl;
+      std::cout << "τ_xy" << stress(0, 1) << std::endl;
+    }
+
+
+
+  }
+
   BOOST_AUTO_TEST_SUITE_END();
 
 }  // muSpectre

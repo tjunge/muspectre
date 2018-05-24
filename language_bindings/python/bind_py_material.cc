@@ -30,6 +30,7 @@
 #include "materials/material_linear_elastic2.hh"
 #include "materials/material_linear_elastic3.hh"
 #include "materials/material_linear_elastic4.hh"
+#include "materials/material_crystal_plasticity_finite.hh"
 #include "cell/cell_base.hh"
 
 #include <pybind11/pybind11.h>
@@ -54,7 +55,7 @@ void add_material_linear_elastic1_helper(py::module & mod) {
 
   using Mat_t = MaterialLinearElastic1<dim, dim>;
   using Sys_t = CellBase<dim, dim>;
-  py::class_<Mat_t>(mod, name.c_str())
+  py::class_<Mat_t, MaterialBase<dim, dim>>(mod, name.c_str())
      .def_static("make",
                 [](Sys_t & sys, std::string n, Real e, Real p) -> Mat_t & {
                   return Mat_t::make(sys, n, e, p);
@@ -77,7 +78,7 @@ void add_material_linear_elastic2_helper(py::module & mod) {
   using Mat_t = MaterialLinearElastic2<dim, dim>;
   using Sys_t = CellBase<dim, dim>;
 
-  py::class_<Mat_t>(mod, name.c_str())
+  py::class_<Mat_t, MaterialBase<dim, dim>>(mod, name.c_str())
      .def_static("make",
                 [](Sys_t & sys, std::string n, Real e, Real p) -> Mat_t & {
                   return Mat_t::make(sys, n, e, p);
@@ -103,7 +104,7 @@ void add_material_linear_elastic3_helper(py::module & mod) {
   using Mat_t = MaterialLinearElastic3<dim, dim>;
   using Sys_t = CellBase<dim, dim>;
 
-  py::class_<Mat_t>(mod, name.c_str())
+  py::class_<Mat_t, MaterialBase<dim, dim>>(mod, name.c_str())
     .def(py::init<std::string>(), "name"_a)
     .def_static("make",
                 [](Sys_t & sys, std::string n) -> Mat_t & {
@@ -129,7 +130,7 @@ void add_material_linear_elastic4_helper(py::module & mod) {
   using Mat_t = MaterialLinearElastic4<dim, dim>;
   using Sys_t = CellBase<dim, dim>;
 
-  py::class_<Mat_t>(mod, name.c_str())
+  py::class_<Mat_t, MaterialBase<dim, dim>>(mod, name.c_str())
     .def(py::init<std::string>(), "name"_a)
     .def_static("make",
                 [](Sys_t & sys, std::string n) -> Mat_t & {
@@ -146,9 +147,177 @@ void add_material_linear_elastic4_helper(py::module & mod) {
     .def("size", &Mat_t::size);
 }
 
+template <Dim_t dim, Dim_t NbSlip>
+void add_material_crystal_plasticity_finite1_helper(py::module & mod) {
+  std::stringstream name_stream{};
+  name_stream << "MaterialCrystalPlasticityFinite_" << dim << "d_"
+              << NbSlip << "slip";
+  const auto name {name_stream.str()};
+
+  using Mat_t = MaterialCrystalPlasticityFinite<dim, dim, NbSlip>;
+  using Sys_t = CellBase<dim, dim>;
+
+  py::class_<Mat_t, MaterialBase<dim, dim>>(mod, name.c_str())
+    .def_static("make",
+                [](Sys_t & sys,
+                   std::string n,
+                   Real bulk_modulus,
+                   Real shear_modulus,
+                   Real gamma_dot_0,
+                   Real m,
+                   Real tau_y0,
+                   Real h0,
+                   Real delta_tau_y_max,
+                   Real a,
+                   Real q_n,
+                   py::EigenDRef<Eigen::MatrixXd> slip,
+                   py::EigenDRef<Eigen::MatrixXd> normals,
+                   Real delta_t,
+                   Real tolerance,
+                   Int maxiter) -> Mat_t & {
+
+                  auto check = [] (auto && mat, auto && name ) {
+                    if (not(
+                            (mat.rows() == NbSlip) and
+                            (mat.cols() == dim))) {
+                      std::stringstream err{};
+                      err << "The " << name << " need to be given in the form of a "
+                      << NbSlip << "×" << dim << " matrix, but you gave a "
+                      << mat.rows() << "×" << mat.cols() << " matrix.";
+                      throw std::runtime_error(err.str());
+                    }
+                  };
+
+                  check(slip, "slip directions");
+                  check(normals, "normals to slip planes");
+                  Eigen::Matrix<Real, NbSlip, dim> real_slip{slip};
+                  Eigen::Matrix<Real, NbSlip, dim> real_normals{normals};
+                  return Mat_t::make(sys,
+                                     n,
+                                     bulk_modulus,
+                                     shear_modulus,
+                                     gamma_dot_0,
+                                     m,
+                                     tau_y0,
+                                     h0,
+                                     delta_tau_y_max,
+                                     a,
+                                     q_n,
+                                     real_slip,
+                                     real_normals,
+                                     delta_t,
+                                     tolerance,
+                                     maxiter);
+                },
+                "cell"_a,
+                "name"_a,
+                "bulk_modulus"_a,
+                "shear_modulus"_a,
+                "dγ/dt₀"_a,
+                "m_exonent"_a,
+                "tau_y₀"_a,
+                "h₀"_a,
+                "Δτ_y_max"_a,
+                "a_exponent"_a,
+                "qₙ"_a,
+                "slip_directions"_a,
+                "normals"_a,
+                "Δt"_a,
+                "tolerance"_a=1.e-4,
+                "max_iter"_a= 20,
+                py::return_value_policy::reference, py::keep_alive<1, 0>())
+    .def("add_pixel",
+         [] (Mat_t & mat, Ccoord_t<dim> pix, py::EigenDRef<Eigen::MatrixXd> euler) {
+           auto check = [] (auto && mat, auto && name ) {
+             if (not(
+                     (mat.rows() == NbSlip) and
+                     (mat.cols() == 1))) {
+               std::stringstream err{};
+               err << "The " << name << " need to be given in the form of a "
+               << Mat_t::NbEuler << "×" << 1 << " matrix, but you gave a "
+               << mat.rows() << "×" << mat.cols() << " matrix.";
+               throw std::runtime_error(err.str());
+             }
+           };
+           check(euler, "euler angles");
+           Eigen::Matrix<Real, Mat_t::NbEuler, 1> real_euler{euler};
+           mat.add_pixel(pix, real_euler);},
+         "pixel"_a,
+         "euler_angles"_a)
+    .def("size", &Mat_t::size);
+}
+
+
+template <Dim_t Dim>
+class PyMaterialBase : public MaterialBase<Dim,  Dim>  {
+public:
+  /* Inherit the constructors */
+  using Parent = MaterialBase<Dim,  Dim>;
+  using Parent::Parent;
+
+  /* Trampoline (need one for each virtual function) */
+  void save_history_variables() override {
+    PYBIND11_OVERLOAD_PURE
+      (void, /* Return type */
+       Parent,      /* Parent class */
+       save_history_variables          /* Name of function in C++ (must match Python name) */
+       );
+  }
+
+  void add_pixel(const Ccoord_t<Dim>& pixel) override {
+    PYBIND11_OVERLOAD_PURE
+      (void,
+       Parent,
+       add_pixel,
+       pixel);
+  }
+
+  /* Trampoline (need one for each virtual function) */
+  void initialise() override {
+    PYBIND11_OVERLOAD_PURE
+      (void, /* Return type */
+       Parent,      /* Parent class */
+       initialise          /* Name of function in C++ (must match Python name) */
+       );
+  }
+  virtual void compute_stresses(const typename Parent::StrainField_t & F,
+                                typename Parent::StressField_t & P,
+                                Formulation form) override {
+    PYBIND11_OVERLOAD_PURE
+      (void, /* Return type */
+       Parent,      /* Parent class */
+       compute_stresses,          /* Name of function in C++ (must match Python name) */
+       F,P,form
+       );
+  }
+
+  virtual void compute_stresses_tangent(const typename Parent::StrainField_t & F,
+                                        typename Parent::StressField_t & P,
+                                        typename Parent::TangentField_t & K,
+                                        Formulation form) override {
+    PYBIND11_OVERLOAD_PURE
+      (void, /* Return type */
+       Parent,      /* Parent class */
+       compute_stresses,          /* Name of function in C++ (must match Python name) */
+       F,P,K, form
+       );
+  }
+
+};
+
+
 
 template <Dim_t dim>
 void add_material_helper(py::module & mod) {
+  std::stringstream name_stream{};
+  name_stream << "MaterialBase_" << dim << "d";
+  std::string name{name_stream.str()};
+  using Animal = MaterialBase<dim, dim>;
+  using PyAnimal = PyMaterialBase<dim>;
+  py::class_<Animal, PyAnimal /* <--- trampoline*/> animal(mod, name.c_str());
+  animal
+    .def(py::init<std::string>())
+    .def("save_history_variables", &Animal::save_history_variables);
   add_material_linear_elastic1_helper<dim>(mod);
   add_material_linear_elastic2_helper<dim>(mod);
   add_material_linear_elastic3_helper<dim>(mod);
@@ -160,4 +329,9 @@ void add_material(py::module & mod) {
   material.doc() = "bindings for constitutive laws";
   add_material_helper<twoD  >(material);
   add_material_helper<threeD>(material);
+
+  add_material_crystal_plasticity_finite1_helper<  twoD,  1>(material);
+  add_material_crystal_plasticity_finite1_helper<  twoD,  3>(material);
+  add_material_crystal_plasticity_finite1_helper<threeD, 12>(material);
+
 }
