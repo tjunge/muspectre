@@ -58,7 +58,7 @@ namespace muSpectre {
     Real delta_tau_y{100e6};
     Real a_par{0};
     Real q_n{1.4};
-    Real delta_t{1e-4};
+    Real delta_t{1e-3};
   };
 
   struct CPDefaultParamsElast: public CPDefaultParams {
@@ -365,53 +365,76 @@ namespace muSpectre {
 
     SlipVecs normals{}; normals << 0, 1;
     SlipVecs slip_dirs{}; slip_dirs << 1, 0;
-    Mat_t mat("material",
-              params.bulk_m,
-              params.shear_m,
-              params.gamma_dot0,
-              params.m_par,
-              params.tau_y0,
-              params.h0,
-              params.delta_tau_y,
-              params.a_par,
-              params.q_n,
-              slip_dirs,
-              normals,
-              params.delta_t);
     Euler_t angles = Euler_t::Zero();
 
-    mat.add_pixel(Ccoord{}, angles);
+    //! check for multiple time steps
+    constexpr std::array<Real, 3> time_steps {1e-2, 1e-3, 1e-4};
+    //! imposed strain increments
+    constexpr Real Delta_gamma{1e-4};
+    //! maximum total strain
+    constexpr Real gamma_max_no_hard{1e-2};
+    //! maximum total strain
+    constexpr Real gamma_max_hard{1e-1};
 
-    auto & internals{mat.get_internals()};
+    //! loose tolerance to check for saturation values (slowly reached asymptotes
+    constexpr Real saturation_tol{1e-3};
 
-    mat.initialise();
 
-    auto & Fp_map = std::get<0>(internals);
-    auto & gamma_dot_map = std::get<1>(internals);
-    auto & tau_y_map = std::get<2>(internals);
-    auto & Euler_map = std::get<3>(internals);
-    auto & dummy_gamma_dot_map = std::get<4>(internals);
-    auto & dummy_tau_inc_map = std::get<5>(internals);
+    auto stress_strain_runner = [&](auto h0, auto a_par, auto saturation_stress,
+                                    auto gamma_max) {
+      for (auto & dt: time_steps) {
+        Mat_t mat("material",
+                  params.bulk_m,
+                  params.shear_m,
+                  Delta_gamma/dt,
+                  params.m_par,
+                  params.tau_y0,
+                  h0,
+                  params.delta_tau_y,
+                  a_par,
+                  params.q_n,
+                  slip_dirs,
+                  normals,
+                  dt);
 
-    T2_t F{T2_t::Identity()};
-    Real shear_incr = 2e-3;
+        mat.add_pixel(Ccoord{}, angles);
 
-    for (int i{}; i < 25; ++i) {
-      F(0, 1) += shear_incr;
+        auto & internals{mat.get_internals()};
 
-      T2_t stress = mat.evaluate_stress(F,
-                                        *Fp_map.begin(),
-                                        *gamma_dot_map.begin(),
-                                        *tau_y_map.begin(),
-                                        *Euler_map.begin(),
-                                        *dummy_gamma_dot_map.begin(),
-                                        *dummy_tau_inc_map.begin());
-      mat.save_history_variables();
+        mat.initialise();
 
-      //std::cout << "for F =\n" << F <<std::endl;
-      //std::cout << "S =\n" << stress <<std::endl << std::endl;
-      std::cout << stress(0, 1) << std::endl;
-    }
+        auto & Fp_map = std::get<0>(internals);
+        auto & gamma_dot_map = std::get<1>(internals);
+        auto & tau_y_map = std::get<2>(internals);
+        auto & Euler_map = std::get<3>(internals);
+        auto & dummy_gamma_dot_map = std::get<4>(internals);
+        auto & dummy_tau_inc_map = std::get<5>(internals);
+
+        T2_t F{T2_t::Identity()};
+
+        T2_t stress;
+        for (int i{}; i < gamma_max/Delta_gamma; ++i) {
+          F(0, 1) += Delta_gamma;
+
+          stress = mat.evaluate_stress(F,
+                                       *Fp_map.begin(),
+                                       *gamma_dot_map.begin(),
+                                       *tau_y_map.begin(),
+                                       *Euler_map.begin(),
+                                       *dummy_gamma_dot_map.begin(),
+                                       *dummy_tau_inc_map.begin());
+          mat.save_history_variables();
+        }
+        auto error {std::abs(stress(0, 1)-saturation_stress)/params.tau_y0};
+        BOOST_CHECK_LT(error, saturation_tol);
+        if (not(error < saturation_tol)) {
+          std::cout << "τ_xy = " << stress(0,1) << ", but shoud be " << saturation_stress << std::endl;
+        }
+      }
+    };
+
+    stress_strain_runner(params.h0, params.a_par, params.tau_y0, gamma_max_no_hard);
+    stress_strain_runner(1000e9, 1.5, params.tau_y0+params.delta_tau_y, gamma_max_hard);
 
 
 
