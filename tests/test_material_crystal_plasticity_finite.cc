@@ -170,6 +170,7 @@ namespace muSpectre {
     T2_t stress_ref{Hooke::evaluate_stress(lambda, Fix::shear_m, E)};
     // for ∂E/∂F, see Curnier
     T4_t C{Hooke::compute_C_T4(lambda, Fix::shear_m)};
+    std::cout << "C =" << std::endl << C << std::endl;
     T4_t tangent_ref{
       Matrices::ddot<Dim>(C,
                           (Matrices::outer_under(F.transpose(), T2_t::Identity())))};
@@ -210,6 +211,19 @@ namespace muSpectre {
 
     auto stress_tgt_ref = mat_ref.evaluate_stress_tangent(E);
 
+    auto fun = [&](auto && grad) {
+      return mat.evaluate_stress(grad,
+                                 *Fp_map.begin(),
+                                 *gamma_dot_map.begin(),
+                                 *tau_y_map.begin(),
+                                 *Euler_map.begin(),
+                                 *dummy_gamma_dot_map.begin(),
+                                 *dummy_tau_inc_map.begin());
+    };
+    T4_t numerical_tangent{
+      MatTB::compute_numerical_tangent<Dim>(fun, F, 1e-5)};
+
+
     T2_t & stress_2{get<0>(stress_tgt)};
     T4_t & tangent{get<1>(stress_tgt)};
 
@@ -247,6 +261,13 @@ namespace muSpectre {
     if (not (error < tol)) {
        std::cout << "tangent_ref =" << std::endl << tangent_ref << std::endl;
        std::cout << "tangent from linear elastic =" << std::endl << tangent << std::endl;
+    }
+
+    error = (tangent_ref-numerical_tangent).norm()/tangent_ref.norm();
+    BOOST_CHECK_LT(error, tol);
+    if (not (error < tol)) {
+       std::cout << "tangent_ref =" << std::endl << tangent_ref << std::endl;
+       std::cout << "numerically determined tangent =" << std::endl << numerical_tangent << std::endl;
     }
   }
 

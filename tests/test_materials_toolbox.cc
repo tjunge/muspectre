@@ -267,6 +267,53 @@ namespace muSpectre {
 
   }
 
+  BOOST_AUTO_TEST_CASE(numerical_tangent_test) {
+    constexpr Dim_t Dim{twoD};
+    using T4_t = T4Mat<Real, Dim>;
+    using T2_t = Eigen::Matrix<Real, Dim, Dim>;
+
+    bool verbose{false};
+
+    T4_t Q{};
+    Q << 1., 0., 0., 0.,
+      0., 1.66666667, 0., 0.,
+      0., 0., 2.33333333, 0.,
+      0., 0., 0., 3.;
+    if (verbose) {
+      std::cout << Q << std::endl << std::endl;
+    }
+
+    T2_t B{};
+    B <<  2., 3.33333333, 2.66666667, 4.;
+    if (verbose) {
+      std::cout << B << std::endl << std::endl;
+    }
+
+    auto fun = [&Q, &B] (const T2_t & x) -> T2_t{
+      using cmap_t = Eigen::Map<const Eigen::Matrix<Real, Dim*Dim, 1>>;
+      using map_t = Eigen::Map<Eigen::Matrix<Real, Dim*Dim, 1>>;
+      cmap_t x_vec{x.data()};
+      T2_t ret_val{};
+      map_t(ret_val.data()) = Q*x_vec + map_t(B.data());
+      return ret_val;
+    };
+
+    T2_t temp_res = fun(T2_t::Ones());
+    if (verbose) {
+      std::cout << temp_res << std::endl << std::endl;
+    }
+    T4_t numerical_tangent{
+      MatTB::compute_numerical_tangent<Dim> (fun, T2_t::Ones(), 1e-2)};
+
+    if (verbose) {
+      std::cout << numerical_tangent << std::endl << std::endl;
+    }
+
+    Real error = (numerical_tangent-Q).norm()/Q.norm();
+    BOOST_CHECK_LT(error, tol);
+
+  }
+
   BOOST_AUTO_TEST_SUITE_END();
 
 }  // muSpectre

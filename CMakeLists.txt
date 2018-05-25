@@ -119,6 +119,10 @@ if (${MAKE_TESTS})
   target_link_libraries(cp_test ${Boost_LIBRARIES} muSpectre)
   muSpectre_add_test(cp_test TYPE BOOST cp_test --report_level=detailed)
 
+  add_executable(mattb_test tests/main_test_suite tests/test_materials_toolbox.cc)
+  target_link_libraries(mattb_test ${Boost_LIBRARIES} muSpectre)
+  muSpectre_add_test(mattb_test TYPE BOOST mattb_test --report_level=detailed)
+
 
   ##############################################################################
   # copy python test
