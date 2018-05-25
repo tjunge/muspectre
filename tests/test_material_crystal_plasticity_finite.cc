@@ -357,7 +357,7 @@ namespace muSpectre {
     using Mat_t = MaterialCrystalPlasticityFinite<Dim, Dim, NbSlip>;
     using Euler_t = Eigen::Array<Real, Mat_t::NbEuler, 1>;
     using T2_t = Eigen::Matrix<Real, Dim, Dim>;
-    using T4_t = T4Mat<Real, Dim>;
+    //using T4_t = T4Mat<Real, Dim>;
 
     using SlipVecs = Eigen::Matrix<Real, NbSlip, Dim>;
 
