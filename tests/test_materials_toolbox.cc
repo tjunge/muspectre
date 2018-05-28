@@ -268,49 +268,7 @@ namespace muSpectre {
   }
 
 
-  namespace MatTB {
-
-    /**
-     * Helper function to numerically determine tangent, intended for
-     * testing, rather than as a replacement for analytical tangents
-     */
-    template <Dim_t Dim, class Derived>
-    inline T4Mat<Real, Dim>
-    compute_numerical_tangent(std::function<Eigen::Matrix<Real, Dim, Dim>(Eigen::Matrix<Real, Dim, Dim>)> && fun,
-                              Eigen::MatrixBase<Derived> strain,
-                              Real delta) {
-      static_assert(Derived::RowsAtCompileTime == Dim,
-                    "can't handle dynamic matrix");
-      static_assert(Derived::ColsAtCompileTime == Dim,
-                    "can't handle dynamic matrix");
-
-      using T4_t = T4Mat<Real, Dim>;
-      using T2_t = Eigen::Matrix<Real, Dim, Dim>;
-      using T2_vec = Eigen::Map<Eigen::Matrix<Real, Dim*Dim, 1>>;
-      static_assert(Dim_t(T2_t::SizeAtCompileTime) ==
-                    Dim_t(T2_vec::SizeAtCompileTime),
-                    "wrong map size");
-      T4_t tangent{T4_t::Zero()};
-
-      for (Dim_t i{}; i < Dim*Dim; ++i ) {
-        T2_t strain2{strain};
-        T2_vec strain_vec{strain2.data()};
-        strain_vec(i) += delta;
-
-        T2_t del_f_del{(fun(strain2).eval()-fun(strain).eval())/delta};
-
-        tangent.col(i) = T2_vec(del_f_del.data());
-        static_assert
-          (Int(decltype(tangent.col(i))::SizeAtCompileTime) ==
-           Int(T2_t::SizeAtCompileTime),
-                      "wrong column size");
-      }
-      return tangent;
-    }
-
-
-
-  }  // MatTB
+  /* ---------------------------------------------------------------------- */
   BOOST_AUTO_TEST_CASE(numerical_tangent_test) {
     constexpr Dim_t Dim{twoD};
     using T4_t = T4Mat<Real, Dim>;
@@ -333,7 +291,7 @@ namespace muSpectre {
       std::cout << B << std::endl << std::endl;
     }
 
-    auto fun = [Q, B] (const T2_t & x) -> T2_t{
+    auto fun = [&Q, &B] (const T2_t & x) -> T2_t{
       using cmap_t = Eigen::Map<const Eigen::Matrix<Real, Dim*Dim, 1>>;
       using map_t = Eigen::Map<Eigen::Matrix<Real, Dim*Dim, 1>>;
       cmap_t x_vec{x.data()};
@@ -346,6 +304,7 @@ namespace muSpectre {
     if (verbose) {
       std::cout << temp_res << std::endl << std::endl;
     }
+
     T4_t numerical_tangent{
       MatTB::compute_numerical_tangent<Dim> (fun, T2_t::Ones(), 1e-2)};
 
@@ -353,13 +312,13 @@ namespace muSpectre {
       std::cout << numerical_tangent << std::endl << std::endl;
     }
 
-    Real error = (numerical_tangent-Q).norm()/Q.norm();
-    Real two{2.};
-    std::cout << "error = " << two << error;// << error << std::endl;
+    Real error{(numerical_tangent-Q).norm()/Q.norm()};
+
     BOOST_CHECK_LT(error, tol);
     if (not(error < tol)) {
-      // std::cout << "numerical tangent:\n" ;//<< numerical_tangent << std::endl;
-      // std::cout << "reference:\n" ;//<< Q << std::endl;
+      std::cout << "error = " << error << std::endl;
+      std::cout << "numerical tangent:\n" << numerical_tangent << std::endl;
+      std::cout << "reference:\n" << Q << std::endl;
     }
 
   }

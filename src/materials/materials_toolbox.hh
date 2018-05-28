@@ -731,6 +731,51 @@ namespace muSpectre {
       }
     };
 
+    /**
+     * Helper function to numerically determine tangent, intended for
+     * testing, rather than as a replacement for analytical tangents
+     */
+    template <Dim_t Dim, class FunType, class Derived>
+    inline T4Mat<Real, Dim>
+    compute_numerical_tangent(FunType && fun,
+                              const Eigen::MatrixBase<Derived> & strain,
+                              Real delta) {
+      static_assert(Derived::RowsAtCompileTime == Dim,
+                    "can't handle dynamic matrix");
+      static_assert(Derived::ColsAtCompileTime == Dim,
+                    "can't handle dynamic matrix");
+
+      using T4_t = T4Mat<Real, Dim>;
+      using T2_t = Eigen::Matrix<Real, Dim, Dim>;
+      using T2_vec = Eigen::Map<Eigen::Matrix<Real, Dim*Dim, 1>>;
+
+      static_assert(std::is_convertible<
+                    FunType, std::function<T2_t(T2_t)>>::value,
+                    "Function argument 'fun' needs to be a function taking "
+                    "one second-rank tensor as input and returning a "
+                    "second-rank tensor");
+
+      static_assert(Dim_t(T2_t::SizeAtCompileTime) ==
+                    Dim_t(T2_vec::SizeAtCompileTime),
+                    "wrong map size");
+      T4_t tangent{T4_t::Zero()};
+
+      for (Dim_t i{}; i < Dim*Dim; ++i ) {
+        T2_t strain2{strain};
+        T2_vec strain_vec{strain2.data()};
+        strain_vec(i) += delta;
+
+        T2_t del_f_del{(fun(strain2).eval()-fun(strain).eval())/delta};
+
+        tangent.col(i) = T2_vec(del_f_del.data());
+        static_assert
+          (Int(decltype(tangent.col(i))::SizeAtCompileTime) ==
+           Int(T2_t::SizeAtCompileTime),
+                      "wrong column size");
+      }
+      return tangent;
+    }
+
   }  // MatTB
 
 }  // muSpectre

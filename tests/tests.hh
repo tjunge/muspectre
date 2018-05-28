@@ -54,6 +54,7 @@ namespace muSpectre {
 
 
   constexpr Real tol = 1e-14*100; //it's in percent
+  constexpr Real finite_diff_tol = 1e-7; //it's in percent
 
 }  // muSpectre
 
