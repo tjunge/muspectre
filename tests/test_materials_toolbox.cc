@@ -291,7 +291,7 @@ namespace muSpectre {
       std::cout << B << std::endl << std::endl;
     }
 
-    auto fun = [&Q, &B] (const T2_t & x) -> T2_t{
+    auto fun = [&Q, &B, Dim] (const T2_t & x) -> T2_t{
       using cmap_t = Eigen::Map<const Eigen::Matrix<Real, Dim*Dim, 1>>;
       using map_t = Eigen::Map<Eigen::Matrix<Real, Dim*Dim, 1>>;
       cmap_t x_vec{x.data()};
