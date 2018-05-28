@@ -378,7 +378,7 @@ namespace muSpectre {
     using Mat_t = MaterialCrystalPlasticityFinite<Dim, Dim, NbSlip>;
     using Euler_t = Eigen::Array<Real, Mat_t::NbEuler, 1>;
     using T2_t = Eigen::Matrix<Real, Dim, Dim>;
-    //using T4_t = T4Mat<Real, Dim>;
+    using T4_t = T4Mat<Real, Dim>;
 
     using SlipVecs = Eigen::Matrix<Real, NbSlip, Dim>;
 
@@ -434,16 +434,19 @@ namespace muSpectre {
         T2_t F{T2_t::Identity()};
 
         T2_t stress;
+        T4_t tangent;
         for (int i{}; i < gamma_max/Delta_gamma; ++i) {
           F(0, 1) += Delta_gamma;
 
-          stress = mat.evaluate_stress(F,
+          auto stress_tgt = mat.evaluate_stress_tangent(F,
                                        *Fp_map.begin(),
                                        *gamma_dot_map.begin(),
                                        *tau_y_map.begin(),
                                        *Euler_map.begin(),
                                        *dummy_gamma_dot_map.begin(),
                                        *dummy_tau_inc_map.begin());
+          stress = std::get<0>(stress_tgt);
+          tangent = std::get<1>(stress_tgt);
           mat.save_history_variables();
         }
         auto error {std::abs(stress(0, 1)-saturation_stress)/params.tau_y0};
@@ -451,6 +454,24 @@ namespace muSpectre {
         if (not(error < saturation_tol)) {
           std::cout << "τ_xy = " << stress(0,1) << ", but shoud be " << saturation_stress << std::endl;
         }
+        auto fun = [&](auto && grad) {
+          return mat.evaluate_stress(grad,
+                                     *Fp_map.begin(),
+                                     *gamma_dot_map.begin(),
+                                     *tau_y_map.begin(),
+                                     *Euler_map.begin(),
+                                     *dummy_gamma_dot_map.begin(),
+                                     *dummy_tau_inc_map.begin());
+        };
+        T4_t numerical_tangent{
+          MatTB::compute_numerical_tangent<Dim>(fun, F, 1e-7)};
+        error = (numerical_tangent - tangent).norm()/tangent.norm();
+        BOOST_CHECK_LT(error, finite_diff_tol);
+        if (not (error < finite_diff_tol)) {
+          std::cout << "computed tangent:\n" << tangent << std::endl;
+          std::cout << "approximated tangent:\n" << numerical_tangent << std::endl;
+        }
+
       }
     };
 
