@@ -33,6 +33,7 @@
 #include "common/tensor_algebra.hh"
 #include "tests/test_goodies.hh"
 
+#include <boost/mpl/list.hpp>
 
 namespace muSpectre {
 
@@ -268,8 +269,17 @@ namespace muSpectre {
   }
 
 
+  template <FiniteDiff FinDiff>
+  struct FiniteDifferencesHolder {
+    constexpr static FiniteDiff value{FinDiff};
+  };
+
+  using FinDiffList = boost::mpl::list<FiniteDifferencesHolder<FiniteDiff::forward>,
+                                       FiniteDifferencesHolder<FiniteDiff::backward>,
+                                       FiniteDifferencesHolder<FiniteDiff::centred>>;
+
   /* ---------------------------------------------------------------------- */
-  BOOST_AUTO_TEST_CASE(numerical_tangent_test) {
+  BOOST_FIXTURE_TEST_CASE_TEMPLATE(numerical_tangent_test, Fix, FinDiffList, Fix) {
     constexpr Dim_t Dim{twoD};
     using T4_t = T4Mat<Real, Dim>;
     using T2_t = Eigen::Matrix<Real, Dim, Dim>;
@@ -306,7 +316,7 @@ namespace muSpectre {
     }
 
     T4_t numerical_tangent{
-      MatTB::compute_numerical_tangent<Dim> (fun, T2_t::Ones(), 1e-2)};
+      MatTB::compute_numerical_tangent<Dim, Fix::value> (fun, T2_t::Ones(), 1e-2)};
 
     if (verbose) {
       std::cout << numerical_tangent << std::endl << std::endl;
@@ -316,6 +326,21 @@ namespace muSpectre {
 
     BOOST_CHECK_LT(error, tol);
     if (not(error < tol)) {
+      switch (Fix::value) {
+      case FiniteDiff::backward: {
+        std::cout << "backward difference: " << std::endl;
+        break;
+      }
+      case FiniteDiff::forward: {
+        std::cout << "forward difference: " << std::endl;
+        break;
+      }
+      case FiniteDiff::centred: {
+        std::cout << "centered difference: " << std::endl;
+        break;
+      }
+      }
+
       std::cout << "error = " << error << std::endl;
       std::cout << "numerical tangent:\n" << numerical_tangent << std::endl;
       std::cout << "reference:\n" << Q << std::endl;

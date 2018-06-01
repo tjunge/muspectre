@@ -145,6 +145,13 @@ namespace muSpectre {
     small_strain_sym //!< symmetric storage as vector ε
   };
 
+  //! finite differences flags
+  enum class FiniteDiff {
+    forward,  //!< ∂f/∂x ≈ (f(x+Δx) - f(x))/Δx
+    backward, //!< ∂f/∂x ≈ (f(x) - f(x-Δx))/Δx
+    centred   //!< ∂f/∂x ≈ (f(x+Δx) - f(x-Δx))/2Δx
+  };
+
   /**
    * compile time computation of voigt vector
    */

@@ -731,11 +731,102 @@ namespace muSpectre {
       }
     };
 
+    namespace internal {
+
+      /* ---------------------------------------------------------------------- */
+      template <Dim_t Dim, FiniteDiff FinDif>
+      struct NumericalTangentHelper {
+        using T4_t = T4Mat<Real, Dim>;
+        using T2_t = Eigen::Matrix<Real, Dim, Dim>;
+        using T2_vec = Eigen::Map<Eigen::Matrix<Real, Dim*Dim, 1>>;
+
+        template <class FunType, class Derived>
+        static inline T4_t compute(FunType && fun,
+                                   const Eigen::MatrixBase<Derived> & strain,
+                                   Real delta);
+      };
+
+      /* ---------------------------------------------------------------------- */
+      template <Dim_t Dim, FiniteDiff FinDif>
+      template <class FunType, class Derived>
+      auto NumericalTangentHelper<Dim, FinDif>::
+      compute(FunType && fun,
+              const Eigen::MatrixBase<Derived> & strain,
+              Real delta) -> T4_t {
+        static_assert((FinDif == FiniteDiff::forward) or
+                      (FinDif == FiniteDiff::backward),
+                      "Not implemented");
+        T4_t tangent{T4_t::Zero()};
+
+        const T2_t fun_val{fun(strain)};
+        for (Dim_t i{}; i < Dim*Dim; ++i ) {
+          T2_t strain2{strain};
+          T2_vec strain_vec{strain2.data()};
+          switch (FinDif) {
+          case FiniteDiff::forward: {
+            strain_vec(i) += delta;
+
+            T2_t del_f_del{(fun(strain2)-fun_val)/delta};
+
+            tangent.col(i) = T2_vec(del_f_del.data());
+            break;
+          }
+          case FiniteDiff::backward: {
+            strain_vec(i) -= delta;
+
+            T2_t del_f_del{(fun_val-fun(strain2))/delta};
+
+            tangent.col(i) = T2_vec(del_f_del.data());
+            break;
+          }
+          }
+          static_assert
+            (Int(decltype(tangent.col(i))::SizeAtCompileTime) ==
+             Int(T2_t::SizeAtCompileTime),
+             "wrong column size");
+        }
+        return tangent;
+      }
+
+      /* ---------------------------------------------------------------------- */
+      template <Dim_t Dim>
+      struct NumericalTangentHelper<Dim, FiniteDiff::centred> {
+        using T4_t = T4Mat<Real, Dim>;
+        using T2_t = Eigen::Matrix<Real, Dim, Dim>;
+        using T2_vec = Eigen::Map<Eigen::Matrix<Real, Dim*Dim, 1>>;
+
+        template <class FunType, class Derived>
+        static inline T4_t compute(FunType && fun,
+                                   const Eigen::MatrixBase<Derived> & strain,
+                                   Real delta){
+        T4_t tangent{T4_t::Zero()};
+
+        for (Dim_t i{}; i < Dim*Dim; ++i ) {
+          T2_t strain1{strain};
+          T2_t strain2{strain};
+          T2_vec strain1_vec{strain1.data()};
+          T2_vec strain2_vec{strain2.data()};
+          strain1_vec(i) += delta;
+          strain2_vec(i) -= delta;
+
+          T2_t del_f_del{(fun(strain1).eval()-fun(strain2).eval())/(2*delta)};
+
+          tangent.col(i) = T2_vec(del_f_del.data());
+          static_assert
+            (Int(decltype(tangent.col(i))::SizeAtCompileTime) ==
+             Int(T2_t::SizeAtCompileTime),
+             "wrong column size");
+        }
+        return tangent;
+        }
+      };
+
+    }  // internal
     /**
      * Helper function to numerically determine tangent, intended for
      * testing, rather than as a replacement for analytical tangents
      */
-    template <Dim_t Dim, class FunType, class Derived>
+    template <Dim_t Dim, FiniteDiff FinDif = FiniteDiff::centred, class FunType, class Derived>
     inline T4Mat<Real, Dim>
     compute_numerical_tangent(FunType && fun,
                               const Eigen::MatrixBase<Derived> & strain,
@@ -745,7 +836,6 @@ namespace muSpectre {
       static_assert(Derived::ColsAtCompileTime == Dim,
                     "can't handle dynamic matrix");
 
-      using T4_t = T4Mat<Real, Dim>;
       using T2_t = Eigen::Matrix<Real, Dim, Dim>;
       using T2_vec = Eigen::Map<Eigen::Matrix<Real, Dim*Dim, 1>>;
 
@@ -758,22 +848,10 @@ namespace muSpectre {
       static_assert(Dim_t(T2_t::SizeAtCompileTime) ==
                     Dim_t(T2_vec::SizeAtCompileTime),
                     "wrong map size");
-      T4_t tangent{T4_t::Zero()};
-
-      for (Dim_t i{}; i < Dim*Dim; ++i ) {
-        T2_t strain2{strain};
-        T2_vec strain_vec{strain2.data()};
-        strain_vec(i) += delta;
-
-        T2_t del_f_del{(fun(strain2).eval()-fun(strain).eval())/delta};
-
-        tangent.col(i) = T2_vec(del_f_del.data());
-        static_assert
-          (Int(decltype(tangent.col(i))::SizeAtCompileTime) ==
-           Int(T2_t::SizeAtCompileTime),
-                      "wrong column size");
-      }
-      return tangent;
+      return internal::NumericalTangentHelper<Dim, FinDif>::compute
+        (std::forward<FunType>(fun),
+         strain,
+         delta);
     }
 
   }  // MatTB

@@ -464,7 +464,7 @@ namespace muSpectre {
                                      *dummy_tau_inc_map.begin());
         };
         T4_t numerical_tangent{
-          MatTB::compute_numerical_tangent<Dim>(fun, F, 1e-7)};
+          MatTB::compute_numerical_tangent<Dim>(fun, F, 1e-4)};
         error = (numerical_tangent - tangent).norm()/tangent.norm();
         BOOST_CHECK_LT(error, finite_diff_tol);
         if (not (error < finite_diff_tol)) {
