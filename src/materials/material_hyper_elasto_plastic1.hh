@@ -401,7 +401,7 @@ namespace muSpectre {
     printer(ret_val);
     std::cout << "F:\n" << F << std::endl << "K4:\n" << ret_val << std::endl;
 
-    //return std::tuple<Mat_t, T4_t>(tau, mat_tangent);
+    return std::tuple<Mat_t, T4_t>(tau, mat_tangent);
     return std::tuple<Mat_t, T4_t>(tau, dtau_dbe);
   }
 
