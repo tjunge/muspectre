@@ -338,6 +338,11 @@ namespace muSpectre {
     }
   }
 
+  /* ---------------------------------------------------------------------- */
+  BOOST_FIXTURE_TEST_CASE_TEMPLATE(stress_strain_test, Fix, mats, Fix) {
+    
+  }
+
   BOOST_AUTO_TEST_SUITE_END();
 
 }  // muSpectre

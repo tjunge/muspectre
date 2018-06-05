@@ -185,9 +185,12 @@ void add_cell_base_helper(py::module & mod) {
            }
            auto & strain{cell.get_strain()};
            strain.eigen() = v;
-           return cell.evaluate_stress_tangent(strain);
+           auto stress_tgt{cell.evaluate_stress_tangent(strain)};
+           return std::tuple
+             <Eigen::ArrayXXd, Eigen::ArrayXXd>(std::get<0>(stress_tgt).eigen(),
+                                                std::get<1>(stress_tgt).eigen());
          },
-         "strain"_a, py::return_value_policy::reference_internal)
+         "strain"_a)
     .def("evaluate_stress",
          [](sys_t& cell, py::EigenDRef<Eigen::ArrayXXd>& v ) {
            if ((size_t(v.cols()) != cell.size() ||

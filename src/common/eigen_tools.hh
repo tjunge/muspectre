@@ -346,22 +346,93 @@ namespace muSpectre {
   }
 
 
+
+  /**
+   * compute the spectral decomposition
+   */
+
+  template <class Derived>
+  inline decltype(auto) spectral_decomposition(const Eigen::MatrixBase<Derived> & mat) {
+    static_assert(Derived::SizeAtCompileTime != Eigen::Dynamic,
+                  "works only for static matrices");
+    static_assert(Derived::RowsAtCompileTime == Derived::ColsAtCompileTime,
+                  "works only for square matrices");
+    constexpr Dim_t dim{Derived::RowsAtCompileTime};
+
+    using Mat = log_comp::Mat_t<dim>;
+    Eigen::SelfAdjointEigenSolver<Mat> Solver{};
+    Solver.computeDirect(mat, Eigen::ComputeEigenvectors);
+    return Solver;
+  }
+
+
+  /**
+   * compute the matrix log. This may not be the most
+   * efficient way to do this
+   */
+  template <Dim_t Dim>
+  using Decomp_t = Eigen::SelfAdjointEigenSolver<Eigen::Matrix<Real, Dim, Dim>>;
+
+  template <Dim_t Dim>
+  inline decltype(auto)
+  logm_alt(const Decomp_t<Dim> & spectral_decomp) {
+    using Mat = log_comp::Mat_t<Dim>;
+
+    Mat retval{Mat::Zero()};
+    for (Dim_t i = 0; i < Dim; ++i) {
+      const Real & val = spectral_decomp.eigenvalues()(i);
+      auto & vec = spectral_decomp.eigenvectors().col(i);
+      retval += std::log(val) * vec * vec.transpose();
+    }
+    return retval;
+  }
+
+  template <class Derived>
+  inline decltype(auto)
+  logm_alt(const Eigen::MatrixBase<Derived> & mat) {
+    static_assert(Derived::SizeAtCompileTime != Eigen::Dynamic,
+                  "works only for static matrices");
+    static_assert(Derived::RowsAtCompileTime == Derived::ColsAtCompileTime,
+                  "works only for square matrices");
+    constexpr Dim_t dim{Derived::RowsAtCompileTime};
+    using Mat = log_comp::Mat_t<dim>;
+    using Decomp_t = Eigen::SelfAdjointEigenSolver<Mat>;
+
+    Decomp_t decomp{spectral_decomposition(mat)};
+
+    return logm_alt(decomp);
+  }
+
   /**
    * compute the matrix exponential. This may not be the most
    * efficient way to do this
    */
-  template <Dim_t dim>
-  inline decltype(auto) expm(const log_comp::Mat_t<dim>& mat) {
-    using Mat = log_comp::Mat_t<dim>;
-    Eigen::SelfAdjointEigenSolver<Mat> Solver{};
-    Solver.computeDirect(mat, Eigen::ComputeEigenvectors);
+  template <Dim_t Dim>
+  inline decltype(auto) expm(const Decomp_t<Dim> & spectral_decomp) {
+    using Mat = log_comp::Mat_t<Dim>;
+
     Mat retval{Mat::Zero()};
-    for (Dim_t i = 0; i < dim; ++i) {
-      const Real & val = Solver.eigenvalues()(i);
-      auto & vec = Solver.eigenvectors().col(i);
+    for (Dim_t i = 0; i < Dim; ++i) {
+      const Real & val = spectral_decomp.eigenvalues()(i);
+      auto & vec = spectral_decomp.eigenvectors().col(i);
       retval += std::exp(val) * vec * vec.transpose();
     }
     return retval;
+  }
+
+  template <class Derived>
+  inline decltype(auto) expm(const Eigen::MatrixBase<Derived> & mat) {
+    static_assert(Derived::SizeAtCompileTime != Eigen::Dynamic,
+                  "works only for static matrices");
+    static_assert(Derived::RowsAtCompileTime == Derived::ColsAtCompileTime,
+                  "works only for square matrices");
+    constexpr Dim_t Dim{Derived::RowsAtCompileTime};
+    using Mat = log_comp::Mat_t<Dim>;
+    using Decomp_t = Eigen::SelfAdjointEigenSolver<Mat>;
+
+    Decomp_t decomp{spectral_decomposition(mat)};
+
+    return expm(decomp);
   }
 
 }  // muSpectre

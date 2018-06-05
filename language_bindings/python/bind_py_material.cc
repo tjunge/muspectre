@@ -138,34 +138,33 @@ void add_material_linear_elastic4_helper(py::module & mod) {
 	   mat.add_pixel(pix, Young, Poisson);},
          "pixel"_a,
          "Young"_a,
-	 "Poisson"_a);
+         "Poisson"_a);
 }
 
 /* ---------------------------------------------------------------------- */
 template <Dim_t Dim>
-void add_material_Hyper_Elasto_Plastic1_helper(py::module & mod) {
+void add_material_hyper_elasto_plastic1_helper(py::module & mod) {
   std::stringstream name_stream{};
   name_stream << "MaterialHyperElastoPlastic1_" << Dim << "d";
   const auto name {name_stream.str()};
 
   using Mat_t = MaterialHyperElastoPlastic1<Dim, Dim>;
-  using Sys_t = CellBase<Dim, Dim>;
+  using Cell_t = CellBase<Dim, Dim>;
 
   py::class_<Mat_t, MaterialBase<Dim, Dim>>(mod, name.c_str())
-    .def_static("make",
-                [](Sys_t & sys,
-                   std::string name,
-                   Real Young, Real Poisson,
-                   Real tau_y0, Real h) {
-                  return Mat_t::make(sys, name, Young, Poisson, tau_y0, h);
-                },
-                "cell"_a
-                "name"_a,
-                "YoungModulus"_a,
-                "PoissonRatio"_a,
-                "τ_y₀"_a,
-                "h"_a,
-                py::return_value_policy::reference, py::keep_alive<1, 0>());
+    .def_static
+    ("make",
+     [](Cell_t & cell, std::string name, Real Young, Real Poisson, Real tau_y0,
+        Real h) -> Mat_t & {
+      return Mat_t::make(cell, name, Young, Poisson, tau_y0, h);
+    },
+     "cell"_a,
+     "name"_a,
+     "YoungModulus"_a,
+     "PoissonRatio"_a,
+     "τ_y₀"_a,
+     "h"_a,
+     py::return_value_policy::reference, py::keep_alive<1, 0>());
 }
 
 /* ---------------------------------------------------------------------- */
@@ -344,6 +343,7 @@ void add_material_helper(py::module & mod) {
   add_material_linear_elastic2_helper<dim>(mod);
   add_material_linear_elastic3_helper<dim>(mod);
   add_material_linear_elastic4_helper<dim>(mod);
+  add_material_hyper_elasto_plastic1_helper<dim>(mod);
 }
 
 void add_material(py::module & mod) {

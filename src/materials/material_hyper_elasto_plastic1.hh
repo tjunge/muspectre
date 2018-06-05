@@ -229,14 +229,22 @@ namespace muSpectre {
     // (https://doi.org/10.1016/j.cma.2003.07.014).
 
     // computation of trial state
+    std::cout << "F\n" << F << std::endl;
     using Mat_t = Eigen::Matrix<Real, DimM, DimM>;
-    auto && f{F*F_prev.old().inverse()};
+    Mat_t F_prev_val = F_prev.old();
+    std::cout << "F_prev\n" << F_prev_val << std::endl;
+    Mat_t f{F*F_prev.old().inverse()};
+    Mat_t be_prev_val = be_prev.old();
+    std::cout << "be_prev\n" << be_prev_val << std::endl;
+    Real eps_p_val{eps_p.old()};
+    std::cout << "eps_p = " << eps_p_val << std::endl;
     Mat_t be_star{f*be_prev.old()*f.transpose()};
-    Mat_t ln_be_star{logm(std::move(be_star))};
+    const Decomp_t<DimM> spectral_decomp{spectral_decomposition(be_star)};
+    Mat_t ln_be_star{logm_alt(spectral_decomp)};
     Mat_t tau_star{.5*Hooke::evaluate_stress(this->lambda, this->mu, ln_be_star)};
     // deviatoric part of Kirchhoff stress
     Mat_t tau_d_star{tau_star - tau_star.trace()/DimM*tau_star.Identity()};
-    auto && tau_eq_star{std::sqrt(3*.5*(tau_d_star.array()*
+    Real tau_eq_star{std::sqrt(3*.5*(tau_d_star.array()*
                                      tau_d_star.transpose().array()).sum())};
     Mat_t N_star{3*.5*tau_d_star/tau_eq_star};
     // this is eq (27), and the std::min enforces the Kuhn-Tucker relation (16)
@@ -244,23 +252,25 @@ namespace muSpectre {
 
     // return mapping
     Real Del_gamma{phi_star/(this->H + 3 * this->mu)};
-    auto && tau{tau_star - 2*Del_gamma*this->mu*N_star};
+    Mat_t tau{tau_star - 2*Del_gamma*this->mu*N_star};
     /////auto && tau_eq{tau_eq_star - 3*this->mu*Del_gamma};
 
     // update the previous values to the new ones
     F_prev.current() = F;
-    ln_be_star -= 2*Del_gamma*N_star;
-    be_prev.current() = expm(std::move(ln_be_star));
-    eps_p.current() += Del_gamma;
+    be_prev.current() = expm(ln_be_star-2*Del_gamma*N_star);
+    eps_p.current() = eps_p.old() + Del_gamma;
 
 
     // transmit info whether this is a plastic step or not
     bool is_plastic{phi_star > 0};
-    return std::tuple<Mat_t, Real, Real, Mat_t, bool>
+    return std::tuple<Mat_t, Real, Real, Mat_t, bool, Decomp_t<DimM>, Mat_t>
       (std::move(tau), std::move(tau_eq_star),
        std::move(Del_gamma), std::move(N_star),
-       std::move(is_plastic));
+       std::move(is_plastic),
+       spectral_decomp,
+       be_star);
   }
+
   //----------------------------------------------------------------------------//
   template <Dim_t DimS, Dim_t DimM>
   template <class grad_t>
@@ -268,8 +278,18 @@ namespace muSpectre {
   MaterialHyperElastoPlastic1<DimS, DimM>::
   evaluate_stress(grad_t && F, StrainStRef_t F_prev, StrainStRef_t be_prev,
                   FlowStRef_t eps_p)  {
-    auto retval(std::move(std::get<0>(this->stress_n_internals_worker
-                                                                 (std::forward<grad_t>(F), F_prev, be_prev, eps_p))));
+    auto && vals{this->stress_n_internals_worker
+    (std::forward<grad_t>(F), F_prev, be_prev, eps_p)};
+    auto retval(std::move(std::get<0>(vals)));
+    auto && is_plastic {std::get<4>(vals)};
+
+    if (is_plastic) {
+      std::cout << "Plasticity at F =\n" << F << std::endl;
+    } else {
+      std::cout << "Elasticity at F =\n" << F << std::endl;
+    }
+
+
     return retval;
   }
   //----------------------------------------------------------------------------//
@@ -282,22 +302,88 @@ namespace muSpectre {
     //! after the stress computation, all internals are up to date
     auto && vals{this->stress_n_internals_worker
         (std::forward<grad_t>(F), F_prev, be_prev, eps_p)};
-    auto && tau        {std::get<0>(vals)};
-    auto && tau_eq_star{std::get<1>(vals)};
-    auto && Del_gamma  {std::get<2>(vals)};
-    auto && N_star     {std::get<3>(vals)};
-    auto && is_plastic {std::get<4>(vals)};
+    auto & tau        {std::get<0>(vals)};
+    auto & tau_eq_star{std::get<1>(vals)};
+    auto & Del_gamma  {std::get<2>(vals)};
+    auto & N_star     {std::get<3>(vals)};
+    auto & is_plastic {std::get<4>(vals)};
+    auto & spec_decomp{std::get<5>(vals)};
+    auto & be_star    {std::get<6>(vals)};
+    using Mat_t = Eigen::Matrix<Real, DimM, DimM>;
+    using Vec_t = Eigen::Matrix<Real, DimM, 1>;
+    using T4_t = T4Mat<Real, DimM>;
 
-    if (is_plastic) {
+    auto compute_C4ep = [&]() {
       auto && a0 = Del_gamma*this->mu/tau_eq_star;
       auto && a1 = this->mu/(this->H + 3*this->mu);
-      return std::make_tuple(std::move(tau), T4Mat<Real, DimM>{
-        ((this->K/2. - this->mu/3 + a0*this->mu)*Matrices::Itrac<DimM>() +
-         (1 - 3*a0) * this->mu*Matrices::Isymm<DimM>() +
-         2*this->mu * (a0 - a1)*Matrices::outer(N_star, N_star))});
-    } else {
-      return std::make_tuple(std::move(tau), T4Mat<Real, DimM>{this->C});
-    }
+      return T4Mat<Real, DimM>{
+          ((this->K/2. - this->mu/3 + a0*this->mu)*Matrices::Itrac<DimM>() +
+           (1 - 3*a0) * this->mu*Matrices::Isymm<DimM>() +
+           2*this->mu * (a0 - a1)*Matrices::outer(N_star, N_star))};
+    };
+
+    // compute derivative ∂ln(be_star)/∂be_star, see (77) through (80)
+    auto compute_dlnbe_dbe = [&] () -> T4_t {
+      T4_t retval{T4_t::Zero()};
+      const Vec_t & eig_vals{spec_decomp.eigenvalues()};
+      const Vec_t log_eig_vals{eig_vals.array().log().matrix()};
+      const Mat_t & eig_vecs{spec_decomp.eigenvectors()};
+
+      Mat_t g_vals{};
+      // see (78), (79)
+      for (int i{0}; i < DimM; ++i) {
+        g_vals(i, i) = 1/eig_vals(i);
+        for (int j{i+1}; j < DimM; ++j) {
+          g_vals(i, j) = g_vals(j, i) = ((log_eig_vals(j) - log_eig_vals(i)) /
+                                         (eig_vals(j) - eig_vals(i)));
+        }
+      }
+
+      for (int i{0}; i < DimM; ++i) {
+        std::cout << "e(" << i << ") = " << eig_vecs.col(i).transpose() << std::endl;
+        for (int j{0}; j < DimM; ++j) {
+          std::cout << "e(" << j << ") = " << eig_vecs.col(j).transpose() << std::endl;
+          std::cout << "g(µᵢ, μⱼ) = " << g_vals(i, j) << std::endl;
+          Mat_t dyad = eig_vecs.col(i) * eig_vecs.col(j).transpose();
+          retval += g_vals(i,j) * Matrices::outer(dyad, dyad);
+        }
+      }
+      return retval;
+    };
+
+    auto odot = [] (auto && T4, auto && T2) {
+      T4_t ret_val(T4_t::Zero());
+      for (Int i = 0; i < DimM; ++i) {
+        for (Int j = 0; j < DimM; ++j) {
+          for (Int k = 0; k < DimM; ++k) {
+            for (Int l = 0; l < DimM; ++l) {
+              for (Int m = 0; m < DimM; ++m) {
+                get(ret_val,i,j,k,l) += get(T4,i,m,k,l)*T2(m,j);
+              }
+            }
+          }
+        }
+      }
+      return ret_val;
+    };
+
+    // compute variation δbe_star
+    auto compute_dbe4s = [&] () -> T4_t {
+      return 2* odot(Matrices::Isymm<DimM>(), be_star);
+    };
+    T4_t mat_tangent{is_plastic ? compute_C4ep() : this->C};
+
+    T4_t MIRT{-Matrices::Itrns<DimM>()};
+    T4_t dlnbe_dbe{compute_dlnbe_dbe()};
+    T4_t dbe4s{compute_dbe4s()};
+    T4_t dtau_dbe((mat_tangent * dlnbe_dbe * dbe4s +
+                   odot(MIRT, tau)));
+    Mat_t && Finv{F.inverse()};
+    T4_t ret_val{odot(Matrices::dot<DimM>(Finv, dtau_dbe), Finv)};
+    std::cout << "F:\n" << F << std::endl << "K4:\n" << ret_val << std::endl;
+
+    //return std::tuple<Mat_t, T4_t>(tau, mat_tangent);
+    return std::tuple<Mat_t, T4_t>(tau, ret_val);
   }
 
 
