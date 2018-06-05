@@ -329,6 +329,9 @@ namespace muSpectre {
       const Vec_t log_eig_vals{eig_vals.array().log().matrix()};
       const Mat_t & eig_vecs{spec_decomp.eigenvectors()};
 
+      std::cout << "reconstructed bₑ:\n" << eig_vecs*eig_vals.asDiagonal()*eig_vecs.transpose()
+      << std::endl;
+
       Mat_t g_vals{};
       // see (78), (79)
       for (int i{0}; i < DimM; ++i) {
@@ -345,7 +348,8 @@ namespace muSpectre {
           std::cout << "e(" << j << ") = " << eig_vecs.col(j).transpose() << std::endl;
           std::cout << "g(µᵢ, μⱼ) = " << g_vals(i, j) << std::endl;
           Mat_t dyad = eig_vecs.col(i) * eig_vecs.col(j).transpose();
-          retval += g_vals(i,j) * Matrices::outer(dyad, dyad);
+          T4_t outerDyad = Matrices::outer(dyad, dyad);
+          retval += g_vals(i,j) * outerDyad;
         }
       }
       return retval;
@@ -369,21 +373,36 @@ namespace muSpectre {
 
     // compute variation δbe_star
     auto compute_dbe4s = [&] () -> T4_t {
-      return 2* odot(Matrices::Isymm<DimM>(), be_star);
+      T4_t ISymm{Matrices::Isymm<DimM>()};
+      return 2* Matrices::dot<DimM>(ISymm, be_star);
     };
     T4_t mat_tangent{is_plastic ? compute_C4ep() : this->C};
 
     T4_t MIRT{-Matrices::Itrns<DimM>()};
     T4_t dlnbe_dbe{compute_dlnbe_dbe()};
     T4_t dbe4s{compute_dbe4s()};
+    auto printer = [] (const T4_t& mat) {
+      for (int i = 0; i < DimM; ++i) {
+        for (int j = 0; j < DimM; ++j) {
+          for (int k = 0; k < DimM; ++k) {
+            for (int l = 0; l < DimM; ++l) {
+              std::cout << "(" << i << ", " << j << ", " << k << ", " << l << ") " << get(mat, i,j,k,l) << std::endl;
+            }
+          }
+        }
+      }
+    };
+
     T4_t dtau_dbe((mat_tangent * dlnbe_dbe * dbe4s +
-                   odot(MIRT, tau)));
+                   Matrices::dot<DimM>(MIRT, tau)));
+    printer(dtau_dbe);
     Mat_t && Finv{F.inverse()};
     T4_t ret_val{odot(Matrices::dot<DimM>(Finv, dtau_dbe), Finv)};
+    printer(ret_val);
     std::cout << "F:\n" << F << std::endl << "K4:\n" << ret_val << std::endl;
 
     //return std::tuple<Mat_t, T4_t>(tau, mat_tangent);
-    return std::tuple<Mat_t, T4_t>(tau, ret_val);
+    return std::tuple<Mat_t, T4_t>(tau, dtau_dbe);
   }
 
 

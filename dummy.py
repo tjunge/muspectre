@@ -132,6 +132,7 @@ def reference_curve (tauy0_input, h_input, max_shear, E, nu,
         # function to compute linearization of the logarithmic Finger tensor
         def dln2_d2(A2):
             vals,vecs = eig2(A2)
+            #vecs[:,1,0,0,0] = - vecs[:,1,0,0,0] # for debugging consistency
             K4        = np.zeros([3,3,3,3,Nx,Ny,Nz])
             for m, n in itertools.product(range(3),repeat=2):
                 gc  = (np.log(vals[n])-np.log(vals[m]))/(vals[n]-vals[m])
@@ -168,9 +169,9 @@ def reference_curve (tauy0_input, h_input, max_shear, E, nu,
         C4ep     = ((K-2./3.*mu)/2.+a0*mu)*II+(1.-3.*a0)*mu*I4s+2.*mu*(a0-a1)*dyad22(N_s,N_s)
         dlnbe4_s = dln2_d2(be_s)
         dbe4_s   = 2.*dot42(I4s,be_s)
-        K4a       = (C4e/2.)*(phi_s<=0.).astype(np.float)+C4ep*(phi_s>0.).astype(np.float)
-        K4b       = ddot44(K4a,ddot44(dlnbe4_s,dbe4_s))
-        K4c       = dot42(-I4rt,tau)+K4b
+        K4a      = (C4e/2.)*(phi_s<=0.).astype(np.float)+C4ep*(phi_s>0.).astype(np.float)
+        K4b      = ddot44(K4a,ddot44(dlnbe4_s,dbe4_s))
+        K4c      = dot42(-I4rt,tau)+K4b
         K4       = dot42(dot24(inv2(F),K4c),trans2(inv2(F)))
 
         return P,K4,be,ep
