@@ -97,6 +97,9 @@ namespace muSpectre {
   template <Dim_t DimS, Dim_t DimM>
   void CellBase<DimS, DimM>::
   set_uniform_strain(const Eigen::Ref<const Matrix_t> & strain) {
+    if (not this->initialised) {
+      this->initialise();
+    }
     this->F.get_map() = strain;
   }
 
