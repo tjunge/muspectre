@@ -423,16 +423,34 @@ namespace muSpectre {
         template <class Strain_t, class Stress_t, class Tangent_t>
         inline static decltype(auto)
         compute(Strain_t && F, Stress_t && tau, Tangent_t && C) {
-          using T4 = typename std::remove_reference_t<Tangent_t>::PlainObject;
+          using T4_t = T4Mat<Real, Dim>;
           using Tmap = T4MatMap<Real, Dim>;
           using Mat_t = Eigen::Matrix<Real, Dim, Dim>;
-          T4 K;
+          T4_t K;
           Tmap Kmap{K.data()};
           K.setZero();
           Mat_t F_inv{F.inverse()};
           Mat_t F_invT{F_inv.transpose()};
-          T4 MIRT{-Matrices::Itrns<Dim>()};
-          T4 intermediate{Matrices::dot<Dim>(MIRT, tau) + C};
+          T4_t MIRT{-Matrices::Iiden<Dim>()};
+          T4_t intermediate{Matrices::dot<Dim>(MIRT, tau) + C};
+          auto printer = [] (const T4_t& mat) {
+            for (int i = 0; i < Dim; ++i) {
+              for (int j = 0; j < Dim; ++j) {
+                for (int k = 0; k < Dim; ++k) {
+                  for (int l = 0; l < Dim; ++l) {
+                    std::cout << "(" << i << ", " << j << ", " << k << ", " << l << ") " << get(mat, i,j,k,l) << std::endl;
+                  }
+                }
+              }
+            }
+          };
+          std::cout << "C (should be K4b):" << std::endl;
+          printer(C);
+          std::cout << "dot(MIRT, tau):" << std::endl;
+          printer(Matrices::dot<Dim>(MIRT, tau));
+          std::cout << "2*intermediate (should be K4c):" << std::endl;
+          printer(2*intermediate);
+
           for (int i = 0; i < Dim; ++i) {
             for (int a = 0; a < Dim; ++a) {
               for (int j = 0; j < Dim; ++j) {
@@ -446,6 +464,8 @@ namespace muSpectre {
               }
             }
           }
+          std::cout << "K:" << std::endl;
+          printer(K);
           Mat_t P = tau * F_inv.transpose();
           return std::make_tuple(std::move(P), std::move(K));
         }

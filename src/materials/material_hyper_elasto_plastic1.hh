@@ -381,27 +381,14 @@ namespace muSpectre {
     T4_t MIRT{-Matrices::Itrns<DimM>()};
     T4_t dlnbe_dbe{compute_dlnbe_dbe()};
     T4_t dbe4s{compute_dbe4s()};
-    auto printer = [] (const T4_t& mat) {
-      for (int i = 0; i < DimM; ++i) {
-        for (int j = 0; j < DimM; ++j) {
-          for (int k = 0; k < DimM; ++k) {
-            for (int l = 0; l < DimM; ++l) {
-              std::cout << "(" << i << ", " << j << ", " << k << ", " << l << ") " << get(mat, i,j,k,l) << std::endl;
-            }
-          }
-        }
-      }
-    };
 
     T4_t dtau_dbe((mat_tangent * dlnbe_dbe * dbe4s +
                    Matrices::dot<DimM>(MIRT, tau)));
-    printer(dtau_dbe);
     Mat_t && Finv{F.inverse()};
     T4_t ret_val{odot(Matrices::dot<DimM>(Finv, dtau_dbe), Finv)};
-    printer(ret_val);
     std::cout << "F:\n" << F << std::endl << "K4:\n" << ret_val << std::endl;
 
-    return std::tuple<Mat_t, T4_t>(tau, mat_tangent);
+    //return std::tuple<Mat_t, T4_t>(tau, mat_tangent);
     return std::tuple<Mat_t, T4_t>(tau, dtau_dbe);
   }
 
