@@ -126,6 +126,54 @@ namespace muSpectre {
       return std::make_tuple(P,K);
     }
 
+
+    /**
+     * recomputes a colmajor representation of a fourth-rank rowmajor
+     * tensor. this is useful when comparing to reference results
+     * computed in numpy
+     */
+    template<class Derived>
+    inline auto
+    from_numpy(const Eigen::MatrixBase<Derived> & t4_np) ->
+      Eigen::Matrix<
+        typename Derived::Scalar,
+        Derived::RowsAtCompileTime,
+        Derived::ColsAtCompileTime>
+
+    {
+      constexpr Dim_t Rows{Derived::RowsAtCompileTime};
+      constexpr Dim_t Cols{Derived::ColsAtCompileTime};
+      constexpr Dim_t DimSq{Rows};
+      using T = typename Derived::Scalar;
+      static_assert(Rows == Cols,
+                    "only square problems");
+      constexpr Dim_t Dim{ct_sqrt(DimSq)};
+      static_assert((Dim == twoD) or (Dim == threeD),
+                    "only two- and three-dimensional problems");
+      static_assert(ipow(Dim,2) == DimSq,
+                    "The array is not a valid fourth order tensor");
+      T4Mat<T, Dim> retval{T4Mat<T, Dim>::Zero()};
+      T4Mat<T, Dim> intermediate{T4Mat<T, Dim>::Zero()};
+      // transpose rows
+      for (int row{0}; row < DimSq; ++row) {
+        for (int i{0}; i < Dim; ++i) {
+          for (int j{0}; j < Dim; ++j) {
+            intermediate(row, i+Dim*j) = t4_np(row, i*Dim+j);
+          }
+        }
+      }
+      //transpose columns
+      for (int col{0}; col < DimSq; ++col) {
+        for (int i{0}; i < Dim; ++i) {
+          for (int j{0}; j < Dim; ++j) {
+            retval(i+Dim*j, col) = intermediate(i*Dim+j, col);
+          }
+        }
+      }
+      return retval;
+    }
+
+
   }  // testGoodies
 
 }  // muSpectre

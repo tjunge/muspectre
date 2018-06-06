@@ -31,6 +31,7 @@
 #include "materials/material_hyper_elasto_plastic1.hh"
 #include "materials/materials_toolbox.hh"
 #include "tests.hh"
+#include "test_goodies.hh"
 
 namespace muSpectre {
 
@@ -393,8 +394,53 @@ namespace muSpectre {
       }
 
       // check also whether pull_back is correct
-      Eigen::Matrix<Real, ipow(mdim,2), ipow(mdim,2), Eigen::RowMajor> K4_ref{};
-      K4_ref << 8.46541479e-01, -1.11250597e-03,  0.00000000e+00,
+
+      Stiffness_t intermediate{stiffness};
+      for (int i{0}; i < mdim; ++i) {
+        for (int j{0}; j < mdim; ++j) {
+          for (int l{0}; l < mdim; ++l) {
+            get(intermediate, i,j,i,l) -= stress(j,l);
+          }
+        }
+      }
+      Stiffness_t temp{};
+      temp <<  8.46145176e-01, -8.69007382e-04,  0.00000000e+00,
+        -2.85052074e-03,  8.26305692e-01,  0.00000000e+00,
+         0.00000000e+00,  0.00000000e+00,  8.26350980e-01,
+       -2.85052074e-03,  1.41564428e-03,  0.00000000e+00,
+         1.61379562e-03,  8.69007382e-04,  0.00000000e+00,
+         0.00000000e+00,  0.00000000e+00,  5.58242059e-18,
+        0.00000000e+00,  0.00000000e+00,  9.90756677e-03,
+         0.00000000e+00,  0.00000000e+00, -9.90756677e-04,
+         1.01057181e-02,  9.90756677e-04,  0.00000000e+00,
+       -8.69007382e-04,  1.21749295e-03,  0.00000000e+00,
+         1.41564428e-03, -1.11250597e-03,  0.00000000e+00,
+         0.00000000e+00,  0.00000000e+00,  5.58242059e-18,
+        8.26305692e-01, -1.11250597e-03,  0.00000000e+00,
+         8.69007382e-04,  8.46541479e-01,  0.00000000e+00,
+         0.00000000e+00,  0.00000000e+00,  8.26350980e-01,
+        0.00000000e+00,  0.00000000e+00, -9.90756677e-04,
+         0.00000000e+00,  0.00000000e+00,  1.01057181e-02,
+         9.90756677e-04,  9.90756677e-03,  0.00000000e+00,
+        0.00000000e+00,  0.00000000e+00,  9.90756677e-03,
+         0.00000000e+00,  0.00000000e+00, -9.90756677e-04,
+         9.90756677e-03, -9.90756677e-04,  0.00000000e+00,
+        0.00000000e+00,  0.00000000e+00, -9.90756677e-04,
+         0.00000000e+00,  0.00000000e+00,  1.01057181e-02,
+        -9.90756677e-04,  1.01057181e-02,  0.00000000e+00,
+        8.26350980e-01,  0.00000000e+00,  0.00000000e+00,
+         1.38777878e-17,  8.26350980e-01,  0.00000000e+00,
+         0.00000000e+00,  0.00000000e+00,  8.46298039e-01;
+      //fix for the last two dimensions being inverted for Geers
+      Stiffness_t K4c_ref{testGoodies::from_numpy(temp)};
+      error = (K4c_ref - intermediate).norm()/K4c_ref.norm();
+      BOOST_CHECK_LT(error, hi_tol);
+      if (not (error < hi_tol)) {
+        std::cout << "stiffness reference:\n" << K4c_ref << std::endl;
+        std::cout << "stiffness computed:\n" << intermediate << std::endl;
+      }
+
+      temp << 8.46541479e-01, -1.11250597e-03,  0.00000000e+00,
         -1.68439288e-01,  8.26528194e-01,  0.00000000e+00,
          0.00000000e+00,  0.00000000e+00,  8.26350980e-01,
        -1.68439288e-01,  1.63814548e-03,  0.00000000e+00,
@@ -421,21 +467,13 @@ namespace muSpectre {
         8.26350980e-01,  0.00000000e+00,  0.00000000e+00,
         -1.65270196e-01,  8.26350980e-01,  0.00000000e+00,
          0.00000000e+00,  0.00000000e+00,  8.46298039e-01;
+      Stiffness_t K4_ref{testGoodies::from_numpy(temp)};
 
       Stiffness_t stiffnessP{};
       Strain_t P{};
       std::tie(P, stiffnessP) = MatTB::PK1_stress<StressMeasure::Kirchhoff,
                                                  StrainMeasure::Gradient>
         (F, stress, stiffness);
-
-      //fix for the last two dimensions being inverted for Geers
-      for (int i{0}; i < ipow(mdim, 2); ++i) {
-        using RowMap = Eigen::Map<Eigen::Matrix<Real, mdim, mdim>>;
-        RowMap map(&K4_ref.row(i)(0));
-        map = map.transpose().eval();
-        RowMap map2(&stiffnessP.col(i)(0));
-        map2 = map2.transpose().eval();
-      }
 
       error = (K4_ref - stiffnessP).norm()/K4_ref.norm();
       BOOST_CHECK_LT(error, hi_tol);
