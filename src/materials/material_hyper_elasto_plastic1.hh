@@ -229,15 +229,8 @@ namespace muSpectre {
     // (https://doi.org/10.1016/j.cma.2003.07.014).
 
     // computation of trial state
-    std::cout << "F\n" << F << std::endl;
     using Mat_t = Eigen::Matrix<Real, DimM, DimM>;
-    Mat_t F_prev_val = F_prev.old();
-    std::cout << "F_prev\n" << F_prev_val << std::endl;
     Mat_t f{F*F_prev.old().inverse()};
-    Mat_t be_prev_val = be_prev.old();
-    std::cout << "be_prev\n" << be_prev_val << std::endl;
-    Real eps_p_val{eps_p.old()};
-    std::cout << "eps_p = " << eps_p_val << std::endl;
     Mat_t be_star{f*be_prev.old()*f.transpose()};
     const Decomp_t<DimM> spectral_decomp{spectral_decomposition(be_star)};
     Mat_t ln_be_star{logm_alt(spectral_decomp)};
@@ -278,20 +271,16 @@ namespace muSpectre {
   MaterialHyperElastoPlastic1<DimS, DimM>::
   evaluate_stress(grad_t && F, StrainStRef_t F_prev, StrainStRef_t be_prev,
                   FlowStRef_t eps_p)  {
-    auto && vals{this->stress_n_internals_worker
-    (std::forward<grad_t>(F), F_prev, be_prev, eps_p)};
-    auto retval(std::move(std::get<0>(vals)));
-    auto && is_plastic {std::get<4>(vals)};
+    Eigen::Matrix<Real, DimM, DimM> tau;
+    std::tie(tau, std::ignore,
+             std::ignore, std::ignore,
+             std::ignore, std::ignore,
+             std::ignore) = this->stress_n_internals_worker
+      (std::forward<grad_t>(F), F_prev, be_prev, eps_p);
 
-    if (is_plastic) {
-      std::cout << "Plasticity at F =\n" << F << std::endl;
-    } else {
-      std::cout << "Elasticity at F =\n" << F << std::endl;
-    }
-
-
-    return retval;
+    return tau;
   }
+
   //----------------------------------------------------------------------------//
   template <Dim_t DimS, Dim_t DimM>
   template <class grad_t>
@@ -329,46 +318,28 @@ namespace muSpectre {
       const Vec_t log_eig_vals{eig_vals.array().log().matrix()};
       const Mat_t & eig_vecs{spec_decomp.eigenvectors()};
 
-      std::cout << "reconstructed bₑ:\n" << eig_vecs*eig_vals.asDiagonal()*eig_vecs.transpose()
-      << std::endl;
-
       Mat_t g_vals{};
       // see (78), (79)
       for (int i{0}; i < DimM; ++i) {
         g_vals(i, i) = 1/eig_vals(i);
         for (int j{i+1}; j < DimM; ++j) {
+          if (std::abs((eig_vals(i)-eig_vals(j))/eig_vals(i)) < 1e-12 ) {
+            g_vals(i, j) = g_vals(i, i);
+          } else {
           g_vals(i, j) = g_vals(j, i) = ((log_eig_vals(j) - log_eig_vals(i)) /
                                          (eig_vals(j) - eig_vals(i)));
+          }
         }
       }
 
       for (int i{0}; i < DimM; ++i) {
-        std::cout << "e(" << i << ") = " << eig_vecs.col(i).transpose() << std::endl;
         for (int j{0}; j < DimM; ++j) {
-          std::cout << "e(" << j << ") = " << eig_vecs.col(j).transpose() << std::endl;
-          std::cout << "g(µᵢ, μⱼ) = " << g_vals(i, j) << std::endl;
           Mat_t dyad = eig_vecs.col(i) * eig_vecs.col(j).transpose();
           T4_t outerDyad = Matrices::outer(dyad, dyad);
           retval += g_vals(i,j) * outerDyad;
         }
       }
       return retval;
-    };
-
-    auto odot = [] (auto && T4, auto && T2) {
-      T4_t ret_val(T4_t::Zero());
-      for (Int i = 0; i < DimM; ++i) {
-        for (Int j = 0; j < DimM; ++j) {
-          for (Int k = 0; k < DimM; ++k) {
-            for (Int l = 0; l < DimM; ++l) {
-              for (Int m = 0; m < DimM; ++m) {
-                get(ret_val,i,j,k,l) += get(T4,i,m,k,l)*T2(m,j);
-              }
-            }
-          }
-        }
-      }
-      return ret_val;
     };
 
     // compute variation δbe_star
@@ -382,13 +353,7 @@ namespace muSpectre {
     T4_t dlnbe_dbe{compute_dlnbe_dbe()};
     T4_t dbe4s{compute_dbe4s()};
 
-    T4_t dtau_dbe((mat_tangent * dlnbe_dbe * dbe4s +
-                   Matrices::dot<DimM>(MIRT, tau)));
-    Mat_t && Finv{F.inverse()};
-    T4_t ret_val{odot(Matrices::dot<DimM>(Finv, dtau_dbe), Finv)};
-    std::cout << "F:\n" << F << std::endl << "K4:\n" << ret_val << std::endl;
-
-    //return std::tuple<Mat_t, T4_t>(tau, mat_tangent);
+    T4_t dtau_dbe{mat_tangent * dlnbe_dbe * dbe4s};
     return std::tuple<Mat_t, T4_t>(tau, dtau_dbe);
   }
 

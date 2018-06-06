@@ -424,32 +424,20 @@ namespace muSpectre {
         inline static decltype(auto)
         compute(Strain_t && F, Stress_t && tau, Tangent_t && C) {
           using T4_t = T4Mat<Real, Dim>;
-          using Tmap = T4MatMap<Real, Dim>;
           using Mat_t = Eigen::Matrix<Real, Dim, Dim>;
           T4_t K;
-          Tmap Kmap{K.data()};
           K.setZero();
           Mat_t F_inv{F.inverse()};
-          Mat_t F_invT{F_inv.transpose()};
-          T4_t MIRT{-Matrices::Iiden<Dim>()};
-          T4_t intermediate{Matrices::dot<Dim>(MIRT, tau) + C};
-          auto printer = [] (const T4_t& mat) {
-            for (int i = 0; i < Dim; ++i) {
-              for (int j = 0; j < Dim; ++j) {
-                for (int k = 0; k < Dim; ++k) {
-                  for (int l = 0; l < Dim; ++l) {
-                    std::cout << "(" << i << ", " << j << ", " << k << ", " << l << ") " << get(mat, i,j,k,l) << std::endl;
-                  }
-                }
+          //T4_t MIRT{-Matrices::Itrns<Dim>()};
+          //T4_t intermediate{Matrices::dot<Dim>(MIRT, tau) + C};
+          T4_t intermediate{C};
+          for (int i{0}; i < Dim; ++i) {
+            for (int j{0}; j < Dim; ++j) {
+              for (int l{0}; l < Dim; ++l) {
+                get(intermediate, i,j,i,l) -= tau(j,l);
               }
             }
-          };
-          std::cout << "C (should be K4b):" << std::endl;
-          printer(C);
-          std::cout << "dot(MIRT, tau):" << std::endl;
-          printer(Matrices::dot<Dim>(MIRT, tau));
-          std::cout << "2*intermediate (should be K4c):" << std::endl;
-          printer(2*intermediate);
+          }
 
           for (int i = 0; i < Dim; ++i) {
             for (int a = 0; a < Dim; ++a) {
@@ -457,15 +445,16 @@ namespace muSpectre {
                 for (int k = 0; k < Dim; ++k) {
                   for (int b = 0; b < Dim; ++b) {
                     for (int l = 0; l < Dim; ++l) {
-                      get(Kmap,i,j,k,l) += F_inv(i,a)*get(intermediate,a,j,k,b)*F_invT(b,l);
+                      get(K,i,j,k,l) += (F_inv(i,a) *
+                                         get(intermediate,a,j,k,b) *
+                                         // l, b inverted for transpose
+                                         F_inv(l,b));
                     }
                   }
                 }
               }
             }
           }
-          std::cout << "K:" << std::endl;
-          printer(K);
           Mat_t P = tau * F_inv.transpose();
           return std::make_tuple(std::move(P), std::move(K));
         }
