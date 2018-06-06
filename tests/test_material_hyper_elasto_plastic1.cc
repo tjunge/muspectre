@@ -268,8 +268,8 @@ namespace muSpectre {
       BOOST_CHECK_LT(error, hi_tol);
 
       // in rowmajor to fix the last two inverted indices in Geers notation
-      Eigen::Matrix<Real, ipow(mdim,2), ipow(mdim,2), Eigen::RowMajor> K4b_ref{};
-      K4b_ref << 1.34766667e+00,  3.86000000e-06,  0.00000000e+00,
+      Stiffness_t temp;
+      temp << 1.34766667e+00,  3.86000000e-06,  0.00000000e+00,
         -3.86000000e-06,  5.75666667e-01,  0.00000000e+00,
          0.00000000e+00,  0.00000000e+00,  5.75666667e-01,
        -3.61540123e-17,  3.86000000e-01,  0.00000000e+00,
@@ -296,13 +296,7 @@ namespace muSpectre {
         5.75666667e-01,  2.61999996e-17,  0.00000000e+00,
          2.61999996e-17,  5.75666667e-01,  0.00000000e+00,
          0.00000000e+00,  0.00000000e+00,  1.34766667e+00;
-
-      //fix for the last two dimensions being inverted for Geers
-      for (int i{0}; i < ipow(mdim, 2); ++i) {
-        using RowMap = Eigen::Map<Eigen::Matrix<Real, mdim, mdim>>;
-        RowMap map(&K4b_ref.row(i)(0));
-        map = map.transpose().eval();
-      }
+      Stiffness_t K4b_ref{testGoodies::right_transpose(temp)};
 
       error = (K4b_ref - stiffness).norm()/K4b_ref.norm();
       BOOST_CHECK_LT(error, hi_tol);
@@ -348,9 +342,8 @@ namespace muSpectre {
       error = (ep_ref-eps_prev[0].current())/ep_ref;
       BOOST_CHECK_LT(error, hi_tol);
 
-      // in rowmajor to fix the last two inverted indices in Geers notation
-      Eigen::Matrix<Real, ipow(mdim,2), ipow(mdim,2), Eigen::RowMajor> K4b_ref{};
-      K4b_ref << 8.46343327e-01,  1.11250597e-03,  0.00000000e+00,
+      Stiffness_t temp{};
+      temp << 8.46343327e-01,  1.11250597e-03,  0.00000000e+00,
         -2.85052074e-03,  8.26305692e-01,  0.00000000e+00,
          0.00000000e+00,  0.00000000e+00,  8.26350980e-01,
        -8.69007382e-04,  1.21749295e-03,  0.00000000e+00,
@@ -377,14 +370,9 @@ namespace muSpectre {
         8.26350980e-01,  0.00000000e+00,  0.00000000e+00,
          1.38777878e-17,  8.26350980e-01,  0.00000000e+00,
          0.00000000e+00,  0.00000000e+00,  8.46298039e-01;
-      error = (K4b_ref - stiffness).norm()/K4b_ref.norm();
 
-      //fix for the last two dimensions being inverted for Geers
-      for (int i{0}; i < ipow(mdim, 2); ++i) {
-        using RowMap = Eigen::Map<Eigen::Matrix<Real, mdim, mdim>>;
-        RowMap map(&K4b_ref.row(i)(0));
-        map = map.transpose().eval();
-      }
+      Stiffness_t K4b_ref{testGoodies::right_transpose(temp)};
+      error = (K4b_ref - stiffness).norm()/K4b_ref.norm();
 
       error = (K4b_ref - stiffness).norm()/K4b_ref.norm();
       BOOST_CHECK_LT(error, hi_tol);
@@ -403,7 +391,7 @@ namespace muSpectre {
           }
         }
       }
-      Stiffness_t temp{};
+
       temp <<  8.46145176e-01, -8.69007382e-04,  0.00000000e+00,
         -2.85052074e-03,  8.26305692e-01,  0.00000000e+00,
          0.00000000e+00,  0.00000000e+00,  8.26350980e-01,
@@ -431,7 +419,7 @@ namespace muSpectre {
         8.26350980e-01,  0.00000000e+00,  0.00000000e+00,
          1.38777878e-17,  8.26350980e-01,  0.00000000e+00,
          0.00000000e+00,  0.00000000e+00,  8.46298039e-01;
-      //fix for the last two dimensions being inverted for Geers
+
       Stiffness_t K4c_ref{testGoodies::from_numpy(temp)};
       error = (K4c_ref - intermediate).norm()/K4c_ref.norm();
       BOOST_CHECK_LT(error, hi_tol);
@@ -467,7 +455,7 @@ namespace muSpectre {
         8.26350980e-01,  0.00000000e+00,  0.00000000e+00,
         -1.65270196e-01,  8.26350980e-01,  0.00000000e+00,
          0.00000000e+00,  0.00000000e+00,  8.46298039e-01;
-      Stiffness_t K4_ref{testGoodies::from_numpy(temp)};
+      Stiffness_t K4_ref{testGoodies::right_transpose(testGoodies::from_numpy(temp))};
 
       Stiffness_t stiffnessP{};
       Strain_t P{};
@@ -492,7 +480,7 @@ namespace muSpectre {
 
   /* ---------------------------------------------------------------------- */
   BOOST_FIXTURE_TEST_CASE_TEMPLATE(stress_strain_test, Fix, mats, Fix) {
-    
+
   }
 
   BOOST_AUTO_TEST_SUITE_END();

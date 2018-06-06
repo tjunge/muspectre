@@ -56,16 +56,29 @@ namespace muSpectre {
    * provides index-based access to fourth-order Tensors represented
    * by square matrices
    */
-  template <typename T4>
-  inline auto get(T4&& t4, Dim_t i, Dim_t j, Dim_t k, Dim_t l)
-    -> decltype(t4.coeffRef(i,j)) {
-    constexpr Dim_t Dim{EigenCheck::tensor_4_dim<T4>::value};
+  template <typename Derived>
+  inline auto get(const Eigen::MatrixBase<Derived> & t4, Dim_t i, Dim_t j, Dim_t k, Dim_t l)
+    -> decltype(t4(i,j)) {
+    constexpr Dim_t Dim{EigenCheck::tensor_4_dim<Derived>::value};
     const auto myColStride{
       (t4.colStride() == 1) ? t4.colStride(): t4.colStride()/Dim};
     const auto myRowStride{
       (t4.rowStride() == 1) ? t4.rowStride(): t4.rowStride()/Dim};
-    return t4.coeffRef(i * myRowStride + j * myColStride,
-                       k * myRowStride + l * myColStride);
+    return t4(i * myRowStride + j * myColStride,
+              k * myRowStride + l * myColStride);
+
+  }
+
+  template <typename Derived>
+  inline auto get(Eigen::MatrixBase<Derived> & t4, Dim_t i, Dim_t j, Dim_t k, Dim_t l)
+    -> decltype(t4(i,j)) {
+    constexpr Dim_t Dim{EigenCheck::tensor_4_dim<Derived>::value};
+    const auto myColStride{
+      (t4.colStride() == 1) ? t4.colStride(): t4.colStride()/Dim};
+    const auto myRowStride{
+      (t4.rowStride() == 1) ? t4.rowStride(): t4.rowStride()/Dim};
+    return t4(i * myRowStride + j * myColStride,
+              k * myRowStride + l * myColStride);
 
   }
 

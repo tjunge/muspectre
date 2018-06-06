@@ -127,6 +127,47 @@ namespace muSpectre {
     }
 
 
+
+    /**
+     * takes a 4th-rank tensor and returns a copy with the last two
+     * dimensions switched. This is particularly useful to check for
+     * identity between a stiffness tensors computed the regular way
+     * and the Geers way. For testing, not efficient.
+     */
+    template<class Derived>
+    inline auto
+    right_transpose(const Eigen::MatrixBase<Derived> & t4) ->
+      Eigen::Matrix<
+        typename Derived::Scalar,
+        Derived::RowsAtCompileTime,
+        Derived::ColsAtCompileTime>
+
+    {
+      constexpr Dim_t Rows{Derived::RowsAtCompileTime};
+      constexpr Dim_t Cols{Derived::ColsAtCompileTime};
+      constexpr Dim_t DimSq{Rows};
+      using T = typename Derived::Scalar;
+      static_assert(Rows == Cols,
+                    "only square problems");
+      constexpr Dim_t Dim{ct_sqrt(DimSq)};
+      static_assert((Dim == twoD) or (Dim == threeD),
+                    "only two- and three-dimensional problems");
+      static_assert(ipow(Dim,2) == DimSq,
+                    "The array is not a valid fourth order tensor");
+      T4Mat<T, Dim> retval{T4Mat<T, Dim>::Zero()};
+
+      for (int i{0}; i < Dim; ++i) {
+        for (int j{0}; j < Dim; ++j) {
+          for (int k{0}; k < Dim; ++k) {
+            for (int l{0}; l < Dim; ++l) {
+              get(retval, i,j,k,l) = get(t4, i,j,l,k);
+            }
+          }
+        }
+      }
+      return retval;
+    }
+
     /**
      * recomputes a colmajor representation of a fourth-rank rowmajor
      * tensor. this is useful when comparing to reference results
