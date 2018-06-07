@@ -27,7 +27,8 @@
  * Boston, MA 02111-1307, USA.
  */
 
-#include "solvers.hh"
+#include "solver/solvers.hh"
+#include "common/iterators.hh"
 
 #include <Eigen/Dense>
 
@@ -133,7 +134,9 @@ namespace muSpectre {
 
     auto F{cell.get_strain_vector()};
     //! incremental loop
-    for (const auto & macro_strain: load_steps) {
+    for (const auto & tup: akantu::enumerate(load_steps)) {
+      const auto & strain_step{std::get<0>(tup)};
+      const auto & macro_strain{std::get<1>(tup)};
       using StrainMap_t = RawFieldMap<Eigen::Map<Eigen::MatrixXd>>;
       for (auto && strain: StrainMap_t(F, shape[0], shape[1])) {
         strain += macro_strain - previous_macro_strain;
@@ -174,7 +177,21 @@ namespace muSpectre {
         }
 
         //! this is a potentially avoidable copy TODO: check this out
+        try {
         incrF = solver.solve(rhs);
+        } catch (ConvergenceError & error) {
+          std::stringstream err{};
+          err << "Failure at load step "<< strain_step+1  << " of "
+              << load_steps.size() << ". In Newton-Raphson step "
+              << newt_iter << ":" << std::endl
+              << error.what() << std::endl
+              << "The applied boundary condition is " << strain_symb << " ="
+              << std::endl << macro_strain << std::endl
+              << "and the load increment is Δ" << strain_symb << " ="
+              << std::endl << macro_strain - previous_macro_strain<< std::endl;
+          throw ConvergenceError(err.str());
+        }
+
 
         F += incrF;
 
@@ -194,7 +211,16 @@ namespace muSpectre {
         }
         convergence_test();
       }
-
+      if (newt_iter == solver.get_maxiter()) {
+        std::stringstream err{};
+        err << "Failure at load step "<< strain_step+1  << " of "
+            << load_steps.size() << ". Newton-Raphson failed to converge. "
+            << "The applied boundary condition is " << strain_symb << " ="
+            << std::endl << macro_strain << std::endl
+            << "and the load increment is Δ" << strain_symb << " ="
+            << std::endl << macro_strain - previous_macro_strain<< std::endl;
+          throw ConvergenceError(err.str());
+      }
 
       // update previous macroscopic strain
       previous_macro_strain = macro_strain;
@@ -316,7 +342,9 @@ namespace muSpectre {
 
     auto F{cell.get_strain_vector()};
     //! incremental loop
-    for (const auto & macro_strain: load_steps) {
+    for (const auto & tup: akantu::enumerate(load_steps)) {
+      const auto & strain_step{std::get<0>(tup)};
+      const auto & macro_strain{std::get<1>(tup)};
       using StrainMap_t = RawFieldMap<Eigen::Map<Eigen::MatrixXd>>;
 
       std::string message{"Has not converged"};
@@ -345,27 +373,41 @@ namespace muSpectre {
         auto res_tup{cell.evaluate_stress_tangent()};
         auto & P{std::get<0>(res_tup)};
 
-        if (newt_iter == 0) {
-          for (auto && strain: StrainMap_t(DeltaF, shape[0], shape[1])) {
-            strain = macro_strain -previous_macro_strain;
+        try {
+          if (newt_iter == 0) {
+            for (auto && strain: StrainMap_t(DeltaF, shape[0], shape[1])) {
+              strain = macro_strain -previous_macro_strain;
+            }
+            rhs = - cell.evaluate_projected_directional_stiffness(DeltaF);
+            stress_norm = std::sqrt(comm.sum(rhs.matrix().squaredNorm()));
+            if (convergence_test()) {
+              break;
+            }
+            incrF = solver.solve(rhs);
+            F += DeltaF;
           }
-          rhs = - cell.evaluate_projected_directional_stiffness(DeltaF);
-          stress_norm = std::sqrt(comm.sum(rhs.matrix().squaredNorm()));
-          if (convergence_test()) {
-            break;
+          else {
+            rhs = -P;
+            cell.apply_projection(rhs);
+            stress_norm = std::sqrt(comm.sum(rhs.matrix().squaredNorm()));
+            if (convergence_test()) {
+              break;
+            }
+            incrF = solver.solve(rhs);
           }
-          incrF = solver.solve(rhs);
-          F += DeltaF;
+        } catch (ConvergenceError & error) {
+          std::stringstream err{};
+          err << "Failure at load step "<< strain_step+1  << " of "
+              << load_steps.size() << ". In Newton-Raphson step "
+              << newt_iter << ":" << std::endl
+              << error.what() << std::endl
+              << "The applied boundary condition is " << strain_symb << " ="
+              << std::endl << macro_strain << std::endl
+              << "and the load increment is Δ" << strain_symb << " ="
+              << std::endl << macro_strain - previous_macro_strain<< std::endl;
+          throw ConvergenceError(err.str());
         }
-        else {
-          rhs = -P;
-          cell.apply_projection(rhs);
-          stress_norm = std::sqrt(comm.sum(rhs.matrix().squaredNorm()));
-          if (convergence_test()) {
-            break;
-          }
-          incrF = solver.solve(rhs);
-        }
+
 
         F += incrF;
 
@@ -384,6 +426,16 @@ namespace muSpectre {
           }
         }
         convergence_test();
+      }
+      if (newt_iter == solver.get_maxiter()) {
+        std::stringstream err{};
+        err << "Failure at load step "<< strain_step+1  << " of "
+            << load_steps.size() << ". Newton-Raphson failed to converge. "
+            << "The applied boundary condition is " << strain_symb << " ="
+            << std::endl << macro_strain << std::endl
+            << "and the load increment is Δ" << strain_symb << " ="
+            << std::endl << macro_strain - previous_macro_strain<< std::endl;
+          throw ConvergenceError(err.str());
       }
 
 

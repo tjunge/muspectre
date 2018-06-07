@@ -455,7 +455,7 @@ namespace muSpectre {
         8.26350980e-01,  0.00000000e+00,  0.00000000e+00,
         -1.65270196e-01,  8.26350980e-01,  0.00000000e+00,
          0.00000000e+00,  0.00000000e+00,  8.46298039e-01;
-      Stiffness_t K4_ref{testGoodies::right_transpose(testGoodies::from_numpy(temp))};
+      Stiffness_t K4_ref{testGoodies::from_numpy(temp)};
 
       Stiffness_t stiffnessP{};
       Strain_t P{};
