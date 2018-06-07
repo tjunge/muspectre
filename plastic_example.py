@@ -2,7 +2,7 @@
 
 import numpy as np
 import sys
-sys.path.append("build-clang-5.0-dbg/language_bindings/python")
+sys.path.append("build-clang-5.0/language_bindings/python")
 import muSpectre as msp
 import matplotlib.pyplot as plt
 
@@ -75,7 +75,7 @@ del_gamma = Del_gamma/nb_gamma
 Del0 = get_Del0((i*del_gamma for i in range(1, nb_gamma+1)))
 
 
-maxiter = 1000 ## for linear cell solver
+maxiter = 500 ## for linear cell solver
 
 ## Choose a solver for the linear cells. Currently avaliable:
 ## SolverCG, SolverCGEigen, SolverBiCGSTABEigen, SolverGMRESEigen,

@@ -10,7 +10,7 @@ np.seterr(divide='ignore', invalid='ignore')
 
 
 def reference_curve (tauy0_input, h_input, max_shear, E, nu,
-                     shear_incr):
+                     shear_incr, sym_stretch):
     # ----------------------------------- GRID ------------------------------------
 
     Nx     = 5          # number of voxels in x-direction
@@ -222,6 +222,7 @@ def reference_curve (tauy0_input, h_input, max_shear, E, nu,
     dtau = np.zeros_like(gammas)
     sigma_xx = np.zeros_like(gammas)
     dsigma_xx = np.zeros_like(gammas)
+    epsbar = 0
     for inc in range(ninc):
 
         #print('=============================')
@@ -235,9 +236,15 @@ def reference_curve (tauy0_input, h_input, max_shear, E, nu,
 
         # store normalization
         Fn = np.linalg.norm(F)
-        F[0,1] += shear_incr
+        epsbar +=shear_incr
+        if sym_stretch:
+            stretch = np.exp(np.sqrt(3.0)/2.0*epsbar)
+            F[0,0] = stretch
+            F[1,1] = 1/stretch
+        else:
+            F[0,1] = epsbar
         P,K4,be,ep = constitutive(F,F_t,be_t,ep_t)
-        gammas[inc] = F[0,1, 0, 0, 0]
+        gammas[inc] = epsbar
         tau[inc] = P[0,1, 0, 0, 0]
         dtau[inc] = K_dF(del_tau)[0,1,0,0,0]
         sigma_xx[inc] = P[0, 0, 0, 0, 0]
@@ -284,12 +291,14 @@ def reference_curve (tauy0_input, h_input, max_shear, E, nu,
 
 
 if __name__ == "__main__":
-    gammas, tau, sigma_xx, del_tau, del_sigxx = reference_curve(tauy0_input=.006,
-                    h_input = .008*2,
-                    max_shear = 5e-2,
-                    E = 1.0030648180242636,
-                    nu = 0.299306759098787,
-                    shear_incr=5e-3)
+    gammas, tau, sigma_xx, del_tau, del_sigxx = reference_curve(
+        tauy0_input=.006,
+        h_input = .008*2,
+        max_shear = 5e-2,
+        E = 1.0030648180242636,
+        nu = 0.299306759098787,
+        shear_incr=5e-3,
+        sym_stretch=False)
 
     import matplotlib.pyplot as plt
     plt.plot(gammas, tau, "+-")
