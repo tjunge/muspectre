@@ -91,7 +91,10 @@ namespace muSpectre {
     Mat_t tau_d_star{tau_star - tau_star.trace()/DimM*tau_star.Identity()};
     Real tau_eq_star{std::sqrt(3*.5*(tau_d_star.array()*
                                      tau_d_star.transpose().array()).sum())};
-    Mat_t N_star{3*.5*tau_d_star/tau_eq_star};
+    // tau_eq_star can only be zero if tau_d_star is identically zero,
+    // so the following is not an approximation;
+    Real division_safe_tau_eq_star{tau_eq_star + Real(tau_eq_star==0.)};
+    Mat_t N_star{3*.5*tau_d_star/division_safe_tau_eq_star};
     // this is eq (27), and the std::min enforces the Kuhn-Tucker relation (16)
     Real phi_star{std::max(tau_eq_star - this->tau_y0 - this->H * eps_p.old(), 0.)};
 

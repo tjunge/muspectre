@@ -36,6 +36,8 @@
 
 namespace muSpectre {
 
+  Eigen::IOFormat format(Eigen::FullPrecision, 0, ", ", ",\n", "[", "]", "[", "]");
+
   //----------------------------------------------------------------------------//
   std::vector<OptimizeResult>
   newton_cg(Cell & cell, const LoadSteps_t & load_steps,
@@ -78,14 +80,15 @@ namespace muSpectre {
       }
       std::cout << " strain with" << std::endl
                 << "newton_tol = " << newton_tol << ", cg_tol = "
-                << solver.get_tol() << " maxiter = " << solver.get_maxiter() << " and Δ"
-                << strain_symb << " =" <<std::endl;
-      for (auto&& tup: akantu::enumerate(load_steps)) {
-        auto && counter{std::get<0>(tup)};
-        auto && grad{std::get<1>(tup)};
-        std::cout << "Step " << counter + 1 << ":" << std::endl
-                  << grad << std::endl;
-      }
+                << solver.get_tol() << " maxiter = " << solver.get_maxiter()
+                << " and "
+                << strain_symb << " from " << strain_symb << "₁ =" << std::endl
+                << load_steps.front() << std::endl
+                << " to " << strain_symb << "ₙ =" << std::endl
+                << load_steps.back() << std::endl
+                <<"in increments of Δ" << strain_symb << " =" << std::endl
+                << (load_steps.back()-load_steps.front())/load_steps.size()
+                << std::endl;
       count_width = size_t(std::log10(solver.get_maxiter()))+1;
     }
 
@@ -137,6 +140,10 @@ namespace muSpectre {
     for (const auto & tup: akantu::enumerate(load_steps)) {
       const auto & strain_step{std::get<0>(tup)};
       const auto & macro_strain{std::get<1>(tup)};
+      if ((verbose > 0) and (comm.rank() == 0)) {
+        std::cout << "at Load step " << std::setw(count_width) << strain_step+1
+                  << std::endl;
+      }
       using StrainMap_t = RawFieldMap<Eigen::Map<Eigen::MatrixXd>>;
       for (auto && strain: StrainMap_t(F, shape[0], shape[1])) {
         strain += macro_strain - previous_macro_strain;
@@ -198,13 +205,13 @@ namespace muSpectre {
         incr_norm = std::sqrt(comm.sum(incrF.squaredNorm()));
         grad_norm = std::sqrt(comm.sum(F.squaredNorm()));
 
-        if ((verbose > 0) and (comm.rank() == 0)) {
+        if ((verbose > 1) and (comm.rank() == 0)) {
           std::cout << "at Newton step " << std::setw(count_width) << newt_iter
                     << ", |δ" << strain_symb << "|/|Δ" << strain_symb
                     << "| = " << std::setw(17) << incr_norm/grad_norm
                     << ", tol = " << newton_tol << std::endl;
 
-          if (verbose-1>1) {
+          if (verbose > 2) {
             std::cout << "<" << strain_symb << "> =" << std::endl
                       << StrainMap_t(F, shape[0], shape[1]).mean() << std::endl;
           }
@@ -284,22 +291,25 @@ namespace muSpectre {
       }
       std::cout << " strain with" << std::endl
                 << "newton_tol = " << newton_tol << ", cg_tol = "
-                << solver.get_tol() << " maxiter = " << solver.get_maxiter() << " and Δ"
-                << strain_symb << " =" <<std::endl;
-      for (auto&& tup: akantu::enumerate(load_steps)) {
-        auto && counter{std::get<0>(tup)};
-        auto && grad{std::get<1>(tup)};
-        std::cout << "Step " << counter + 1 << ":" << std::endl
-                  << grad << std::endl;
-      }
+                << solver.get_tol() << " maxiter = " << solver.get_maxiter()
+                << " and "
+                << strain_symb << " from " << strain_symb << "₁ =" << std::endl
+                << load_steps.front() << std::endl
+                << " to " << strain_symb << "ₙ =" << std::endl
+                << load_steps.back() << std::endl
+                <<"in increments of Δ" << strain_symb << " =" << std::endl
+                << (load_steps.back()-load_steps.front())/load_steps.size()
+                << std::endl;
       count_width = size_t(std::log10(solver.get_maxiter()))+1;
     }
 
     auto shape{cell.get_strain_shape()};
+    Matrix_t default_strain_val{};
 
     switch (form) {
     case Formulation::finite_strain: {
-      cell.set_uniform_strain(Matrix_t::Identity(shape[0], shape[1]));
+      default_strain_val = Matrix_t::Identity(shape[0], shape[1]);
+      cell.set_uniform_strain(default_strain_val);
       for (const auto & delF: load_steps) {
         auto rows = delF.rows();
         auto cols = delF.cols();
@@ -314,7 +324,8 @@ namespace muSpectre {
       break;
     }
     case Formulation::small_strain: {
-      cell.set_uniform_strain(Matrix_t::Zero(shape[0], shape[1]));
+      default_strain_val = Matrix_t::Zero(shape[0], shape[1]);
+      cell.set_uniform_strain(default_strain_val);
       for (const auto & delF: load_steps) {
         if (not ((delF.rows() == shape[0]) and (delF.cols() == shape[1]))) {
           std::stringstream err{};
@@ -346,6 +357,12 @@ namespace muSpectre {
       const auto & strain_step{std::get<0>(tup)};
       const auto & macro_strain{std::get<1>(tup)};
       using StrainMap_t = RawFieldMap<Eigen::Map<Eigen::MatrixXd>>;
+      if ((verbose > 0) and (comm.rank() == 0)) {
+        std::cout << "at Load step " << std::setw(count_width) << strain_step+1
+                  << ", " << strain_symb << " =" << std::endl
+                  << (macro_strain + default_strain_val).format(format)
+                  << std::endl;
+      }
 
       std::string message{"Has not converged"};
       Real incr_norm{2*newton_tol}, grad_norm{1};
@@ -367,7 +384,7 @@ namespace muSpectre {
       Uint newt_iter{0};
 
       for (;
-           newt_iter < solver.get_maxiter() && !has_converged;
+           ((newt_iter < solver.get_maxiter()) and (!has_converged)) or (newt_iter < 2);
            ++newt_iter) {
         // obtain material response
         auto res_tup{cell.evaluate_stress_tangent()};
@@ -379,21 +396,23 @@ namespace muSpectre {
               strain = macro_strain -previous_macro_strain;
             }
             rhs = - cell.evaluate_projected_directional_stiffness(DeltaF);
-            stress_norm = std::sqrt(comm.sum(rhs.matrix().squaredNorm()));
-            if (convergence_test()) {
-              break;
-            }
-            incrF = solver.solve(rhs);
             F += DeltaF;
+            stress_norm = std::sqrt(comm.sum(rhs.matrix().squaredNorm()));
+            if (stress_norm < equil_tol) {
+              incrF.setZero();
+            } else {
+              incrF = solver.solve(rhs);
+            }
           }
           else {
             rhs = -P;
             cell.apply_projection(rhs);
             stress_norm = std::sqrt(comm.sum(rhs.matrix().squaredNorm()));
-            if (convergence_test()) {
-              break;
+            if (stress_norm < equil_tol) {
+              incrF.setZero();
+            } else {
+              incrF = solver.solve(rhs);
             }
-            incrF = solver.solve(rhs);
           }
         } catch (ConvergenceError & error) {
           std::stringstream err{};
@@ -414,15 +433,16 @@ namespace muSpectre {
         incr_norm = std::sqrt(comm.sum(incrF.squaredNorm()));
         grad_norm = std::sqrt(comm.sum(F.squaredNorm()));
 
-        if ((verbose > 0) and (comm.rank() == 0)) {
+        if ((verbose > 1) and (comm.rank() == 0)) {
           std::cout << "at Newton step " << std::setw(count_width) << newt_iter
                     << ", |δ" << strain_symb << "|/|Δ" << strain_symb
                     << "| = " << std::setw(17) << incr_norm/grad_norm
                     << ", tol = " << newton_tol << std::endl;
 
-          if (verbose-1>1) {
+          if (verbose > 2) {
             std::cout << "<" << strain_symb << "> =" << std::endl
-                      << StrainMap_t(F, shape[0], shape[1]).mean() << std::endl;
+                      << StrainMap_t(F, shape[0], shape[1]).mean().format(format)
+                      << std::endl;
           }
         }
         convergence_test();

@@ -95,7 +95,7 @@ namespace muSpectre {
       this->converged = true;
     } else {
       std::stringstream err{};
-      err << " After " << this->counter << " steps, the solver "
+      err << " After " << this->maxiter << " steps, the solver "
           << " FAILED with  |r|/|b| = "
           << std::setw(15) << std::sqrt(rdr/rhs_norm2)
           << ", cg_tol = " << this->tol << std::endl;
