@@ -154,6 +154,15 @@ namespace muSpectre {
     virtual void apply_projection(Eigen::Ref<Vector_t> vec) = 0;
 
     /**
+     * evaluates the projection of the input field (this corresponds
+     * do G:P in de Geus 2017,
+     * http://dx.doi.org/10.1016/j.cma.2016.12.032). The first time,
+     * this allocates the memory for the return value, and reuses it
+     * on subsequent calls
+     */
+    virtual Vector_ref evaluate_projection(Eigen::Ref<const Vector_t> P)=0;
+
+    /**
      * freezes all the history variables of the materials
      */
     virtual void save_history_variables() = 0;
@@ -281,6 +290,15 @@ namespace muSpectre {
      * evaluates and returns the stress and stiffness for the currently set strain
      */
     virtual std::array<ConstVector_ref, 2> evaluate_stress_tangent() override;
+
+    /**
+     * evaluates the projection of the input field (this corresponds
+     * do G:P in de Geus 2017,
+     * http://dx.doi.org/10.1016/j.cma.2016.12.032). The first time,
+     * this allocates the memory for the return value, and reuses it
+     * on subsequent calls
+     */
+    virtual Vector_ref evaluate_projection(Eigen::Ref<const Vector_t> P) override;
 
 
     /**

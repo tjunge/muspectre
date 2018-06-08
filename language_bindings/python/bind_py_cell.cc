@@ -211,7 +211,13 @@ void add_cell_base_helper(py::module & mod) {
     .def("get_subdomain_resolutions", &sys_t::get_subdomain_resolutions)
     .def("get_subdomain_locations", &sys_t::get_subdomain_locations)
     .def("get_domain_resolutions", &sys_t::get_domain_resolutions)
-    .def("get_domain_lengths", &sys_t::get_domain_resolutions);
+    .def("get_domain_lengths", &sys_t::get_domain_resolutions)
+    .def("set_uniform_strain",
+         [](sys_t & cell, py::EigenDRef<Eigen::ArrayXXd> & v) -> void {
+           cell.set_uniform_strain(v);
+         },
+         "strain"_a
+         );
 }
 
 void add_cell_base(py::module & mod) {

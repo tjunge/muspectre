@@ -191,6 +191,27 @@ namespace muSpectre {
 
   /* ---------------------------------------------------------------------- */
   template <Dim_t DimS, Dim_t DimM>
+  auto CellBase<DimS, DimM>::
+  evaluate_projection
+  (Eigen::Ref<const Vector_t> P) -> Vector_ref {
+    if (P.size() != this->get_nb_dof()) {
+      std::stringstream err{};
+      err << "input should be of size ndof = ¶(" << this->subdomain_resolutions
+          << ") × " << DimS << "² = "<< this->get_nb_dof() << " but I got "
+          << P.size();
+      throw std::runtime_error(err.str());
+    }
+
+    const std::string out_name{"RHS; temp output for projection"};
+    auto & rhs = this->get_managed_field(out_name);
+    rhs.eigen() = P;
+
+    return Vector_ref(this->project(rhs).data(), this->get_nb_dof());
+
+  }
+
+  /* ---------------------------------------------------------------------- */
+  template <Dim_t DimS, Dim_t DimM>
   void CellBase<DimS, DimM>::apply_projection(Eigen::Ref<Vector_t> vec) {
     TypedField<FieldCollection_t, Real> field("Proxy for projection",
                                               *this->fields,
