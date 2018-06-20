@@ -90,18 +90,18 @@ class MaterialCrystalPlasticityFinite1_Check(unittest.TestCase):
 
             stress = self.cell.evaluate_stress(F.T.reshape(-1))
             self.mat.save_history_variables()
-            print ("stress:\n{}\n".format(stress))
+            #print ("stress:\n{}\n".format(stress))
             tau.append(stress[2])
-        print("gamma = np.array([{}])".format(", ".join(
-            ("{}".format(g) for g in gammas))))
-        print("tau = np.array([{}])".format(", ".join(
-            ("{}".format(t) for t in tau))))
+        #print("gamma = np.array([{}])".format(", ".join(
+        #    ("{}".format(g) for g in gammas))))
+        #print("tau = np.array([{}])".format(", ".join(
+        #    ("{}".format(t) for t in tau))))
 
     def test_get_field(self):
         for pixel in self.cell:
             self.mat.add_pixel(pixel, np.array([[0.]]))
 
-            print(self.mat.list_fields())
+            #print(self.mat.list_fields())
 
 
 
