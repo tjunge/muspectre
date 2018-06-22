@@ -164,9 +164,11 @@ namespace muSpectre {
            2*this->mu * (a0 - a1)*Matrices::outer(N_star, N_star))};
     };
 
+    T4_t mat_tangent{is_plastic ? compute_C4ep() : this->C};
+
     // compute derivative ∂ln(be_star)/∂be_star, see (77) through (80)
-    auto compute_dlnbe_dbe = [&] () -> T4_t {
-      T4_t retval{T4_t::Zero()};
+    T4_t dlnbe_dbe{T4_t::Zero()};
+    {
       const Vec_t & eig_vals{spec_decomp.eigenvalues()};
       const Vec_t log_eig_vals{eig_vals.array().log().matrix()};
       const Mat_t & eig_vecs{spec_decomp.eigenvectors()};
@@ -177,7 +179,7 @@ namespace muSpectre {
         g_vals(i, i) = 1/eig_vals(i);
         for (int j{i+1}; j < DimM; ++j) {
           if (std::abs((eig_vals(i)-eig_vals(j))/eig_vals(i)) < 1e-12 ) {
-            g_vals(i, j) = g_vals(i, i);
+            g_vals(i, j) = g_vals(j,i) = g_vals(i, i);
           } else {
           g_vals(i, j) = g_vals(j, i) = ((log_eig_vals(j) - log_eig_vals(i)) /
                                          (eig_vals(j) - eig_vals(i)));
@@ -189,21 +191,14 @@ namespace muSpectre {
         for (int j{0}; j < DimM; ++j) {
           Mat_t dyad = eig_vecs.col(i) * eig_vecs.col(j).transpose();
           T4_t outerDyad = Matrices::outer(dyad, dyad);
-          retval += g_vals(i,j) * outerDyad;
+          dlnbe_dbe += g_vals(i,j) * outerDyad;
         }
       }
-      return retval;
-    };
+    }
 
     // compute variation δbe_star
-    auto compute_dbe4s = [&] () -> T4_t {
-      T4_t ISymm{Matrices::Isymm<DimM>()};
-      return 2* Matrices::dot<DimM>(ISymm, be_star);
-    };
-    T4_t mat_tangent{is_plastic ? compute_C4ep() : this->C};
-
-    T4_t dlnbe_dbe{compute_dlnbe_dbe()};
-    T4_t dbe4s{compute_dbe4s()};
+    T4_t ISymm{Matrices::Isymm<DimM>()};
+    T4_t dbe4s{2* Matrices::dot<DimM>(ISymm, be_star)};//;compute_dbe4s()};
 
     T4_t dtau_dbe{mat_tangent * dlnbe_dbe * dbe4s};
     return std::tuple<Mat_t, T4_t>(tau, dtau_dbe);

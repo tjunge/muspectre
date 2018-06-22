@@ -8,7 +8,7 @@
 @date   18 Jun 2018
 
 @brief  Tests exactness of each iterate with respect to python reference
-        implementation from GooseFFT
+        implementation from GooseFFT for elasticity
 
 Copyright © 2018 Till Junge
 
@@ -190,7 +190,7 @@ class LinearElastic_Check(unittest.TestCase):
             print(µ_arr-g_arr)
             err = norm(µ_arr-g_arr)
             print("error norm = {}".format(err))
-            err_sum += err_max
+            err_sum += err
             err_max = max(err_max, err)
             pass
         print("∑(err) = {}, max(err) = {}".format (err_sum, err_max))
@@ -213,13 +213,15 @@ class LinearElastic_Check(unittest.TestCase):
                 µ_arr[a,b] = µ_arr_tmp[a, turnaround[b]]
             g_arr = gT4[:,:,:,:,i,j,k].reshape(ndim**2, ndim**2)
             self.assertEqual(Nz*Ny*i+Nz*j + k, counter)
-            print(µ_arr[:4,:4])
-            print(g_arr[:4,:4])
+            print(µ_arr[:5, :5])
+            print(g_arr[:5, :5])
             print((µ_arr-g_arr)[:4, :4])
             err = norm(µ_arr-g_arr)/norm(g_arr)
             print("error norm = {}".format(err))
-            err_sum += err_max
+            err_sum += err
             err_max = max(err_max, err)
+            print("count {:>2}: err_norm = {:.5f}, err_sum = {:.5f}".format(
+                counter, err, err_sum))
             pass
         print("∑(err) = {}, max(err) = {}".format (err_sum, err_max))
         return err_sum
