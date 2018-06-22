@@ -33,6 +33,9 @@ import unittest
 import numpy as np
 import numpy.linalg as linalg
 from python_test_imports import µ
+# turn of warning for zero division
+# (which occurs in the linearization of the logarithmic strain)
+np.seterr(divide='ignore', invalid='ignore')
 
 import scipy.sparse.linalg as sp
 import itertools
@@ -335,20 +338,49 @@ class ElastoPlastic_Check(unittest.TestCase):
                 return
             rel_error_t4(µK, K4, strict_tol)
 
+            µF[:] = µbarF
+            rel_error_t2(µF, F, strict_tol)
+            µFn = linalg.norm(µF)
+            self.assertLess((µFn-Fn)/Fn, strict_tol)
+
+            µG_K_dF = lambda x: self.rve.directional_stiffness(x.reshape(µF.shape)).reshape(-1)
+            µG = lambda x: self.rve.project(x).reshape(-1)
+            µb = -µG_K_dF(µbarF)
+            # because of identical elastic properties, µb has got to
+            # be zero before plasticity kicks in
+            self.assertLess(linalg.norm(µb), strict_tol)
+
+
+
             # iterate as long as the iterative update does not vanish
             while True:
 
                 # solve linear system using the Conjugate Gradient iterative solver
+                g_counter = Counter()
                 dFm,_ = sp.cg(tol=1.e-8,
-                  A   = sp.LinearOperator(shape=(F.size,F.size),matvec=G_K_dF,dtype='float'),
-                  b   = b,
+                              A   = sp.LinearOperator(shape=(F.size,F.size),matvec=G_K_dF,dtype='float'),
+                              b   = b,
+                              callback=g_counter
                 )
+                µ_counter = Counter()
+                µdFm,_ = sp.cg(tol=cg_tol,
+                               A =  sp.LinearOperator(shape=(F.size,F.size),
+                                                      matvec=µG_K_dF,dtype='float'),
+                               b = µb,
+                               callback=µ_counter)
+
+                err = g_counter.get()-µ_counter.get()
+                if err != 0:
+                    print("n_iter(g) = {}, n_iter(µ) = {}".format(g_counter.get(),
+                                                                  µ_counter.get()))
+                self.assertEqual(g_counter.get(), µ_counter.get())
 
                 # add solution of linear system to DOFs
                 F += dFm.reshape(3,3,Nx,Ny,Nz)
 
                 # compute residual stress and tangent, convert to residual
                 P,K4,be,ep = constitutive(F,F_t,be_t,ep_t)
+                µP, µK = self.rve.evaluate_stress_tangent(µF)
                 rel_error_t2(µP, P, strict_tol)
                 b          = -G(P)
 

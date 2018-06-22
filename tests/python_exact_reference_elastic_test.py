@@ -347,7 +347,7 @@ class LinearElastic_Check(unittest.TestCase):
             if err != 0:
                 print("n_iter(g) = {}, n_iter(µ) = {}".format(g_counter.get(),
                                                               µ_counter.get()))
-            #self.assertEqual(g_counter.get(), µ_counter.get())
+            self.assertEqual(g_counter.get(), µ_counter.get())
 
             # in the last iteration, the increment is essentially
             # zero, so we don't care about relative error anymore
