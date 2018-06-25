@@ -213,7 +213,9 @@ class LinearElastic_Check(unittest.TestCase):
                 µ_arr[a,b] = µ_arr_tmp[a, turnaround[b]]
             g_arr = gT4[:,:,:,:,i,j,k].reshape(ndim**2, ndim**2)
             self.assertEqual(Nz*Ny*i+Nz*j + k, counter)
+            print("µSpectre:")
             print(µ_arr[:, :5])
+            print("Goose:")
             print(g_arr[:, :5])
             print((µ_arr-g_arr)[:, :4])
             err = norm(µ_arr-g_arr)/norm(g_arr)

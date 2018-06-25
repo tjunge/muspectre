@@ -278,7 +278,7 @@ namespace muSpectre {
         0.00000000e+00,  0.00000000e+00,  3.86000000e-01,  0.00000000e+00,  0.00000000e+00, -1.93000000e-06,  3.86000000e-01,  1.93000000e-06,  0.00000000e+00,
         0.00000000e+00,  0.00000000e+00, -1.93000000e-06,  0.00000000e+00,  0.00000000e+00,  3.86000000e-01,  1.93000000e-06,  3.86000000e-01,  0.00000000e+00,
         5.75666667e-01,  2.61999996e-17,  0.00000000e+00,  2.61999996e-17,  5.75666667e-01,  0.00000000e+00,  0.00000000e+00,  0.00000000e+00,  1.34766667e+00;
-      Stiffness_t K4b_ref{testGoodies::right_transpose(temp)};
+      Stiffness_t K4b_ref{testGoodies::from_numpy(temp)};
 
       error = (K4b_ref - stiffness).norm()/K4b_ref.norm();
       BOOST_CHECK_LT(error, hi_tol);
@@ -336,7 +336,7 @@ namespace muSpectre {
         0.00000000e+00,  0.00000000e+00, -9.90756677e-04,  0.00000000e+00,  0.00000000e+00,  1.01057181e-02,  9.90756677e-04,  9.90756677e-03,  0.00000000e+00,
         8.26350980e-01,  0.00000000e+00,  0.00000000e+00,  1.38777878e-17,  8.26350980e-01,  0.00000000e+00,  0.00000000e+00,  0.00000000e+00,  8.46298039e-01;
 
-      Stiffness_t K4b_ref{testGoodies::right_transpose(temp)};
+      Stiffness_t K4b_ref{testGoodies::from_numpy(temp)};
       error = (K4b_ref - stiffness).norm()/K4b_ref.norm();
 
       error = (K4b_ref - stiffness).norm()/K4b_ref.norm();
@@ -350,23 +350,14 @@ namespace muSpectre {
 
       Stiffness_t intermediate{stiffness};
       Stiffness_t zero_mediate{Stiffness_t::Zero()};
-      Stiffness_t zerobmediate{Stiffness_t::Zero()};
-      for (int i{0}; i < mdim; ++i) {
-        for (int j{0}; j < mdim; ++j) {
-          for (int l{0}; l < mdim; ++l) {
-            // i,l inverted for right_transpose()
-            get(intermediate, i,j,l,i) -= stress(j,l);
-            get(zero_mediate, i,j,l,i) -= stress(j,l);
-          }
-        }
-      }
       for (int i{0}; i < mdim; ++i) {
         for (int j{0}; j < mdim; ++j) {
           for (int m{0}; m < mdim; ++m) {
-            const auto k{i};
-            const auto l{j};
+            const auto & k{i};
+            const auto & l{j};
             // k,m inverted for right transpose
-            get(zerobmediate, i, j, k, m) -= stress(l, m);
+            get(zero_mediate, i, j, k, m) -= stress(l, m);
+            get(intermediate, i, j, k, m) -= stress(l, m);
           }
         }
       }
@@ -383,13 +374,12 @@ namespace muSpectre {
         0.00000000e+00,  0.00000000e+00, -9.90756677e-04,  0.00000000e+00,  0.00000000e+00,  1.01057181e-02, -9.90756677e-04,  1.01057181e-02,  0.00000000e+00,
         8.26350980e-01,  0.00000000e+00,  0.00000000e+00,  1.38777878e-17,  8.26350980e-01,  0.00000000e+00,  0.00000000e+00,  0.00000000e+00,  8.46298039e-01;
 
-      Stiffness_t K4c_ref{testGoodies::right_transpose(temp)};
-      error = (K4b_ref + zerobmediate - K4c_ref).norm()/zero_mediate.norm();
-      BOOST_CHECK_LT(error, -hi_tol);
-      if (not (error < -hi_tol)) {
+      Stiffness_t K4c_ref{testGoodies::from_numpy(temp)};
+      error = (K4b_ref + zero_mediate - K4c_ref).norm()/zero_mediate.norm();
+      BOOST_CHECK_LT(error, hi_tol*100); //rel error on small difference between inexacly read doubles
+      if (not (error < hi_tol)) {
         std::cout << "decrement reference:\n" << K4c_ref - K4b_ref << std::endl;
-        //std::cout << "zero-mediate computed:\n" << zero_mediate << std::endl;
-        std::cout << "zerobmediate computed:\n" << zerobmediate << std::endl;
+        std::cout << "zero_mediate computed:\n" << zero_mediate << std::endl;
       }
 
       error = (K4c_ref - intermediate).norm()/K4c_ref.norm();

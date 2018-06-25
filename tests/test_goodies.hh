@@ -156,11 +156,23 @@ namespace muSpectre {
                     "The array is not a valid fourth order tensor");
       T4Mat<T, Dim> retval{T4Mat<T, Dim>::Zero()};
 
+      /**
+       * Note: this looks like it's doing a left transpose, but in
+       * reality, np is rowmajor in all directions, so from numpy to
+       * eigen, we need to transpose left, center, and
+       * right. Therefore, if we want to right-transpose, then we need
+       * to transpose once left, once center, and *twice* right, which
+       * is equal to just left and center transpose. Center-transpose
+       * happens automatically when eigen parses the input (which is
+       * naturally written in rowmajor but interpreted into colmajor),
+       * so all that's left to do is (ironically) the subsequent
+       * left-transpose
+       */
       for (int i{0}; i < Dim; ++i) {
         for (int j{0}; j < Dim; ++j) {
           for (int k{0}; k < Dim; ++k) {
             for (int l{0}; l < Dim; ++l) {
-              get(retval, i,j,l,k) = get(t4, i,j,k,l);
+              get(retval, i,j,k,l) = get(t4, j,i,k,l);
             }
           }
         }

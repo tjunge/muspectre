@@ -435,7 +435,7 @@ namespace muSpectre {
             for (int j{0}; j < Dim; ++j) {
               for (int l{0}; l < Dim; ++l) {
                 // i, l inverted for transpose
-                get(intermediate, i,j,l,i) -= tau(j,l);
+                get(intermediate, i,j,i,l) -= tau(j,l);
               }
             }
           }
@@ -446,9 +446,8 @@ namespace muSpectre {
                 for (int k = 0; k < Dim; ++k) {
                   for (int b = 0; b < Dim; ++b) {
                     for (int l = 0; l < Dim; ++l) {
-                      get(K,i,j,k,l) += (F_inv(i,a) *
+                      get(K,i,j,l,k) += (F_inv(i,a) *
                                          get(intermediate,a,j,k,b) *
-                                         // l, b inverted for transpose
                                          F_inv(l,b));
                     }
                   }
