@@ -292,12 +292,12 @@ def reference_curve (tauy0_input, h_input, max_shear, E, nu,
 
 if __name__ == "__main__":
     gammas, tau, sigma_xx, del_tau, del_sigxx = reference_curve(
-        tauy0_input=.006,
-        h_input = .008*2,
+        tauy0_input=.003,
+        h_input = .004,
         max_shear = 5e-2,
         E = 1.0030648180242636,
         nu = 0.299306759098787,
-        shear_incr=5e-3,
+        shear_incr=1e-5,#5e-3,
         sym_stretch=False)
 
     import matplotlib.pyplot as plt

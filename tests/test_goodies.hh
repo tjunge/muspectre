@@ -160,7 +160,7 @@ namespace muSpectre {
         for (int j{0}; j < Dim; ++j) {
           for (int k{0}; k < Dim; ++k) {
             for (int l{0}; l < Dim; ++l) {
-              get(retval, i,j,k,l) = get(t4, i,j,l,k);
+              get(retval, i,j,l,k) = get(t4, i,j,k,l);
             }
           }
         }

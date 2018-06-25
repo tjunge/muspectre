@@ -75,8 +75,8 @@ def t4_to_goose(t4_msp, right_transposed=True):
                 tmp = t4_msp[:, Nz*Ny*i + Nz*j + k].reshape(ndim**2, ndim**2)
                 goose_view = t4_goose[:,:,:,:,i,j,k].reshape(ndim**2, ndim**2)
                 for a,b in itertools.product(range(ndim**2), repeat=2):
-                    a = a if right_transposed else turnaround[a]
-                    goose_view[a,b] = tmp[a, turnaround[b]]
+                    a_id = a if right_transposed else turnaround[a]
+                    goose_view[a,b] = tmp[a_id, turnaround[b]]
             pass
         pass
     return t4_goose
@@ -213,9 +213,9 @@ class LinearElastic_Check(unittest.TestCase):
                 µ_arr[a,b] = µ_arr_tmp[a, turnaround[b]]
             g_arr = gT4[:,:,:,:,i,j,k].reshape(ndim**2, ndim**2)
             self.assertEqual(Nz*Ny*i+Nz*j + k, counter)
-            print(µ_arr[:5, :5])
-            print(g_arr[:5, :5])
-            print((µ_arr-g_arr)[:4, :4])
+            print(µ_arr[:, :5])
+            print(g_arr[:, :5])
+            print((µ_arr-g_arr)[:, :4])
             err = norm(µ_arr-g_arr)/norm(g_arr)
             print("error norm = {}".format(err))
             err_sum += err

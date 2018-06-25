@@ -434,7 +434,8 @@ namespace muSpectre {
           for (int i{0}; i < Dim; ++i) {
             for (int j{0}; j < Dim; ++j) {
               for (int l{0}; l < Dim; ++l) {
-                get(intermediate, i,j,i,l) -= tau(j,l);
+                // i, l inverted for transpose
+                get(intermediate, i,j,l,i) -= tau(j,l);
               }
             }
           }
