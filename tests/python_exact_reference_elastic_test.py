@@ -185,7 +185,9 @@ class LinearElastic_Check(unittest.TestCase):
             µ_arr = µT2[:, counter].reshape(ndim, ndim).T
             g_arr = gT2[:,:,i,j,k]
             self.assertEqual(Nz*Ny*i+Nz*j + k, counter)
+            print("µSpectre:")
             print(µ_arr)
+            print("Goose:")
             print(g_arr)
             print(µ_arr-g_arr)
             err = norm(µ_arr-g_arr)

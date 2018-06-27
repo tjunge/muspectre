@@ -115,8 +115,7 @@ namespace muSpectre {
       (std::move(tau), std::move(tau_eq_star),
        std::move(Del_gamma), std::move(N_star),
        std::move(is_plastic),
-       spectral_decomp,
-       be_star);
+       spectral_decomp);
   }
 
   //----------------------------------------------------------------------------//
@@ -128,8 +127,7 @@ namespace muSpectre {
     Eigen::Matrix<Real, DimM, DimM> tau;
     std::tie(tau, std::ignore,
              std::ignore, std::ignore,
-             std::ignore, std::ignore,
-             std::ignore) = this->stress_n_internals_worker
+             std::ignore, std::ignore) = this->stress_n_internals_worker
       (F, F_prev, be_prev, eps_p);
 
     return tau;
@@ -150,7 +148,6 @@ namespace muSpectre {
     auto & N_star     {std::get<3>(vals)};
     auto & is_plastic {std::get<4>(vals)};
     auto & spec_decomp{std::get<5>(vals)};
-    auto & be_star    {std::get<6>(vals)};
     using Mat_t = Eigen::Matrix<Real, DimM, DimM>;
     using Vec_t = Eigen::Matrix<Real, DimM, 1>;
     using T4_t = T4Mat<Real, DimM>;
@@ -197,11 +194,15 @@ namespace muSpectre {
     }
 
     // compute variation δbe_star
-    T4_t ISymm{Matrices::Isymm<DimM>()};
-    T4_t dbe4s{2* Matrices::dot<DimM>(ISymm, be_star)};//;compute_dbe4s()};
+    T2_t I{Matrices::I2<DimM>()};
+    //T4_t ISymm{Matrices::Isymm<DimM>()};
+    //T4_t dbe4s{2* Matrices::dot<DimM>(ISymm, be_star)};//;compute_dbe4s()};
+    T4_t dbe_dF{Matrices::outer_under(I, F*be_prev.old()) + Matrices::outer_over(F*be_prev.old(), I)};
 
-    T4_t dtau_dbe{mat_tangent * dlnbe_dbe * dbe4s};
-    return std::tuple<Mat_t, T4_t>(tau, dtau_dbe);
+    //T4_t dtau_dbe{mat_tangent * dlnbe_dbe * dbe4s};
+    T4_t dtau_dF{mat_tangent * dlnbe_dbe * dbe_dF};
+    //return std::tuple<Mat_t, T4_t>(tau, dtau_dbe);
+    return std::tuple<Mat_t, T4_t>(tau, dtau_dF);
   }
 
 

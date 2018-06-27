@@ -185,7 +185,7 @@ namespace muSpectre {
     /**
      * worker function computing stresses and internal variables
      */
-    using Worker_t = std::tuple<T2_t, Real, Real, T2_t, bool, Decomp_t<DimM>, T2_t>;
+    using Worker_t = std::tuple<T2_t, Real, Real, T2_t, bool, Decomp_t<DimM>>;
     Worker_t stress_n_internals_worker(const T2_t & F,
                                        StrainStRef_t& F_prev,
                                        StrainStRef_t& be_prev,

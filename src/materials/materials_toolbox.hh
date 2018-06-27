@@ -425,36 +425,21 @@ namespace muSpectre {
         compute(Strain_t && F, Stress_t && tau, Tangent_t && C) {
           using T4_t = T4Mat<Real, Dim>;
           using Mat_t = Eigen::Matrix<Real, Dim, Dim>;
-          T4_t K;
-          K.setZero();
+          T4_t K{T4_t::Zero()};
           Mat_t F_inv{F.inverse()};
-          //T4_t MIRT{-Matrices::Itrns<Dim>()};
-          //T4_t intermediate{Matrices::dot<Dim>(MIRT, tau) + C};
-          T4_t intermediate{C};
           for (int i{0}; i < Dim; ++i) {
             for (int j{0}; j < Dim; ++j) {
-              for (int l{0}; l < Dim; ++l) {
-                // i, l inverted for transpose
-                get(intermediate, i,j,i,l) -= tau(j,l);
-              }
-            }
-          }
-
-          for (int i = 0; i < Dim; ++i) {
-            for (int a = 0; a < Dim; ++a) {
-              for (int j = 0; j < Dim; ++j) {
-                for (int k = 0; k < Dim; ++k) {
-                  for (int b = 0; b < Dim; ++b) {
-                    for (int l = 0; l < Dim; ++l) {
-                      get(K,i,j,k,l) += (F_inv(i,a) *
-                                         get(intermediate,a,j,k,b) *
-                                         F_inv(l,b));
-                    }
+              for (int k{0}; k < Dim; ++k) {
+                for (int l{0}; l < Dim; ++l) {
+                  for (int a{0}; a < Dim; ++a) {
+                    get(K, i,j,k,l) += (get(C, i,a,k,l)*F_inv(j,a) -
+                                        tau(i,a) * F_inv(l,a) * F_inv(j,k));
                   }
                 }
               }
             }
           }
+
           Mat_t P = tau * F_inv.transpose();
           return std::make_tuple(std::move(P), std::move(K));
         }

@@ -217,7 +217,8 @@ void add_cell_base_helper(py::module & mod) {
            cell.set_uniform_strain(v);
          },
          "strain"_a
-         );
+         )
+    .def("save_history_variables", &sys_t::save_history_variables);
 }
 
 void add_cell_base(py::module & mod) {

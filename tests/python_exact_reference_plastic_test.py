@@ -39,6 +39,7 @@ np.seterr(divide='ignore', invalid='ignore')
 
 import scipy.sparse.linalg as sp
 import itertools
+import sys
 
 from python_exact_reference_elastic_test import deserialise_t4, t2_to_goose
 from python_exact_reference_elastic_test import t2_vec_to_goose
@@ -211,7 +212,7 @@ def constitutive(F,F_t,be_t,ep_t):
     return P,K4,be,ep
 
 # phase indicator: square inclusion of volume fraction (3*3*15)/(11*13*15)
-phase  = np.zeros([Nx,Ny,Nz]); phase[:2,:2,:2] = 1.
+phase  = np.zeros([Nx,Ny,Nz]); phase[0,0,0] = 1.
 # function to convert material parameters to grid of scalars
 param  = lambda M0,M1: M0*np.ones([Nx,Ny,Nz])*(1.-phase)+\
                        M1*np.ones([Nx,Ny,Nz])*    phase
@@ -271,14 +272,14 @@ class ElastoPlastic_Check(unittest.TestCase):
         E, nu = get_E_nu(.833, .386)
         H = 0.004
         tauy0 = .003
-        hard = mat.make(self.rve, 'hard', E, nu, 2*tauy0, 2*H)
-        soft = mat.make(self.rve, 'soft', E, nu,   tauy0,   H)
+        self.hard = mat.make(self.rve, 'hard', E, nu, 2*tauy0, 2*H)
+        self.soft = mat.make(self.rve, 'soft', E, nu,   tauy0,   H)
 
         for pixel in self.rve:
-            if pixel[0] < 2 and pixel[1] < 2 and pixel[2] < 2:
-                hard.add_pixel(pixel)
+            if pixel[0] == 0 and pixel[1] == 0 and pixel[2] == 0:
+                self.hard.add_pixel(pixel)
             else:
-                soft.add_pixel(pixel)
+                self.soft.add_pixel(pixel)
                 pass
             pass
         return
@@ -286,7 +287,11 @@ class ElastoPlastic_Check(unittest.TestCase):
     def test_solve(self):
         strict_tol = 1e-12
         cg_tol = 1e-11
+        after_cg_tol = 1e-10
         newton_tol = 1e-5
+        self.rve.set_uniform_strain(np.array(np.eye(ndim)))
+        µF = self.rve.get_strain()
+        µbarF_t = µF.copy()
         # incremental deformation
         for inc in range(1,ninc):
 
@@ -300,8 +305,6 @@ class ElastoPlastic_Check(unittest.TestCase):
             barF[0,0] =    (1.+lam)
             barF[1,1] = 1./(1.+lam)
 
-            self.rve.set_uniform_strain(np.array(np.eye(ndim)))
-            µF = self.rve.get_strain()
             def rel_error_t2(µ, g, tol, do_assert=True):
                 err = linalg.norm(t2_vec_to_goose(µ) - g.reshape(-1)) / linalg.norm(g)
                 if not (err < tol):
@@ -312,7 +315,7 @@ class ElastoPlastic_Check(unittest.TestCase):
                         print("AssertionWarning: {} is not less than {}".format(
                             err, tol))
                     pass
-                return
+                return err
 
             def rel_error_t4(µ, g, tol, right_transposed=True, do_assert=True):
                 err = linalg.norm(t4_vec_to_goose(µ) - g.reshape(-1)) / linalg.norm(g)
@@ -326,12 +329,12 @@ class ElastoPlastic_Check(unittest.TestCase):
                             err, tol))
 
                     pass
-                return
+                return err
 
             def abs_error_t2(µ, g, tol, do_assert=True):
                 ref_norm = linalg.norm(g)
                 if ref_norm > 1:
-                    return rel_error-t2(µ, g, tol)
+                    return rel_error_t2(µ, g, tol, do_assert)
                 else:
                     err = linalg.norm(t2_vec_to_goose(µ) - g.reshape(-1))
                     if not (err < tol):
@@ -341,6 +344,7 @@ class ElastoPlastic_Check(unittest.TestCase):
                         else:
                             print("AssertionWarning: {} is not less than {}".format(
                                 err, tol))
+                    return err
 
             rel_error_t2(µF, F, strict_tol)
 
@@ -361,29 +365,34 @@ class ElastoPlastic_Check(unittest.TestCase):
             µbarF[ndim + 1, :] = 1./(1. + lam)
             µbarF[-1, :]       = 1.
             rel_error_t2(µbarF, barF, strict_tol)
-            µP, µK = self.rve.evaluate_stress_tangent(µF)
+            if inc == 1:
+                µP, µK = self.rve.evaluate_stress_tangent(µF)
             rel_error_t4(µK, K4, strict_tol)
-
-            µF[:] = µbarF
+            µF += µbarF - µbarF_t
             rel_error_t2(µF, F, strict_tol)
+
             µFn = linalg.norm(µF)
             self.assertLess((µFn-Fn)/Fn, strict_tol)
 
             µG_K_dF = lambda x: self.rve.directional_stiffness(x.reshape(µF.shape)).reshape(-1)
             µG = lambda x: self.rve.project(x).reshape(-1)
-            µb = -µG_K_dF(µbarF)
+            µb = -µG_K_dF(µbarF-µbarF_t)
+            abs_error_t2(µb, b, strict_tol)
             # because of identical elastic properties, µb has got to
             # be zero before plasticity kicks in
-            self.assertLess(linalg.norm(µb), strict_tol)
+            print("inc = {}".format(inc))
+            if inc == 1:
+                self.assertLess(linalg.norm(µb), strict_tol)
 
-
+            print(self.hard.list_fields())
+            sys.exit()
 
             # iterate as long as the iterative update does not vanish
             while True:
 
                 # solve linear system using the Conjugate Gradient iterative solver
                 g_counter = Counter()
-                dFm,_ = sp.cg(tol=1.e-8,
+                dFm,_ = sp.cg(tol=cg_tol,
                               A   = sp.LinearOperator(shape=(F.size,F.size),matvec=G_K_dF,dtype='float'),
                               b   = b,
                               callback=g_counter
@@ -404,24 +413,38 @@ class ElastoPlastic_Check(unittest.TestCase):
 
                 #self.assertEqual(g_counter.get(), µ_counter.get())
 
-                abs_error_t2(µdFm, dFm, strict_tol, do_assert=False)
+                try:
+                    err = abs_error_t2(µdFm, dFm, after_cg_tol, do_assert=True)
+                except Exception as err:
+                    raise err
                 # add solution of linear system to DOFs
                 F += dFm.reshape(3,3,Nx,Ny,Nz)
                 µF += µdFm.reshape(µF.shape)
 
-                rel_error_t2(µF, F, strict_tol, do_assert=False)
+                err = rel_error_t2(µF, F, strict_tol, do_assert=True)
                 # compute residual stress and tangent, convert to residual
                 P,K4,be,ep = constitutive(F,F_t,be_t,ep_t)
                 µP, µK = self.rve.evaluate_stress_tangent(µF)
-                rel_error_t2(µP, P, strict_tol)
-                rel_error_t4(µK, K4, strict_tol)
+                err = rel_error_t2(µP, P, strict_tol)
+                try:
+                    err = rel_error_t4(µK, K4, strict_tol, do_assert=True)
+                except AssertionError as err:
+                    raise AssertionError("at iiter = {}, inc = {}, caught this: '{}'".format(
+                        iiter, inc, err))
                 b          = -G(P)
                 µb = -µG(µP)
 
-                abs_error_t2(µb, b, strict_tol)
+                err = abs_error_t2(µb, b, after_cg_tol)
+                #print("inc, iiter, err: {}".format((inc, iiter, err)))
+                #print()
+
 
                 # check for convergence, print convergence info to screen
-                print('{0:10.2e}'.format(np.linalg.norm(dFm)/Fn))
+                #print('{0:10.2e}'.format(np.linalg.norm(dFm)/Fn))
+                print('Goose:   rel_residual {:10.15e}, |rhs|: {:10.15e}'.format(
+                    np.linalg.norm(dFm)/Fn, linalg.norm(b)))
+                print('µSpectre:rel_residual {:10.15e}, |rhs|: {:10.15e}'.format(
+                    np.linalg.norm(µdFm)/µFn, linalg.norm(µb)))
                 if np.linalg.norm(dFm)/Fn<1.e-5 and iiter>0: break
 
                 # update Newton iteration counter
@@ -429,6 +452,7 @@ class ElastoPlastic_Check(unittest.TestCase):
 
             # end-of-increment: update history
             barF_t = np.array(barF,copy=True)
+            µbarF_t[:] = µbarF
             F_t    = np.array(F   ,copy=True)
             be_t   = np.array(be  ,copy=True)
             ep_t   = np.array(ep  ,copy=True)
