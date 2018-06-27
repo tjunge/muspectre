@@ -51,16 +51,56 @@ namespace muSpectre {
   /**
    * Base class for state fields, useful for storing polymorphic references
    */
-  template <size_t nb_memory>
+  template <class FieldCollection>
   class StateFieldBase {
   public:
+    //! get naming prefix
+    const std::string & get_prefix() const {return this->prefix;}
+
+    //! get a ref to the `StateField` 's field collection
+    const FieldCollection & get_collection() const {
+      return this->collection;}
+
+
+  protected:
+    //! constructor
+    StateFieldBase(std::string unique_prefix,
+                   const FieldCollection & collection,
+                   size_t nb_memory=1):
+      prefix{unique_prefix},
+      nb_memory{nb_memory},
+      collection{collection} {}
+
+    /**
+     * the unique prefix is used as the first part of the unique name
+     * of the subfields belonging to this state field
+     */
+    std::string prefix;
+    /**
+     * number of old states to store, defaults to 1
+     */
+    const size_t nb_memory;
+    //! reference to the collection this statefield belongs to
+    const FieldCollection & collection;
+  };
+
+  /* ---------------------------------------------------------------------- */
+  template <class FieldCollection, size_t nb_memory>
+  class StateFieldSizedBase: public StateFieldBase<FieldCollection> {
+  public:
+    //! Parent class
+    using Parent = StateFieldBase<FieldCollection>;
     //! the current (historically accurate) ordering of the fields
     using index_t = std::array<size_t, nb_memory+1>;
     //! get the current ordering of the fields
     inline const index_t & get_indices() const {return this->indices;}
   protected:
     //! constructor
-    StateFieldBase(index_t indices):indices{indices}{};
+    StateFieldSizedBase(std::string unique_prefix,
+                        const FieldCollection& collection,
+                        index_t indices):
+      Parent{unique_prefix, collection, nb_memory},
+      indices{indices}{};
     index_t indices; ///< these are cycled through
   };
 
@@ -98,13 +138,14 @@ namespace muSpectre {
    * history variables, for instance.
    */
   template <class Field_t, size_t nb_memory=1>
-  class StateField: public StateFieldBase<nb_memory>
+  class StateField:
+    public StateFieldSizedBase<typename Field_t::Base::collection_t, nb_memory>
   {
   public:
-    //! Base class for all state fields of same memory 
-    using Base = StateFieldBase<nb_memory>;
     //! the underlying field's collection type
-    using FieldCollection = typename Field_t::Base::collection_t;
+    using FieldCollection_t = typename Field_t::Base::collection_t;
+    //! Base class for all state fields of same memory 
+    using Base = StateFieldSizedBase<FieldCollection_t, nb_memory>;
     /**
      * storage of field refs (can't be a `std::array`, because arrays
      * of refs are explicitely forbidden
@@ -120,9 +161,11 @@ namespace muSpectre {
      * @param collection is the field collection in which the
      * subfields will be stored
      */
-    inline StateField(std::string unique_prefix, FieldCollection & collection)
-      : Base{internal::build_indices<nb_memory+1>(std::make_index_sequence<nb_memory+1>{})},
-        prefix{unique_prefix}, fields{internal::build_fields_helper<Field_t, nb_memory+1>
+    inline StateField(std::string unique_prefix, FieldCollection_t & collection)
+      : Base{unique_prefix, collection,
+        internal::build_indices<nb_memory+1>
+        (std::make_index_sequence<nb_memory+1>{})},
+        fields{internal::build_fields_helper<Field_t, nb_memory+1>
         (unique_prefix, collection, std::make_index_sequence<nb_memory+1>{})}
     {}
 
@@ -176,13 +219,6 @@ namespace muSpectre {
       return static_cast<const StateField&> (other);
     }
 
-    //! get naming prefix
-    const std::string & get_prefix() const {return this->prefix;}
-
-    //! get a ref to the `StateField` 's field collection
-    const FieldCollection & get_collection() const {
-      return std::get<0>(this->fields).get_collection();}
-
     //! get a ref to the `StateField` 's fields
      Fields_t & get_fields() {
        return this->fields;
@@ -223,11 +259,6 @@ namespace muSpectre {
     }
 
   protected:
-    /**
-     * the unique prefix is used as the first part of the unique name
-     * of the subfields belonging to this state field
-     */
-    std::string prefix;
     Fields_t fields; //!< container for the states
   private:
   };
@@ -265,9 +296,9 @@ namespace muSpectre {
     using size_type = typename iterator::size_type;
 
     //! field collection type where this state field can be stored
-    using FieldCollection= typename FieldMap::Field::collection_t;
+    using FieldCollection_t= typename FieldMap::Field::collection_t;
     //! base class (for polymorphic references)
-    using StateFieldBase_t = StateFieldBase<nb_memory>;
+    using StateFieldBase_t = StateFieldSizedBase<FieldCollection_t, nb_memory>;
     //! for traits access
     using FieldMap_t = FieldMap;
     //! for traits access
@@ -328,7 +359,7 @@ namespace muSpectre {
       return iterator(*this, this->collection.size());}
 
   protected:
-    const FieldCollection & collection; //!< collection holding the field
+    const FieldCollection_t & collection; //!< collection holding the field
     StateFieldBase_t & statefield; //!< ref to the field itself
     std::array<FieldMap, nb_memory+1> maps;//!< refs to the addressable maps;
     //! const refs to the addressable maps;
