@@ -30,6 +30,7 @@
 
 #include "common/common.hh"
 #include "common/field.hh"
+#include "common/statefield.hh"
 
 #include <map>
 #include <vector>
@@ -51,8 +52,10 @@ namespace muSpectre {
   {
   public:
     //! polymorphic base type to store
-    using Field = internal::FieldBase<FieldCollectionDerived>;
-    using Field_p = std::unique_ptr<Field>; //!< stored type
+    using Field_t = internal::FieldBase<FieldCollectionDerived>;
+    using Field_p = std::unique_ptr<Field_t>; //!< stored type
+    using StateField_t = StateFieldBase<FieldCollectionDerived>;
+    using StateField_p = std::unique_ptr<StateField_t>;
     using Ccoord = Ccoord_t<DimS>; //!< cell coordinates type
 
     //! Default constructor
@@ -77,6 +80,10 @@ namespace muSpectre {
     //! as shared pointers
     void register_field(Field_p&& field);
 
+    //! Register a new field (fields need to be in heap, so I want to keep them
+    //! as shared pointers
+    void register_state_field(StateField_p&& field);
+
     //! for return values of iterators
     constexpr inline static Dim_t spatial_dim();
 
@@ -84,10 +91,26 @@ namespace muSpectre {
     inline Dim_t get_spatial_dim() const;
 
     //! retrieve field by unique_name
-    inline Field& operator[](std::string unique_name);
+    inline Field_t& operator[](std::string unique_name);
 
     //! retrieve field by unique_name with bounds checking
-    inline Field& at(std::string unique_name);
+    inline Field_t& at(std::string unique_name);
+
+    //! retrieve state field by unique_prefix with bounds checking
+    inline StateField_t& get_statefield(std::string unique_prefix);
+
+    /**
+     * retrieve current value of state field by unique_prefix with
+     * bounds checking
+     */
+    inline Field_t& get_current(std::string unique_prefix);
+
+    /**
+     * retrieve old value of state field by unique_prefix with
+     * bounds checking
+     */
+    template<size_t nb_steps_ago = 1>
+    inline const Field_t& get_old(std::string unique_prefix) const;
 
     //! returns size of collection, this refers to the number of pixels handled
     //! by the collection, not the number of fields
@@ -99,6 +122,8 @@ namespace muSpectre {
 
   protected:
     std::map<const std::string, Field_p> fields{}; //!< contains the field ptrs
+    //! contains ptrs to state fields
+    std::map<const std::string, StateField_p> state_fields{};
     bool is_initialised{false}; //!< to handle double initialisation correctly
     const Uint id; //!< unique identifier
     static Uint counter; //!< used to assign unique identifiers
@@ -118,7 +143,8 @@ namespace muSpectre {
 
   /* ---------------------------------------------------------------------- */
   template <Dim_t DimS, class FieldCollectionDerived>
-  void FieldCollectionBase<DimS, FieldCollectionDerived>::register_field(Field_p &&field) {
+  void FieldCollectionBase<DimS, FieldCollectionDerived>::
+  register_field(Field_p &&field) {
     auto&& search_it = this->fields.find(field->get_name());
     auto&& does_exist = search_it != this->fields.end();
     if (does_exist) {
@@ -139,6 +165,25 @@ namespace muSpectre {
 
   /* ---------------------------------------------------------------------- */
   template <Dim_t DimS, class FieldCollectionDerived>
+  void FieldCollectionBase<DimS, FieldCollectionDerived>::
+  register_state_field(StateField_p&& field) {
+    auto&& search_it = this->state_fields.find(field->get_prefix());
+    auto&& does_exist = search_it != this->state_fields.end();
+    if (does_exist) {
+      std::stringstream err_str;
+      err_str << "a state field named " << field->get_prefix()
+              << "is already registered in this field collection. "
+              << "Currently registered fields: ";
+      for (const auto& name_field_pair: this->state_fields) {
+        err_str << ", " << name_field_pair.first;
+      }
+      throw FieldCollectionError(err_str.str());
+    }
+    this->state_fields[field->get_prefix()] = std::move(field);
+  }
+
+  /* ---------------------------------------------------------------------- */
+  template <Dim_t DimS, class FieldCollectionDerived>
   constexpr Dim_t FieldCollectionBase<DimS, FieldCollectionDerived>::
   spatial_dim() {
     return DimS;
@@ -153,18 +198,26 @@ namespace muSpectre {
 
   /* ---------------------------------------------------------------------- */
   template <Dim_t DimS, class FieldCollectionDerived>
-  typename FieldCollectionBase<DimS, FieldCollectionDerived>::Field&
+  auto
   FieldCollectionBase<DimS, FieldCollectionDerived>::
-  operator[](std::string unique_name) {
+  operator[](std::string unique_name) -> Field_t & {
     return *(this->fields[unique_name]);
   }
 
   /* ---------------------------------------------------------------------- */
   template <Dim_t DimS, class FieldCollectionDerived>
-  typename FieldCollectionBase<DimS, FieldCollectionDerived>::Field&
+  auto
   FieldCollectionBase<DimS, FieldCollectionDerived>::
-  at(std::string unique_name) {
+  at(std::string unique_name) -> Field_t & {
     return *(this->fields.at(unique_name));
+  }
+
+  /* ---------------------------------------------------------------------- */
+  template <Dim_t DimS, class FieldCollectionDerived>
+  auto
+  FieldCollectionBase<DimS, FieldCollectionDerived>::
+  get_statefield(std::string unique_prefix) -> StateField_t & {
+    return *(this->state_fields.at(unique_prefix));
   }
 
   /* ---------------------------------------------------------------------- */
@@ -175,6 +228,23 @@ namespace muSpectre {
     return this->fields.find(unique_name) != this->fields.end();
   }
 
+  /* ---------------------------------------------------------------------- */
+  template <Dim_t DimS, class FieldCollectionDerived>
+  auto
+  FieldCollectionBase<DimS, FieldCollectionDerived>::
+  get_current(std::string unique_prefix) -> Field_t & {
+    return this->get_statefield(unique_prefix).current();
+  }
+
+  /* ---------------------------------------------------------------------- */
+  /* ---------------------------------------------------------------------- */
+  template <Dim_t DimS, class FieldCollectionDerived>
+  template <size_t nb_steps_ago>
+  auto
+  FieldCollectionBase<DimS, FieldCollectionDerived>::
+  get_old(std::string unique_prefix) const -> const Field_t & {
+    return this->get_statefield(unique_prefix).template old<nb_steps_ago>();
+  }
 
 }  // muSpectre
 

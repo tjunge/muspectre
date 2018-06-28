@@ -52,10 +52,13 @@ namespace muSpectre {
 
 
     SF_Fixture()
-      :fc{}, sf("prefix", fc), scalar_f("scalar", fc), self{*this} {}
+      :fc{},
+       sf{make_statefield<StateField<Field_t, nb_mem>>("prefix", fc)},
+       scalar_f{make_statefield<StateField<ScalField_t, nb_mem>>("scalar", fc)},
+       self{*this} {}
     FC_t fc;
-    StateField<Field_t, nb_mem> sf;
-    StateField<ScalField_t, nb_mem> scalar_f;
+    StateField<Field_t, nb_mem> & sf;
+    StateField<ScalField_t, nb_mem>  & scalar_f;
     SF_Fixture & self;
   };
 
@@ -66,8 +69,12 @@ namespace muSpectre {
                                     SF_Fixture<  twoD, threeD,  true>,
                                     SF_Fixture<threeD, threeD,  true>>;
 
+  BOOST_AUTO_TEST_SUITE(statefield);
+
   BOOST_FIXTURE_TEST_CASE_TEMPLATE(constructor_test, Fix, typelist, Fix) {
-    BOOST_CHECK_EQUAL("prefix", Fix::sf.get_prefix());
+    const std::string ref{"prefix"};
+    const std::string & fix{Fix::sf.get_prefix()};
+    BOOST_CHECK_EQUAL(ref, fix);
   }
 
   namespace internal {
@@ -204,5 +211,49 @@ namespace muSpectre {
     }
 
   }
+
+  /* ---------------------------------------------------------------------- */
+  BOOST_FIXTURE_TEST_CASE_TEMPLATE(extract_by_prefix_from_collection, Fix,
+                                   typelist, Fix) {
+    internal::init<Fix::global, decltype(Fix::self)>::run(Fix::self);
+
+    constexpr bool verbose{true};
+    auto scalar_map{Fix::scalar_f.get_map()};
+
+    for (size_t i = 0; i < Fix::nb_mem+1; ++i) {
+      for (auto && wrapper: scalar_map) {
+        wrapper.current() += (i+1);
+        if (verbose) {
+          std::cout << "pixel " << wrapper.get_ccoord() << ", memory cycle " << i << std::endl;
+          std::cout << wrapper.current() << std::endl;
+          std::cout << wrapper.old() << std::endl;
+          std::cout << wrapper.template old<2>() << std::endl << std::endl;
+        }
+      }
+      Fix::scalar_f.cycle();
+    }
+
+    auto scalar_const_map{Fix::scalar_f.get_const_map()};
+    // auto current_map{Fix::fc.get_current("scalar").eigen_vec()};
+    // auto old_map{Fix::fc.get_old("scalar").get_map()};
+    // auto old_2_map{Fix::fc.template get_old<2>("scalar").get_map()};
+
+    BOOST_CHECK_EQUAL(scalar_const_map[0].current(), scalar_const_map[1].current());
+
+    for (auto wrapper: scalar_const_map) {
+      Real error{wrapper.current() - 1};
+      BOOST_CHECK_LT(error, tol);
+
+      error = wrapper.old() - 3;
+      BOOST_CHECK_LT(error, tol);
+
+      error = wrapper.template old<2>() - 2;
+      BOOST_CHECK_LT(error, tol);
+
+    }
+
+
+  }
+  BOOST_AUTO_TEST_SUITE_END();
 
 }  // muSpectre

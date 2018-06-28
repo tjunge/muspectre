@@ -194,13 +194,13 @@ namespace muSpectre {
     //! Local FieldCollection type for field storage
     using LColl_t = LocalFieldCollection<DimS>;
     //! storage for cumulated plastic flow εₚ
-    StateField<ScalarField<LColl_t, Real>>  plast_flow_field;
+    StateField<ScalarField<LColl_t, Real>> & plast_flow_field;
 
     //! storage for previous gradient Fᵗ
-    StateField<TensorField<LColl_t, Real, secondOrder, DimM>> F_prev_field;
+    StateField<TensorField<LColl_t, Real, secondOrder, DimM>> & F_prev_field;
 
     //! storage for elastic left Cauchy-Green deformation tensor bₑᵗ
-    StateField<TensorField<LColl_t, Real, secondOrder, DimM>> be_prev_field;
+    StateField<TensorField<LColl_t, Real, secondOrder, DimM>> & be_prev_field;
 
     // material properties
     const Real young;          //!< Young's modulus

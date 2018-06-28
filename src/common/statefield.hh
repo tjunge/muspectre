@@ -61,6 +61,7 @@ namespace muSpectre {
     const FieldCollection & get_collection() const {
       return this->collection;}
 
+    virtual ~StateFieldBase() = default;
 
   protected:
     //! constructor
@@ -94,6 +95,8 @@ namespace muSpectre {
     using index_t = std::array<size_t, nb_memory+1>;
     //! get the current ordering of the fields
     inline const index_t & get_indices() const {return this->indices;}
+
+    virtual ~StateFieldSizedBase() = default;
   protected:
     //! constructor
     StateFieldSizedBase(std::string unique_prefix,
@@ -144,7 +147,7 @@ namespace muSpectre {
   public:
     //! the underlying field's collection type
     using FieldCollection_t = typename Field_t::Base::collection_t;
-    //! Base class for all state fields of same memory 
+    //! Base class for all state fields of same memory
     using Base = StateFieldSizedBase<FieldCollection_t, nb_memory>;
     /**
      * storage of field refs (can't be a `std::array`, because arrays
@@ -154,20 +157,6 @@ namespace muSpectre {
 
     //! Default constructor
     StateField() = delete;
-
-    /**
-     * Constructor.  @param unique_prefix is used to create the names
-     * of the fields that this abstraction creates in the background
-     * @param collection is the field collection in which the
-     * subfields will be stored
-     */
-    inline StateField(std::string unique_prefix, FieldCollection_t & collection)
-      : Base{unique_prefix, collection,
-        internal::build_indices<nb_memory+1>
-        (std::make_index_sequence<nb_memory+1>{})},
-        fields{internal::build_fields_helper<Field_t, nb_memory+1>
-        (unique_prefix, collection, std::make_index_sequence<nb_memory+1>{})}
-    {}
 
     //! Copy constructor
     StateField(const StateField &other) = delete;
@@ -185,13 +174,13 @@ namespace muSpectre {
     StateField& operator=(StateField &&other) = delete;
 
     //! get (modifiable) current field
-    inline StateField& current() {
+    inline Field_t& current() {
       return this->fields[this->indices[0]];
     }
 
     //! get (constant) previous field
     template <size_t nb_steps_ago=1>
-    inline const StateField& old() {
+    inline const Field_t& old() {
       static_assert(nb_steps_ago <= nb_memory,
                     "you can't go that far inte the past");
       static_assert(nb_steps_ago > 0,
@@ -199,11 +188,10 @@ namespace muSpectre {
       return this->fields[this->indices[nb_steps_ago]];
     }
 
-    // //! factory function
-    // template<class StateFieldType, class CollectionType, typename... Args>
-    // friend StateFieldType& make_statefield(std::string unique_prefix,
-    //                                        CollectionType & collection,
-    //                                        Args&&... args);
+   //! factory function
+   template<class StateFieldType, class CollectionType>
+   friend StateFieldType& make_statefield(const std::string & unique_prefix,
+                                          CollectionType & collection);
 
     //! returns a `StateField` reference if `other is a compatible state field
     inline static StateField& check_ref(Base& other) {
@@ -259,6 +247,21 @@ namespace muSpectre {
     }
 
   protected:
+    /**
+     * Constructor.  @param unique_prefix is used to create the names
+     * of the fields that this abstraction creates in the background
+     * @param collection is the field collection in which the
+     * subfields will be stored
+     */
+    inline StateField(const std::string & unique_prefix,
+                      FieldCollection_t & collection)
+      : Base{unique_prefix, collection,
+        internal::build_indices<nb_memory+1>
+        (std::make_index_sequence<nb_memory+1>{})},
+        fields{internal::build_fields_helper<Field_t, nb_memory+1>
+        (unique_prefix, collection, std::make_index_sequence<nb_memory+1>{})}
+    {}
+
     Fields_t fields; //!< container for the states
   private:
   };
@@ -273,6 +276,18 @@ namespace muSpectre {
     }
 
   }  // internal
+
+  /* ---------------------------------------------------------------------- */
+  template <class StateFieldType, class CollectionType>
+  inline StateFieldType &
+  make_statefield(const std::string & unique_prefix,
+                  CollectionType & collection) {
+    std::unique_ptr<StateFieldType> ptr {
+      new StateFieldType(unique_prefix, collection)};
+      auto & retref{*ptr};
+      collection.register_state_field(std::move(ptr));
+      return retref;
+  }
 
   /**
    * extends the StateField <-> Field equivalence to StateFieldMap <-> FieldMap
