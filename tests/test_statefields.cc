@@ -234,7 +234,8 @@ namespace muSpectre {
     }
 
     auto scalar_const_map{Fix::scalar_f.get_const_map()};
-    // auto current_map{Fix::fc.get_current("scalar").eigen_vec()};
+    auto current_map{Fix::fc.template get_current<Real>("scalar").eigenvec()};
+    std::cout << current_map << std::endl;
     // auto old_map{Fix::fc.get_old("scalar").get_map()};
     // auto old_2_map{Fix::fc.template get_old<2>("scalar").get_map()};
 

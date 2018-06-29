@@ -53,6 +53,9 @@ namespace muSpectre {
   public:
     //! polymorphic base type to store
     using Field_t = internal::FieldBase<FieldCollectionDerived>;
+    template<typename T>
+    using TypedField_t = TypedField<FieldCollectionDerived, T>;
+
     using Field_p = std::unique_ptr<Field_t>; //!< stored type
     using StateField_t = StateFieldBase<FieldCollectionDerived>;
     using StateField_p = std::unique_ptr<StateField_t>;
@@ -96,21 +99,26 @@ namespace muSpectre {
     //! retrieve field by unique_name with bounds checking
     inline Field_t& at(std::string unique_name);
 
+    //! retrieve typed field by unique_name
+    template <typename T>
+    inline TypedField_t<T> & get_typed_field(std::string unique_name);
+
     //! retrieve state field by unique_prefix with bounds checking
     inline StateField_t& get_statefield(std::string unique_prefix);
 
     /**
-     * retrieve current value of state field by unique_prefix with
+     * retrieve current value of typed state field by unique_prefix with
      * bounds checking
      */
-    inline Field_t& get_current(std::string unique_prefix);
+    template <typename T>
+    inline TypedField_t<T>& get_current(std::string unique_prefix);
 
     /**
-     * retrieve old value of state field by unique_prefix with
+     * retrieve old value of typed state field by unique_prefix with
      * bounds checking
      */
-    template<size_t nb_steps_ago = 1>
-    inline const Field_t& get_old(std::string unique_prefix) const;
+    template<typename T, size_t nb_steps_ago = 1>
+    inline const TypedField_t<T> & get_old(std::string unique_prefix) const;
 
     //! returns size of collection, this refers to the number of pixels handled
     //! by the collection, not the number of fields
@@ -228,21 +236,55 @@ namespace muSpectre {
     return this->fields.find(unique_name) != this->fields.end();
   }
 
+  //! retrieve typed field by unique_name
+  template <Dim_t DimS, class FieldCollectionDerived>
+  template <typename T>
+  auto FieldCollectionBase<DimS, FieldCollectionDerived>::
+  get_typed_field(std::string unique_name) -> TypedField_t<T> &  {
+    auto & unqualified_field{this->at(unique_name)};
+    if (unqualified_field.get_stored_typeid().hash_code() !=
+        typeid(T).hash_code()) {
+      std::stringstream err{};
+      err << "Field '" << unique_name << "' is of type "
+          << unqualified_field.get_stored_typeid().name()
+          << ", but should be of type " << typeid(T).name() << std::endl;
+      throw FieldCollectionError(err.str());
+    }
+    return static_cast<TypedField_t<T> &>(unqualified_field);
+  }
+
   /* ---------------------------------------------------------------------- */
   template <Dim_t DimS, class FieldCollectionDerived>
+  template <typename T>
   auto
   FieldCollectionBase<DimS, FieldCollectionDerived>::
-  get_current(std::string unique_prefix) -> Field_t & {
-    return this->get_statefield(unique_prefix).current();
-  }
+  get_current(std::string unique_prefix) -> TypedField_t<T> & {
+    auto & unqualified_statefield = this->get_statefield(unique_prefix);
+    if (unqualified_statefield.get_stored_typeid().hash_code() !=
+        typeid(T).hash_code()) {
+      std::stringstream err{};
+      err << "StateField '" << unique_prefix << "' is of type "
+          << unqualified_field.get_stored_typeid().name()
+          << ", but should be of type " << typeid(T).name() << std::endl;
+      throw FieldCollectionError(err.str());
+    }
+    switch (unqualified_statefield.get_nb_memory()) {
+    case 1: {
+      return static_cast<Statefield
+      break;
+    }
+default:
+      break;
+    }
+    return this->get_statefield(unique_prefix).ecurrent();  }
 
   /* ---------------------------------------------------------------------- */
   /* ---------------------------------------------------------------------- */
   template <Dim_t DimS, class FieldCollectionDerived>
-  template <size_t nb_steps_ago>
+  template <typename T, size_t nb_steps_ago>
   auto
   FieldCollectionBase<DimS, FieldCollectionDerived>::
-  get_old(std::string unique_prefix) const -> const Field_t & {
+  get_old(std::string unique_prefix) const -> const TypedField_t<T> & {
     return this->get_statefield(unique_prefix).template old<nb_steps_ago>();
   }
 

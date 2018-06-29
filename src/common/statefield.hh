@@ -63,6 +63,11 @@ namespace muSpectre {
 
     virtual ~StateFieldBase() = default;
 
+    size_t get_nb_memory() const {return this->nb_memory;}
+    //! return type_id of stored type
+    virtual const std::type_info & get_stored_typeid() const = 0;
+
+
   protected:
     //! constructor
     StateFieldBase(std::string unique_prefix,
@@ -134,6 +139,18 @@ namespace muSpectre {
     }
 
   }  // internal
+  template <typename T, size_nb_memory, class FieldCollection>
+  class StafieldFieldSizedTyped:
+    public StateFieldSizedBase<FieldCollection, nb_memory> {
+  public:
+    //! Parent class
+    using Parent = StateFieldSizedBase<FieldCollection, nb_memory>;
+    //! Typed field
+    using TypedField_t = TypedField<FieldCollection, T>;
+
+    TypedField_t & get_current_typed() {
+    }
+  };
 
   /**
    * A statefield is an abstraction around a Field that can hold a
@@ -211,6 +228,11 @@ namespace muSpectre {
      Fields_t & get_fields() {
        return this->fields;
      }
+
+    //! return type_id of stored type
+    const std::type_info & get_stored_typeid() const override final {
+      return this->fields.front().get_stored_typeid();
+    }
 
     /**
      * Pure convenience functions to get a MatrixFieldMap of
