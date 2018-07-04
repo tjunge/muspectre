@@ -117,8 +117,9 @@ namespace muSpectre {
      * retrieve old value of typed state field by unique_prefix with
      * bounds checking
      */
-    template<typename T, size_t nb_steps_ago = 1>
-    inline const TypedField_t<T> & get_old(std::string unique_prefix) const;
+    template<typename T>
+    inline const TypedField_t<T> & get_old(std::string unique_prefix,
+                                           size_t nb_steps_ago = 1) const;
 
     //! returns size of collection, this refers to the number of pixels handled
     //! by the collection, not the number of fields
@@ -260,32 +261,46 @@ namespace muSpectre {
   FieldCollectionBase<DimS, FieldCollectionDerived>::
   get_current(std::string unique_prefix) -> TypedField_t<T> & {
     auto & unqualified_statefield = this->get_statefield(unique_prefix);
+
+    //! check for correct underlying fundamental type
     if (unqualified_statefield.get_stored_typeid().hash_code() !=
         typeid(T).hash_code()) {
       std::stringstream err{};
       err << "StateField '" << unique_prefix << "' is of type "
-          << unqualified_field.get_stored_typeid().name()
+          << unqualified_statefield.get_stored_typeid().name()
           << ", but should be of type " << typeid(T).name() << std::endl;
       throw FieldCollectionError(err.str());
     }
-    switch (unqualified_statefield.get_nb_memory()) {
-    case 1: {
-      return static_cast<Statefield
-      break;
-    }
-default:
-      break;
-    }
-    return this->get_statefield(unique_prefix).ecurrent();  }
+
+    using Typed_t = TypedStateField<FieldCollectionDerived, T>;
+    auto & typed_field{static_cast<Typed_t&>(unqualified_statefield)};
+    return typed_field.get_current_field();
+  }
 
   /* ---------------------------------------------------------------------- */
   /* ---------------------------------------------------------------------- */
   template <Dim_t DimS, class FieldCollectionDerived>
-  template <typename T, size_t nb_steps_ago>
+  template <typename T>
   auto
   FieldCollectionBase<DimS, FieldCollectionDerived>::
-  get_old(std::string unique_prefix) const -> const TypedField_t<T> & {
-    return this->get_statefield(unique_prefix).template old<nb_steps_ago>();
+  get_old(std::string unique_prefix, size_t nb_steps_ago) const
+    -> const TypedField_t<T> & {
+    auto & unqualified_statefield = this->get_statefield(unique_prefix);
+
+    //! check for correct underlying fundamental type
+    if (unqualified_statefield.get_stored_typeid().hash_code() !=
+        typeid(T).hash_code()) {
+      std::stringstream err{};
+      err << "StateField '" << unique_prefix << "' is of type "
+          << unqualified_statefield.get_stored_typeid().name()
+          << ", but should be of type " << typeid(T).name() << std::endl;
+      throw FieldCollectionError(err.str());
+    }
+
+    using Typed_t = TypedStateField<FieldCollectionDerived, T>;
+    auto & typed_field{static_cast<Typed_t&>(unqualified_statefield)};
+    return typed_field.get_old_field(nb_steps_ago);
+
   }
 
 }  // muSpectre
