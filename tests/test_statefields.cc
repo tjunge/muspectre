@@ -49,7 +49,10 @@ namespace muSpectre {
     constexpr static Dim_t sdim{DimS};
     constexpr static Dim_t mdim{DimM};
     constexpr static bool global{Global};
-
+    constexpr static size_t get_nb_mem() {return nb_mem;}
+    constexpr static Dim_t  get_sdim  () {return sdim;}
+    constexpr static Dim_t  get_mdim  () {return mdim;}
+    constexpr static bool   get_global() {return global;}
 
     SF_Fixture()
       :fc{},
@@ -217,7 +220,7 @@ namespace muSpectre {
                                    typelist, Fix) {
     internal::init<Fix::global, decltype(Fix::self)>::run(Fix::self);
 
-    constexpr bool verbose{true};
+    constexpr bool verbose{false};
     auto scalar_map{Fix::scalar_f.get_map()};
 
     for (size_t i = 0; i < Fix::nb_mem+1; ++i) {
@@ -235,7 +238,9 @@ namespace muSpectre {
 
     auto scalar_const_map{Fix::scalar_f.get_const_map()};
     auto current_map{Fix::fc.template get_current<Real>("scalar").eigenvec()};
-    std::cout << current_map << std::endl;
+    if (verbose) {
+      std::cout << current_map << std::endl;
+    }
     // auto old_map{Fix::fc.get_old("scalar").get_map()};
     // auto old_2_map{Fix::fc.template get_old<2>("scalar").get_map()};
 
@@ -252,9 +257,29 @@ namespace muSpectre {
       BOOST_CHECK_LT(error, tol);
 
     }
+  }
+
+  /* ---------------------------------------------------------------------- */
+  BOOST_FIXTURE_TEST_CASE_TEMPLATE(Polymorphic_access_by_name, Fix, typelist, Fix) {
+    internal::init<Fix::global, decltype(Fix::self)>::run(Fix::self);
+
+    //constexpr bool verbose{true};
+    auto & tensor_field = Fix::fc.get_statefield("prefix");
+    BOOST_CHECK_EQUAL(tensor_field.get_nb_memory(), Fix::get_nb_mem());
+
+    auto & field = Fix::fc.template get_current<Real>("prefix");
+    BOOST_CHECK_EQUAL(field.get_nb_components(),
+                      ipow(Fix::get_mdim(), secondOrder));
+    BOOST_CHECK_THROW(Fix::fc.template get_current<Int>("prefix"), std::runtime_error);
+    auto & old_field = Fix::fc.template get_old<Real>("prefix");
+    BOOST_CHECK_EQUAL(old_field.get_nb_components(),
+                      field.get_nb_components());
+    BOOST_CHECK_THROW(Fix::fc.template get_old<Real>("prefix", Fix::get_nb_mem()+1),
+                      std::out_of_range);
 
 
   }
+
   BOOST_AUTO_TEST_SUITE_END();
 
 }  // muSpectre

@@ -136,7 +136,7 @@ namespace muSpectre {
       //inline const Field_t & get_type() const;
       //! return my collection (for iterating)
       inline const FieldCollection & get_collection() const;
-      //! return my collection (for iterating)
+      //! return number of components (e.g., dimensions) of this field
       inline const size_t & get_nb_components() const;
       //! return type_id of stored type
       virtual const std::type_info & get_stored_typeid() const = 0;

@@ -63,7 +63,7 @@ namespace muSpectre {
 
     /**
      * type stored (unfortunately, we can't statically size the second
-     * dimension due to an Eigen bug,i.e., creating a row vector
+     * dimension due to an Eigen bug, i.e., creating a row vector
      * reference to a column vector does not raise an error :(
      */
     using Stored_t = Eigen::Array<T, Eigen::Dynamic, Eigen::Dynamic>;

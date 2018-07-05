@@ -58,6 +58,9 @@ namespace muSpectre {
 
     using Field_p = std::unique_ptr<Field_t>; //!< stored type
     using StateField_t = StateFieldBase<FieldCollectionDerived>;
+    template<typename T>
+    using TypedStateField_t = TypedStateField<FieldCollectionDerived, T>;
+
     using StateField_p = std::unique_ptr<StateField_t>;
     using Ccoord = Ccoord_t<DimS>; //!< cell coordinates type
 
@@ -104,7 +107,14 @@ namespace muSpectre {
     inline TypedField_t<T> & get_typed_field(std::string unique_name);
 
     //! retrieve state field by unique_prefix with bounds checking
-    inline StateField_t& get_statefield(std::string unique_prefix);
+    inline StateField_t& get_statefield(std::string unique_prefix) {
+      return *(this->state_fields.at(unique_prefix));
+    }
+
+    //! retrieve state field by unique_prefix with bounds checking
+    inline const StateField_t& get_statefield(std::string unique_prefix) const {
+      return *(this->state_fields.at(unique_prefix));
+    }
 
     /**
      * retrieve current value of typed state field by unique_prefix with
@@ -223,14 +233,6 @@ namespace muSpectre {
 
   /* ---------------------------------------------------------------------- */
   template <Dim_t DimS, class FieldCollectionDerived>
-  auto
-  FieldCollectionBase<DimS, FieldCollectionDerived>::
-  get_statefield(std::string unique_prefix) -> StateField_t & {
-    return *(this->state_fields.at(unique_prefix));
-  }
-
-  /* ---------------------------------------------------------------------- */
-  template <Dim_t DimS, class FieldCollectionDerived>
   bool
   FieldCollectionBase<DimS, FieldCollectionDerived>::
   check_field_exists(std::string unique_name) {
@@ -298,9 +300,8 @@ namespace muSpectre {
     }
 
     using Typed_t = TypedStateField<FieldCollectionDerived, T>;
-    auto & typed_field{static_cast<Typed_t&>(unqualified_statefield)};
+    auto & typed_field{static_cast<const Typed_t&>(unqualified_statefield)};
     return typed_field.get_old_field(nb_steps_ago);
-
   }
 
 }  // muSpectre

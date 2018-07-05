@@ -63,6 +63,9 @@ namespace muSpectre {
 
     virtual ~StateFieldBase() = default;
 
+    /**
+     * returns number of old states that are stored
+     */
     size_t get_nb_memory() const {return this->nb_memory;}
 
     //! return type_id of stored type
@@ -231,7 +234,7 @@ namespace muSpectre {
                     "you can't go that far inte the past");
       static_assert(nb_steps_ago > 0,
                     "Did you mean to call current()?");
-      return this->fields[this->indices[nb_steps_ago]];
+      return this->fields[this->indices.at(nb_steps_ago)];
     }
 
     //! returns a TypedField ref to the current value of this state field
@@ -242,7 +245,7 @@ namespace muSpectre {
     //! returns a const TypedField ref to an old value of this state field
     const TypedField_t &
     get_old_field(size_t nb_steps_ago=1) const override final {
-      return this->fields[this->indices[nb_steps_ago]];
+      return this->fields[this->indices.at(nb_steps_ago)];
     }
 
    //! factory function
