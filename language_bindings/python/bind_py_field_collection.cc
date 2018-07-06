@@ -55,25 +55,57 @@ void add_field_collection(py::module & mod) {
          -> typename FC_t::template TypedField_t<Real> & {
            return field_collection.template get_typed_field<Real>(unique_name);
          },
-         "unique_name"_a)
+         "unique_name"_a,
+         py::return_value_policy::reference_internal)
     .def("get_int_field",
          [](FC_t & field_collection, std::string unique_name)
          -> typename FC_t::template TypedField_t<Int> & {
            return field_collection.template get_typed_field<Int>(unique_name);
          },
-         "unique_name"_a)
-    .def("get_current_int",
-         [](FC_t & field_collection, std::string unique_prefix)
-         -> typename FC_t::template TypedField_t<Int> & {
-           return field_collection.template get_current<Int>(unique_prefix);
+         "unique_name"_a,
+         py::return_value_policy::reference_internal)
+    .def("get_uint_field",
+         [](FC_t & field_collection, std::string unique_name)
+         -> typename FC_t::template TypedField_t<Uint> & {
+           return field_collection.template get_typed_field<Uint>(unique_name);
          },
-         "unique_prefix"_a)
-    .def("get_current_int",
-         [](FC_t & field_collection, std::string unique_prefix)
-         -> typename FC_t::template TypedField_t<Int> & {
-           return field_collection.template get_current<Int>(unique_prefix);
+         "unique_name"_a,
+         py::return_value_policy::reference_internal)
+    .def("get_complex_field",
+         [](FC_t & field_collection, std::string unique_name)
+         -> typename FC_t::template TypedField_t<Complex> & {
+           return field_collection.template get_typed_field<Complex>(unique_name);
          },
-         "unique_prefix"_a);
+         "unique_name"_a,
+         py::return_value_policy::reference_internal)
+    .def("get_real_statefield",
+         [](FC_t & field_collection, std::string unique_name)
+         -> typename FC_t::template TypedStateField_t<Real> & {
+           return field_collection.template get_typed_statefield<Real>(unique_name);
+         },
+         "unique_name"_a,
+         py::return_value_policy::reference_internal)
+    .def("get_int_statefield",
+         [](FC_t & field_collection, std::string unique_name)
+         -> typename FC_t::template TypedStateField_t<Int> & {
+           return field_collection.template get_typed_statefield<Int>(unique_name);
+         },
+         "unique_name"_a,
+         py::return_value_policy::reference_internal)
+    .def("get_uint_statefield",
+         [](FC_t & field_collection, std::string unique_name)
+         -> typename FC_t::template TypedStateField_t<Uint> & {
+           return field_collection.template get_typed_statefield<Uint>(unique_name);
+         },
+         "unique_name"_a,
+         py::return_value_policy::reference_internal)
+    .def("get_complex_statefield",
+         [](FC_t & field_collection, std::string unique_name)
+         -> typename FC_t::template TypedStateField_t<Complex> & {
+           return field_collection.template get_typed_statefield<Complex>(unique_name);
+         },
+         "unique_name"_a,
+         py::return_value_policy::reference_internal);
 }
 
 template <typename T, class FieldCollection>
@@ -84,8 +116,18 @@ void add_field(py::module & mod, std::string dtype_name) {
               << "Field" << dtype_name << "_" << FieldCollection::spatial_dim();
   std::string name{name_stream.str()};
   py::class_<Field_t, typename Field_t::Parent>(mod, name.c_str())
-    .def("eigen", &Field_t::eigen, "array of stored data")
-    .def("eigenvec", &Field_t::eigen, "flattened array of stored data");
+    .def("eigen", [](Field_t & field) {return field.eigen();},
+         "array of stored data",
+         py::return_value_policy::reference_internal)
+    .def("eigen", [](const Field_t & field) {return field.eigen();},
+         "array of stored data",
+         py::return_value_policy::reference_internal)
+    .def("eigenvec", [](Field_t& field) {return field.eigenvec();},
+         "flattened array of stored data",
+         py::return_value_policy::reference_internal)
+    .def("eigenvec", [](const Field_t& field) {return field.eigenvec();},
+         "flattened array of stored data",
+         py::return_value_policy::reference_internal);
 }
 
 template <Dim_t Dim, class FieldCollection>
@@ -124,10 +166,12 @@ void add_statefield(py::module & mod, std::string dtype_name) {
   std::string name{name_stream.str()};
   py::class_<StateField_t, typename StateField_t::Parent>(mod, name.c_str())
     .def("get_current_field", &StateField_t::get_current_field,
-         "returns the current field value")
+         "returns the current field value",
+         py::return_value_policy::reference_internal)
     .def("get_old_field", &StateField_t::get_old_field,
          "nb_steps_ago"_a = 1,
-         "returns the value this field held 'nb_steps_ago' steps ago");
+         "returns the value this field held 'nb_steps_ago' steps ago",
+         py::return_value_policy::reference_internal);
 }
 
 template <Dim_t Dim, class FieldCollection>
@@ -157,6 +201,9 @@ template <Dim_t Dim>
 void add_field_collection_helper(py::module & mod) {
   add_field_helper<Dim, GlobalFieldCollection<Dim>>(mod);
   add_field_helper<Dim,  LocalFieldCollection<Dim>>(mod);
+
+  add_statefield_helper<Dim, GlobalFieldCollection<Dim>>(mod);
+  add_statefield_helper<Dim,  LocalFieldCollection<Dim>>(mod);
 
   add_field_collection<Dim, GlobalFieldCollection<Dim>>(mod);
   add_field_collection<Dim,  LocalFieldCollection<Dim>>(mod);

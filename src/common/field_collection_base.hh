@@ -107,6 +107,10 @@ namespace muSpectre {
     inline TypedField_t<T> & get_typed_field(std::string unique_name);
 
     //! retrieve state field by unique_prefix with bounds checking
+    template <typename T>
+    inline TypedStateField_t<T>& get_typed_statefield(std::string unique_prefix);
+
+    //! retrieve state field by unique_prefix with bounds checking
     inline StateField_t& get_statefield(std::string unique_prefix) {
       return *(this->state_fields.at(unique_prefix));
     }
@@ -255,6 +259,26 @@ namespace muSpectre {
     }
     return static_cast<TypedField_t<T> &>(unqualified_field);
   }
+
+  /* ---------------------------------------------------------------------- */
+  //! retrieve state field by unique_prefix with bounds checking
+  template <Dim_t DimS, class FieldCollectionDerived>
+  template <typename T>
+  auto FieldCollectionBase<DimS, FieldCollectionDerived>::
+  get_typed_statefield(std::string unique_prefix)
+    -> TypedStateField_t<T> & {
+    auto & unqualified_statefield{this->get_statefield(unique_prefix)};
+    if (unqualified_statefield.get_stored_typeid().hash_code() !=
+        typeid(T).hash_code()) {
+      std::stringstream err{};
+      err << "Statefield '" << unique_prefix << "' is of type "
+          << unqualified_statefield.get_stored_typeid().name()
+          << ", but should be of type " << typeid(T).name() << std::endl;
+      throw FieldCollectionError(err.str());
+    }
+    return static_cast<TypedStateField_t<T> &>(unqualified_statefield);
+  }
+
 
   /* ---------------------------------------------------------------------- */
   template <Dim_t DimS, class FieldCollectionDerived>

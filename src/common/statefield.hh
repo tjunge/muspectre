@@ -71,7 +71,11 @@ namespace muSpectre {
     //! return type_id of stored type
     virtual const std::type_info & get_stored_typeid() const = 0;
 
-
+    /**
+     * cycle the fields (current becomes old, old becomes older,
+     * oldest becomes current)
+     */
+    virtual void cycle() = 0;
   protected:
     //! constructor
     StateFieldBase(std::string unique_prefix,
@@ -173,8 +177,8 @@ namespace muSpectre {
 
     /* ---------------------------------------------------------------------- */
     template <size_t size, size_t... I>
-    decltype(auto) build_indices(std::index_sequence<I...>) {
-      return std::array<size_t, size>{I...};
+    inline decltype(auto) build_indices(std::index_sequence<I...>) {
+      return std::array<size_t, size>{(size-I)%size...};
     }
 
   }  // internal
@@ -300,7 +304,7 @@ namespace muSpectre {
      * cycle the fields (current becomes old, old becomes older,
      * oldest becomes current)
      */
-    inline void cycle() {
+    inline void cycle() override final {
       for (auto & val: this->indices) {
         val = (val+1)%(nb_memory+1);
       }
@@ -638,7 +642,7 @@ namespace muSpectre {
       static_assert (nb_steps_ago > 0,
                      "Did you mean to access the current value? If so, use "
                      "current()");
-      return std::get<nb_memory-nb_steps_ago>(this->old_vals);
+      return std::get<nb_steps_ago-1>(this->old_vals);
     }
 
     //! read the coordinates of the current pixel

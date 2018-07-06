@@ -74,6 +74,34 @@ namespace muSpectre {
 
   BOOST_AUTO_TEST_SUITE(statefield);
 
+  BOOST_AUTO_TEST_CASE(old_values_test) {
+    constexpr Dim_t Dim{twoD};
+    constexpr size_t NbMem{2};
+    constexpr bool verbose{false};
+    using FC_t = LocalFieldCollection<Dim>;
+    FC_t fc{};
+    using Field_t = ScalarField<FC_t, Int>;
+    auto & statefield{make_statefield<StateField<Field_t, NbMem>>("name", fc)};
+    fc.add_pixel({});
+    fc.initialise();
+    for (size_t i{0}; i < NbMem+1; ++i) {
+      statefield.current().eigen() = i+1;
+      if (verbose) {
+        std::cout << "current = " << statefield.current().eigen() << std::endl
+                  << "old 1   = " << statefield.old().eigen() << std::endl
+                  << "old 2   = " << statefield.template old<2>().eigen()
+                  << std::endl
+                  << "indices = " << statefield.get_indices() << std::endl
+                  << std::endl;
+      }
+      statefield.cycle();
+    }
+    BOOST_CHECK_EQUAL(statefield.current().eigen()(0), 1);
+    BOOST_CHECK_EQUAL(statefield.old().eigen()(0), 3);
+    BOOST_CHECK_EQUAL(statefield.template old<2>().eigen()(0), 2);
+
+  }
+
   BOOST_FIXTURE_TEST_CASE_TEMPLATE(constructor_test, Fix, typelist, Fix) {
     const std::string ref{"prefix"};
     const std::string & fix{Fix::sf.get_prefix()};
@@ -215,49 +243,6 @@ namespace muSpectre {
 
   }
 
-  /* ---------------------------------------------------------------------- */
-  BOOST_FIXTURE_TEST_CASE_TEMPLATE(extract_by_prefix_from_collection, Fix,
-                                   typelist, Fix) {
-    internal::init<Fix::global, decltype(Fix::self)>::run(Fix::self);
-
-    constexpr bool verbose{false};
-    auto scalar_map{Fix::scalar_f.get_map()};
-
-    for (size_t i = 0; i < Fix::nb_mem+1; ++i) {
-      for (auto && wrapper: scalar_map) {
-        wrapper.current() += (i+1);
-        if (verbose) {
-          std::cout << "pixel " << wrapper.get_ccoord() << ", memory cycle " << i << std::endl;
-          std::cout << wrapper.current() << std::endl;
-          std::cout << wrapper.old() << std::endl;
-          std::cout << wrapper.template old<2>() << std::endl << std::endl;
-        }
-      }
-      Fix::scalar_f.cycle();
-    }
-
-    auto scalar_const_map{Fix::scalar_f.get_const_map()};
-    auto current_map{Fix::fc.template get_current<Real>("scalar").eigenvec()};
-    if (verbose) {
-      std::cout << current_map << std::endl;
-    }
-    // auto old_map{Fix::fc.get_old("scalar").get_map()};
-    // auto old_2_map{Fix::fc.template get_old<2>("scalar").get_map()};
-
-    BOOST_CHECK_EQUAL(scalar_const_map[0].current(), scalar_const_map[1].current());
-
-    for (auto wrapper: scalar_const_map) {
-      Real error{wrapper.current() - 1};
-      BOOST_CHECK_LT(error, tol);
-
-      error = wrapper.old() - 3;
-      BOOST_CHECK_LT(error, tol);
-
-      error = wrapper.template old<2>() - 2;
-      BOOST_CHECK_LT(error, tol);
-
-    }
-  }
 
   /* ---------------------------------------------------------------------- */
   BOOST_FIXTURE_TEST_CASE_TEMPLATE(Polymorphic_access_by_name, Fix, typelist, Fix) {
@@ -276,6 +261,34 @@ namespace muSpectre {
                       field.get_nb_components());
     BOOST_CHECK_THROW(Fix::fc.template get_old<Real>("prefix", Fix::get_nb_mem()+1),
                       std::out_of_range);
+
+    auto & statefield{Fix::fc.get_statefield("prefix")};
+    auto & typed_statefield{Fix::fc.template get_typed_statefield<Real>("prefix")};
+    auto map{ArrayFieldMap
+        <decltype(Fix::fc), Real, ipow(Fix::get_mdim(), secondOrder), 1>
+        (typed_statefield.get_current_field())};
+    for (auto arr: map) {
+      arr.setConstant(1);
+    }
+
+
+
+    Eigen::ArrayXXd field_copy{field.eigen()};
+    statefield.cycle();
+    auto & alt_old_field{typed_statefield.get_old_field()};
+
+    Real err{(field_copy - alt_old_field.eigen()).matrix().norm()/
+        field_copy.matrix().norm()};
+    BOOST_CHECK_LT(err, tol);
+    if (not(err<tol)) {
+      std::cout << field_copy << std::endl
+                << std::endl
+                << typed_statefield.get_current_field().eigen() << std::endl
+                << std::endl
+                << typed_statefield.get_old_field(1).eigen() << std::endl
+                << std::endl
+                << typed_statefield.get_old_field(2).eigen() << std::endl;
+    }
 
 
   }
