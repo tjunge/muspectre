@@ -7,8 +7,6 @@
  *
  * @brief  Virtual base class for fields
  *
- * @section LICENSE
- *
  * Copyright © 2018 Till Junge
  *
  * µSpectre is free software; you can redistribute it and/or
@@ -158,7 +156,8 @@ namespace muSpectre {
       //! give access to collections
       friend FieldCollection;
       //! give access to collection's base class
-      friend typename FieldCollection::Parent;
+      using FParent_t = typename FieldCollection::Parent;
+      friend FParent_t;
 
     protected:
       /* ---------------------------------------------------------------------- */

@@ -349,7 +349,7 @@ namespace muSpectre {
     std::unique_ptr<StateFieldType> ptr {
       new StateFieldType(unique_prefix, collection)};
       auto & retref{*ptr};
-      collection.register_state_field(std::move(ptr));
+      collection.register_statefield(std::move(ptr));
       return retref;
   }
 

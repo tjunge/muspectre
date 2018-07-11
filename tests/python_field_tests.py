@@ -40,8 +40,32 @@ class FieldCollection_Check(unittest.TestCase):
         self.resolution = [3, 3]
         self.lengths = [1.58, 5.87]
         self.formulation = µ.Formulation.finite_strain
-        self.sys = µ.Cell(self.resolution,
-                          self.lengths,
-                          self.formulation)
+        self.cell = µ.Cell(self.resolution,
+                           self.lengths,
+                           self.formulation)
         self.dim = len(self.lengths)
-        #self.mat = µ.material.MaterialHyperElastoPlastic
+        self.mat = µ.material.MaterialLinearElastic2_2d.make(
+            self.cell, "material", 210e9, .33)
+
+    def test_fields(self):
+        eigen_strain = np.array([[.01,  .02],
+                                 [.03, -.01]])
+        for i, pixel in enumerate(self.cell):
+            self.mat.add_pixel(pixel, i/self.cell.size*eigen_strain)
+
+        self.cell.initialise()
+        dir(µ.material.Material_2d)
+        self.assertTrue(isinstance(self.mat, µ.material.Material_2d))
+        collection = self.mat.collection
+        field_name = collection.field_names[0]
+        self.assertRaises(Exception, collection.get_complex_field, field_name)
+        self.assertRaises(Exception, collection.get_int_field, field_name)
+        self.assertRaises(Exception, collection.get_uint_field, field_name)
+        eigen_strain_field = collection.get_real_field(field_name)
+
+        print(eigen_strain_field.eigen.T)
+        for i, row in enumerate(eigen_strain_field.eigen.T):
+            error = np.linalg.norm(i/self.cell.size*eigen_strain -
+                                   row.reshape(eigen_strain.shape).T)
+            self.assertEqual(0, error)
+

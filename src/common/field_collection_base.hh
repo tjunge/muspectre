@@ -88,13 +88,31 @@ namespace muSpectre {
 
     //! Register a new field (fields need to be in heap, so I want to keep them
     //! as shared pointers
-    void register_state_field(StateField_p&& field);
+    void register_statefield(StateField_p&& field);
 
     //! for return values of iterators
     constexpr inline static Dim_t spatial_dim();
 
     //! for return values of iterators
     inline Dim_t get_spatial_dim() const;
+
+    //! return names of all stored fields
+    std::vector<std::string> get_field_names() const {
+      std::vector<std::string> names{};
+      for (auto & tup: this->fields) {
+        names.push_back(std::get<0>(tup));
+      }
+      return names;
+    }
+
+    //! return names of all state fields
+    std::vector<std::string> get_statefield_names() const {
+      std::vector<std::string> names{};
+      for (auto & tup: this->statefields) {
+        names.push_back(std::get<0>(tup));
+      }
+      return names;
+    }
 
     //! retrieve field by unique_name
     inline Field_t& operator[](std::string unique_name);
@@ -112,12 +130,12 @@ namespace muSpectre {
 
     //! retrieve state field by unique_prefix with bounds checking
     inline StateField_t& get_statefield(std::string unique_prefix) {
-      return *(this->state_fields.at(unique_prefix));
+      return *(this->statefields.at(unique_prefix));
     }
 
     //! retrieve state field by unique_prefix with bounds checking
     inline const StateField_t& get_statefield(std::string unique_prefix) const {
-      return *(this->state_fields.at(unique_prefix));
+      return *(this->statefields.at(unique_prefix));
     }
 
     /**
@@ -146,7 +164,7 @@ namespace muSpectre {
   protected:
     std::map<const std::string, Field_p> fields{}; //!< contains the field ptrs
     //! contains ptrs to state fields
-    std::map<const std::string, StateField_p> state_fields{};
+    std::map<const std::string, StateField_p> statefields{};
     bool is_initialised{false}; //!< to handle double initialisation correctly
     const Uint id; //!< unique identifier
     static Uint counter; //!< used to assign unique identifiers
@@ -189,20 +207,20 @@ namespace muSpectre {
   /* ---------------------------------------------------------------------- */
   template <Dim_t DimS, class FieldCollectionDerived>
   void FieldCollectionBase<DimS, FieldCollectionDerived>::
-  register_state_field(StateField_p&& field) {
-    auto&& search_it = this->state_fields.find(field->get_prefix());
-    auto&& does_exist = search_it != this->state_fields.end();
+  register_statefield(StateField_p&& field) {
+    auto&& search_it = this->statefields.find(field->get_prefix());
+    auto&& does_exist = search_it != this->statefields.end();
     if (does_exist) {
       std::stringstream err_str;
       err_str << "a state field named " << field->get_prefix()
               << "is already registered in this field collection. "
               << "Currently registered fields: ";
-      for (const auto& name_field_pair: this->state_fields) {
+      for (const auto& name_field_pair: this->statefields) {
         err_str << ", " << name_field_pair.first;
       }
       throw FieldCollectionError(err_str.str());
     }
-    this->state_fields[field->get_prefix()] = std::move(field);
+    this->statefields[field->get_prefix()] = std::move(field);
   }
 
   /* ---------------------------------------------------------------------- */

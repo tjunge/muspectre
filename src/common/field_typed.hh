@@ -8,8 +8,6 @@
  * @brief  Typed Field for dynamically sized fields and base class for fields 
  *         of tensors, matrices, etc
  *
- * @section LICENSE
- *
  * Copyright © 2018 Till Junge
  *
  * µSpectre is free software; you can redistribute it and/or

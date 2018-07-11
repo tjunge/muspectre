@@ -105,7 +105,12 @@ void add_field_collection(py::module & mod) {
            return field_collection.template get_typed_statefield<Complex>(unique_name);
          },
          "unique_name"_a,
-         py::return_value_policy::reference_internal);
+         py::return_value_policy::reference_internal)
+    .def_property_readonly("field_names", &FC_t::get_field_names,
+                           "returns the names of all fields in this collection")
+    .def_property_readonly("statefield_names", &FC_t::get_statefield_names,
+                           "returns the names of all state fields in this "
+                           "collection");
 }
 
 template <typename T, class FieldCollection>
@@ -115,19 +120,21 @@ void add_field(py::module & mod, std::string dtype_name) {
   name_stream << (FieldCollection::Global ? "Global" : "Local")
               << "Field" << dtype_name << "_" << FieldCollection::spatial_dim();
   std::string name{name_stream.str()};
+  using Ref_t = py::EigenDRef<Eigen::Matrix<T, Eigen::Dynamic, Eigen::Dynamic>>;
   py::class_<Field_t, typename Field_t::Parent>(mod, name.c_str())
-    .def("eigen", [](Field_t & field) {return field.eigen();},
-         "array of stored data",
-         py::return_value_policy::reference_internal)
-    .def("eigen", [](const Field_t & field) {return field.eigen();},
-         "array of stored data",
-         py::return_value_policy::reference_internal)
-    .def("eigenvec", [](Field_t& field) {return field.eigenvec();},
-         "flattened array of stored data",
-         py::return_value_policy::reference_internal)
-    .def("eigenvec", [](const Field_t& field) {return field.eigenvec();},
-         "flattened array of stored data",
-         py::return_value_policy::reference_internal);
+    .def_property("eigen", [](Field_t & field) {return field.eigen();},
+                  [](Field_t & field, Ref_t mat) {field.eigen() = mat;},
+                  "array of stored data")
+    .def_property_readonly("eigen",
+                           [](const Field_t & field) {return field.eigen();},
+                           "array of stored data")
+    .def_property("eigenvec",
+                  [](Field_t& field) {return field.eigenvec();},
+                  [](Field_t & field, Ref_t mat) {field.eigen() = mat;},
+                  "flattened array of stored data")
+    .def_property_readonly("eigenvec",
+                           [](const Field_t& field) {return field.eigenvec();},
+                           "flattened array of stored data");
 }
 
 template <Dim_t Dim, class FieldCollection>

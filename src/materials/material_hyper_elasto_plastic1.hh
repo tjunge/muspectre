@@ -220,10 +220,11 @@ namespace muSpectre {
   //----------------------------------------------------------------------------//
   template <Dim_t DimS, Dim_t DimM>
   template <class grad_t>
-  decltype(auto)
+  auto
   MaterialHyperElastoPlastic1<DimS, DimM>::
   stress_n_internals_worker(grad_t && F, StrainStRef_t& F_prev,
-                            StrainStRef_t& be_prev, FlowStRef_t& eps_p)  {
+                            StrainStRef_t& be_prev, FlowStRef_t& eps_p)
+    -> decltype(auto) {
 
     // the notation in this function follows Geers 2003
     // (https://doi.org/10.1016/j.cma.2003.07.014).
@@ -264,10 +265,10 @@ namespace muSpectre {
   //----------------------------------------------------------------------------//
   template <Dim_t DimS, Dim_t DimM>
   template <class grad_t>
-  decltype(auto)
+  auto
   MaterialHyperElastoPlastic1<DimS, DimM>::
   evaluate_stress(grad_t && F, StrainStRef_t F_prev, StrainStRef_t be_prev,
-                  FlowStRef_t eps_p)  {
+                  FlowStRef_t eps_p) -> decltype(auto) {
     auto retval(std::move(std::get<0>(this->stress_n_internals_worker
                                                                  (std::forward<grad_t>(F), F_prev, be_prev, eps_p))));
     return retval;
@@ -275,10 +276,10 @@ namespace muSpectre {
   //----------------------------------------------------------------------------//
   template <Dim_t DimS, Dim_t DimM>
   template <class grad_t>
-  decltype(auto)
+  auto
   MaterialHyperElastoPlastic1<DimS, DimM>::
   evaluate_stress_tangent(grad_t && F, StrainStRef_t F_prev, StrainStRef_t be_prev,
-                          FlowStRef_t eps_p)  {
+                          FlowStRef_t eps_p) -> decltype(auto) {
     //! after the stress computation, all internals are up to date
     auto && vals{this->stress_n_internals_worker
         (std::forward<grad_t>(F), F_prev, be_prev, eps_p)};
