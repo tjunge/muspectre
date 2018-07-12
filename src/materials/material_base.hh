@@ -162,6 +162,8 @@ namespace muSpectre {
      */
     std::vector<std::string> list_fields() const;
 
+    //! gives access to internal fields
+    inline MFieldCollection_t& get_collection() {return this->internal_fields;}
 
   protected:
 

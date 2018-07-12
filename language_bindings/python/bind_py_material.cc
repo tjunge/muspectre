@@ -33,6 +33,7 @@
 #include "materials/material_crystal_plasticity_finite.hh"
 #include "materials/material_hyper_elasto_plastic1.hh"
 #include "cell/cell_base.hh"
+#include "common/field_collection.hh"
 
 #include <pybind11/pybind11.h>
 #include <pybind11/stl.h>

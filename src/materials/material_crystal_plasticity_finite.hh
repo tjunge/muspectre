@@ -221,11 +221,14 @@ namespace muSpectre {
     using ScalarPerSlip_map =
       StateFieldMap<MatrixFieldMap<LColl_t, Real, NbSlip, 1>>;
     //! Storage for F_p
-    StateField<TensorField<LColl_t, Real, secondOrder, DimM>> FpField;
+    using FpField_t = StateField<TensorField<LColl_t, Real, secondOrder, DimM>>;
+    FpField_t & FpField;
     //! Storage for dγ/dt
-    StateField<MatrixField<LColl_t, Real, NbSlip, 1>> GammaDotField;
+    using GammaDotField_t = StateField<MatrixField<LColl_t, Real, NbSlip, 1>>;
+    GammaDotField_t & GammaDotField;
     //! Storage for τ_y
-    StateField<MatrixField<LColl_t, Real, NbSlip, 1>> TauYField;
+    using TauYField_t = StateField<MatrixField<LColl_t, Real, NbSlip, 1>>;
+    TauYField_t & TauYField;
     //! Storage for γ
     MatrixField<LColl_t, Real, NbSlip, 1> & GammaField;
     //! Storage for Euler angles

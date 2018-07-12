@@ -36,9 +36,12 @@ namespace muSpectre {
   MaterialCrystalPlasticityFinite<DimS, DimM, NbSlip>::
   MaterialCrystalPlasticityFinite(std::string name, Real bulk_m, Real shear_m, Real gamma_dot0, Real m_par, Real tau_y0, Real h0, Real delta_tau_y_max, Real a_par, Real q_n, SlipVecs_ref Slip0, SlipVecs_ref Normal0, Real delta_t, Real tolerance, Int maxiter)
     : Parent{name},
-      FpField("Plastic Deformation Gradient Fₚ(t)",this->internal_fields),
-      GammaDotField("Plastic slip rates dγᵅ/dt",this->internal_fields),
-      TauYField("Critical resolved shear stress τᵅy(t)",this->internal_fields),
+      FpField{make_statefield<FpField_t>
+              ("Plastic Deformation Gradient Fₚ(t)",this->internal_fields)},
+      GammaDotField(make_statefield<GammaDotField_t>
+                    ("Plastic slip rates dγᵅ/dt",this->internal_fields)),
+      TauYField(make_statefield<TauYField_t>
+                ("Critical resolved shear stress τᵅy(t)",this->internal_fields)),
       GammaField{
         make_field<MatrixField<LColl_t, Real, NbSlip, 1>>
           ("Accumulated slips γᵅ(t)",this->internal_fields)},

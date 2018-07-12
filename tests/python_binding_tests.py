@@ -37,9 +37,13 @@ from python_fft_tests import FFT_Check
 from python_projection_tests import *
 from python_material_linear_elastic3_test import MaterialLinearElastic3_Check
 from python_material_linear_elastic4_test import MaterialLinearElastic4_Check
+
 from python_material_crystal_plasticity_finite1 import MaterialCrystalPlasticityFinite1_Check
 
-from python_exact_reference_test import LinearElastic_Check
+from python_exact_reference_elastic_test import LinearElastic_Check
+
+from python_field_tests import FieldCollection_Check
+
 
 class CellCheck(unittest.TestCase):
     def test_Construction(self):
