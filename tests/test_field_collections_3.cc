@@ -138,7 +138,7 @@ namespace muSpectre {
   }
 
   /* ---------------------------------------------------------------------- */
-  BOOST_FIXTURE_TEST_CASE_TEMPLATE(get_typed_field, Fix,
+  BOOST_FIXTURE_TEST_CASE_TEMPLATE(typed_field_getter, Fix,
                                    mult_collections, Fix) {
     constexpr auto mdim{Fix::mdim()};
     auto & fc{Fix::fc};
