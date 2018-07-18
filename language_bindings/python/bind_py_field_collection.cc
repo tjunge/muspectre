@@ -122,17 +122,17 @@ void add_field(py::module & mod, std::string dtype_name) {
   std::string name{name_stream.str()};
   using Ref_t = py::EigenDRef<Eigen::Matrix<T, Eigen::Dynamic, Eigen::Dynamic>>;
   py::class_<Field_t, typename Field_t::Parent>(mod, name.c_str())
-    .def_property("eigen", [](Field_t & field) {return field.eigen();},
+    .def_property("array", [](Field_t & field) {return field.eigen();},
                   [](Field_t & field, Ref_t mat) {field.eigen() = mat;},
                   "array of stored data")
-    .def_property_readonly("eigen",
+    .def_property_readonly("array",
                            [](const Field_t & field) {return field.eigen();},
                            "array of stored data")
-    .def_property("eigenvec",
+    .def_property("vector",
                   [](Field_t& field) {return field.eigenvec();},
                   [](Field_t & field, Ref_t mat) {field.eigen() = mat;},
                   "flattened array of stored data")
-    .def_property_readonly("eigenvec",
+    .def_property_readonly("vector",
                            [](const Field_t& field) {return field.eigenvec();},
                            "flattened array of stored data");
 }
