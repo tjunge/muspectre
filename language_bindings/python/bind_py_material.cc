@@ -327,8 +327,10 @@ void add_material_helper(py::module & mod) {
   std::string name{name_stream.str()};
   using Material = MaterialBase<dim, dim>;
   using MaterialTrampoline = PyMaterialBase<dim>;
-  py::class_<Material, MaterialTrampoline /* <--- trampoline*/> animal(mod, name.c_str());
-  animal
+  using FC_t = LocalFieldCollection<dim>;
+  using FCBase_t = FieldCollectionBase<dim, FC_t>;
+
+  py::class_<Material, MaterialTrampoline /* <--- trampoline*/>(mod, name.c_str())
     .def(py::init<std::string>())
     .def("save_history_variables", &Material::save_history_variables)
     .def("list_fields", &Material::list_fields)
@@ -338,7 +340,12 @@ void add_material_helper(py::module & mod) {
     .def("add_pixel",
          [] (Material & mat, Ccoord_t<dim> pix) {
            mat.add_pixel(pix);},
-         "pixel"_a);
+         "pixel"_a)
+    .def_property_readonly("collection",
+                          [](Material & material) -> FCBase_t &{
+                            return material.get_collection();},
+                          "returns the field collection containing internal "
+                          "fields of this material");
 
   add_material_linear_elastic1_helper<dim>(mod);
   add_material_linear_elastic2_helper<dim>(mod);
