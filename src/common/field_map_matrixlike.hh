@@ -118,7 +118,7 @@ namespace muSpectre {
                                            value_type>; // since it's a resource handle
       using size_type = typename Parent::size_type; //!< stl conformance
       using pointer = std::unique_ptr<EigenArray>; //!< stl conformance
-      using TypedField = typename Parent::TypedField; //!< stl conformance
+
       using Field = typename Parent::Field; //!< stl conformance
       using Field_c  = typename Parent::Field_c; //!< stl conformance
       //! stl conformance
@@ -153,9 +153,9 @@ namespace muSpectre {
       MatrixLikeFieldMap(TypedSizedFieldBase<FC, T2, NbC> & field);
 
       //! Copy constructor
-      MatrixLikeFieldMap(const MatrixLikeFieldMap &other) = default;
+      MatrixLikeFieldMap(const MatrixLikeFieldMap &other) = delete;
 
-      //! Move constructor
+      //! Move constructorxo
       MatrixLikeFieldMap(MatrixLikeFieldMap &&other) = default;
 
       //! Destructor
@@ -185,7 +185,7 @@ namespace muSpectre {
       inline const_reference operator[](const Ccoord& ccoord) const;
 
       //! return an iterator to head of field for ranges
-      inline iterator begin(){return iterator(*this);}
+      inline iterator begin(){return std::move(iterator(*this));}
       //! return an iterator to head of field for ranges
       inline const_iterator cbegin() const {return const_iterator(*this);}
       //! return an iterator to head of field for ranges

@@ -75,18 +75,28 @@ namespace muSpectre {
     template <class FieldCollection, typename T, Dim_t NbComponents, bool ConstField>
     class FieldMap
     {
+      static_assert((NbComponents != 0),
+                    "Fields with now components make no sense.");
+      /*
+       * Eigen::Dynamic is equal to -1, and is a legal value, hence
+       * the following peculiar check
+       */
+      static_assert((NbComponents > -2),
+                    "Fields with a negative number of components make no sense.");
     public:
       //! Fundamental type stored
       using Scalar = T;
       //! number of scalars per entry
       constexpr static auto nb_components{NbComponents};
-      using TypedField_nc = TypedSizedFieldBase
-        <FieldCollection, T, NbComponents>; //!< non-constant version of field
+      //! non-constant version of field
+      using TypedField_nc = std::conditional_t<(NbComponents >= 1),
+        TypedSizedFieldBase<FieldCollection, T, NbComponents>,
+        TypedField<FieldCollection, T>>;
       //! field type as seen from iterator
-      using TypedField = std::conditional_t<ConstField,
-                                            const TypedField_nc,
-                                            TypedField_nc>;
-      using Field = typename TypedField::Base; //!< iterated field type
+      using TypedField_t = std::conditional_t<ConstField,
+                                              const TypedField_nc,
+                                              TypedField_nc>;
+      using Field = typename TypedField_nc::Base; //!< iterated field type
       //! const-correct field type
       using Field_c = std::conditional_t<ConstField,
                                          const Field,
@@ -173,8 +183,8 @@ namespace muSpectre {
         using reference = typename FullyTypedFieldMap::reference;
         //! fully typed reference as seen by the iterator
         using TypedRef = std::conditional_t<ConstIter,
-                                            const FullyTypedFieldMap &,
-                                            FullyTypedFieldMap>;
+                                            const FullyTypedFieldMap,
+                                            FullyTypedFieldMap> &;
 
         //! Default constructor
         iterator() = delete;
@@ -184,9 +194,6 @@ namespace muSpectre {
 
         //! constructor for random access
         inline iterator(TypedRef fieldmap, size_t index);
-
-        //! Copy constructor
-        iterator(const iterator &other)= default;
 
         //! Move constructor
         iterator(iterator &&other) = default;
@@ -242,7 +249,7 @@ namespace muSpectre {
         //! get pixel coordinates
         inline Ccoord get_ccoord() const;
 
-        //! ostream operator (mainly for debug
+        //! ostream operator (mainly for debugging)
         friend std::ostream & operator<<(std::ostream & os,
                                          const iterator& it) {
           if (ConstIter) {
@@ -255,13 +262,16 @@ namespace muSpectre {
         }
 
       protected:
+        //! Copy constructor
+        iterator(const iterator &other) = default;
+
         const FieldCollection & collection; //!< collection of the field
         TypedRef fieldmap; //!< ref to the field itself
         size_t index; //!< index of currently pointed-to pixel
       private:
       };
 
-      TypedField & get_field() {return this->field;}
+      TypedField_t & get_field() {return this->field;}
 
     protected:
       //! raw pointer to entry (for Eigen Map)
@@ -269,7 +279,7 @@ namespace muSpectre {
       //! raw pointer to entry (for Eigen Map)
       inline const T* get_ptr_to_entry(size_t index) const;
       const FieldCollection & collection; //!< collection holding Field
-      TypedField & field;  //!< mapped Field
+      TypedField_t & field;  //!< mapped Field
     private:
     };
   }  // internal
@@ -281,8 +291,8 @@ namespace muSpectre {
     template<class FieldCollection, typename T, Dim_t NbComponents, bool ConstField>
     FieldMap<FieldCollection, T, NbComponents, ConstField>::
     FieldMap(Field_c& field)
-      :collection(field.get_collection()), field(static_cast<TypedField&>(field)) {
-      static_assert(NbComponents>0,
+      :collection(field.get_collection()), field(static_cast<TypedField_t&>(field)) {
+      static_assert((NbComponents > 0) or (NbComponents == Eigen::Dynamic),
                     "Only fields with more than 0 components allowed");
     }
 
@@ -291,7 +301,7 @@ namespace muSpectre {
     template <class FC, typename T2, Dim_t NbC>
     FieldMap<FieldCollection, T, NbComponents, ConstField>::
     FieldMap(TypedSizedFieldBase<FC, T2, NbC> & field)
-      :collection(field.get_collection()), field(static_cast<TypedField&>(field)) {
+      :collection(field.get_collection()), field(static_cast<TypedField_t&>(field)) {
       static_assert(std::is_same<FC, FieldCollection>::value,
                     "The field does not have the expected FieldCollection type");
       static_assert(std::is_same<T2, T>::value,
@@ -305,21 +315,21 @@ namespace muSpectre {
     void
     FieldMap<FieldCollection, T, NbComponents, ConstField>::
     check_compatibility() {
-     if (typeid(T).hash_code() !=
+      if (typeid(T).hash_code() !=
           this->field.get_stored_typeid().hash_code()) {
-       std::string err{"Cannot create a Map of type '" +
-           this->info_string() +
-           "' for field '" + this->field.get_name() + "' of type '" +
-           this->field.get_stored_typeid().name() + "'"};
+        std::string err{"Cannot create a Map of type '" +
+            this->info_string() +
+            "' for field '" + this->field.get_name() + "' of type '" +
+            this->field.get_stored_typeid().name() + "'"};
         throw FieldInterpretationError
           (err);
       }
       //check size compatibility
-      if (NbComponents != this->field.get_nb_components()) {
+      if (NbComponents != Dim_t(this->field.get_nb_components())) {
         throw FieldInterpretationError
           ("Cannot create a Map of type '" +
-           this->info_string() +
-           "' for field '" + this->field.get_name() + "' with " +
+           this->info_string() 
+           +           "' for field '" + this->field.get_name() + "' with " +
            std::to_string(this->field.get_nb_components()) + " components");
       }
     }
@@ -344,13 +354,13 @@ namespace muSpectre {
         static_assert
           (std::is_same<typename myField::Scalar, T>::value,
            "The // field does not have the expected Scalar type");
-        static_assert((TypedField::nb_components == NbComponents),
+        static_assert((TypedField_t::nb_components == NbComponents),
                       "The field does not have the expected number of components");
         //The static asserts wouldn't pass in the incompatible case, so this is it
         return true;
       }
       //! evaluated compatibility
-      constexpr static bool value{std::is_base_of<TypedField, myField>::value};
+      constexpr static bool value{std::is_base_of<TypedField_t, myField>::value};
     };
 
     /* ---------------------------------------------------------------------- */

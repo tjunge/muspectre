@@ -70,7 +70,7 @@ namespace muSpectre {
                                          value_type>; // since it's a resource handle
     using size_type = typename Parent::size_type; //!< stl conformance
     using pointer = std::unique_ptr<value_type>; //!< stl conformance
-    using TypedField = typename Parent::TypedField; //!< field to map
+
     //! polymorphic base field type (for debug and python)
     using Field = typename Parent::Field;
     //! polymorphic base field type (for debug and python)
@@ -96,7 +96,7 @@ namespace muSpectre {
     TensorFieldMap(Field_c & field);
 
     //! Copy constructor
-    TensorFieldMap(const TensorFieldMap &other) = default;
+    TensorFieldMap(const TensorFieldMap &other) = delete;
 
     //! Move constructor
     TensorFieldMap(TensorFieldMap &&other) = default;
