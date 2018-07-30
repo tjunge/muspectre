@@ -325,7 +325,8 @@ namespace muSpectre {
           (err);
       }
       //check size compatibility
-      if (NbComponents != Dim_t(this->field.get_nb_components())) {
+      if ((NbComponents != Dim_t(this->field.get_nb_components())) and
+          (NbComponents != Eigen::Dynamic)) {
         throw FieldInterpretationError
           ("Cannot create a Map of type '" +
            this->info_string() 

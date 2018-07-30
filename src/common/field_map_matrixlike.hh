@@ -263,9 +263,8 @@ namespace muSpectre {
     MatrixLikeFieldMap<FieldCollection, EigenArray, EigenConstArray, EigenPlain,
                        map_type, ConstField>::
     operator[](const Ccoord & ccoord) {
-      size_t index{};
-      index = this->collection.get_index(ccoord);
-      return reference(this->get_ptr_to_entry(std::move(index)));
+      size_t && index{this->collection.get_index(ccoord)};
+      return reference(this->get_ptr_to_entry(index));
     }
 
     /* ---------------------------------------------------------------------- */
@@ -287,9 +286,8 @@ namespace muSpectre {
     MatrixLikeFieldMap<FieldCollection, EigenArray, EigenConstArray, EigenPlain,
                        map_type, ConstField>::
     operator[](const Ccoord & ccoord) const{
-      size_t index{};
-      index = this->collection.get_index(ccoord);
-      return const_reference(this->get_ptr_to_entry(std::move(index)));
+      size_t && index{this->collection.get_index(ccoord)};
+      return const_reference(this->get_ptr_to_entry(index));
     }
 
     //----------------------------------------------------------------------------//
