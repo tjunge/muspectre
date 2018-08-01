@@ -74,8 +74,6 @@ namespace muSpectre {
       using Scalar = T; //!< for type checking
       using Base = typename Parent::Base; //!< root base class
 
-      //! type stored if ArrayStore is true
-      using Stored_t = Eigen::Array<T, NbComponents, 1>;
       //! storage container
       using Storage_t = typename Parent::Storage_t;
 
@@ -93,7 +91,8 @@ namespace muSpectre {
       virtual ~TypedSizedFieldBase() = default;
 
       //! add a new value at the end of the field
-      inline void push_back(const Stored_t & value);
+      template <class Derived>
+      inline void push_back(const Eigen::DenseBase<Derived> & value);
 
       //! add a new scalar value at the end of the field
       template <bool scalar_store = NbComponents==1>
@@ -447,11 +446,17 @@ protected:
 
     /* ---------------------------------------------------------------------- */
     template <class FieldCollection, typename T, Dim_t NbComponents>
+    template <class Derived>
     void TypedSizedFieldBase<FieldCollection, T, NbComponents>::
-    push_back(const Stored_t & value) {
+    push_back(const Eigen::DenseBase<Derived> & value) {
+      static_assert(Derived::SizeAtCompileTime == NbComponents,
+                    "You provided an array with the wrong number of entries.");
+      static_assert((Derived::RowsAtCompileTime == 1) or
+                    (Derived::ColsAtCompileTime == 1),
+                    "You have not provided a column or row vector.");
       static_assert (not FieldCollection::Global,
                      "You can only push_back data into local field "
-                     "collections");
+                     "collections.");
       for (Dim_t i = 0; i < NbComponents; ++i) {
         this->values.push_back(value(i));
       }

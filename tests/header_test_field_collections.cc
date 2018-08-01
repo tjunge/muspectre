@@ -27,6 +27,8 @@
  */
 
 #include "test_field_collections.hh"
+#include "common/field_map_dynamic.hh"
+
 namespace muSpectre {
 
   BOOST_AUTO_TEST_SUITE(field_collection_tests);
@@ -220,9 +222,23 @@ namespace muSpectre {
     using FC_t = typename F::Parent::FC_t;
     using Tensor4Map = TensorFieldMap<FC_t, Real, order, F::Parent::mdim()>;
     Tensor4Map T4map{F::fc["Tensorfield Real o4"]};
+    TypedFieldMap<FC_t, Real> dyn_map{F::fc["Tensorfield Real o4"]};
     F::fc["Tensorfield Real o4"].set_zero();
     for (auto && tens:T4map) {
       BOOST_CHECK_EQUAL(Real(Eigen::Tensor<Real, 0>(tens.abs().sum().eval())()), 0);
+    }
+    for (auto && tens: T4map) {
+      tens.setRandom();
+    }
+
+    for (auto && tup: akantu::zip(T4map, dyn_map) ) {
+      auto & tens = std::get<0>(tup);
+      auto & dyn = std::get<1>(tup);
+      using Map_t = std::remove_reference<decltype(tens)>;
+      constexpr Dim_t nb_comp{ipow(F::mdim(), order)};
+      Eigen::Map<Eigen::Array<Real, nb_comp, 1>> tens_arr(tens.data());
+      Real error{(dyn-tens_arr).matrix().norm()};
+      BOOST_CHECK_EQUAL(error, 0);
     }
 
     using Tensor2Map = TensorFieldMap<FC_t, Real, matrix_order, F::Parent::mdim()>;
@@ -323,28 +339,23 @@ namespace muSpectre {
        ("iterator on field 'Tensorfield Real o4', entry ") +
        std::to_string(diff));
 
-    // check copy, move, and assigment constructor (and operator+)
-    it_t itcopy = it1;
+    // check move and assigment constructor (and operator+)
+    it_t it_repl{T4map};
     it_t itmove = std::move(T4map.begin());
     it_t it4 = it1+diff;
-    it_t it5(it2);
-    it_t tmp(it2);
-    it_t it6(std::move(tmp));
     it_t it7 = it4 -diff;
-    BOOST_CHECK_EQUAL(itcopy, it1);
+    //BOOST_CHECK_EQUAL(itcopy, it1);
     BOOST_CHECK_EQUAL(itmove, it1);
     BOOST_CHECK_EQUAL(it4, it3);
-    BOOST_CHECK_EQUAL(it5, it2);
-    BOOST_CHECK_EQUAL(it6, it5);
     BOOST_CHECK_EQUAL(it7, it1);
 
     // check increments/decrements
-    BOOST_CHECK_EQUAL(it1++, itcopy);    // post-increment
-    BOOST_CHECK_EQUAL(it1, itcopy+1);
-    BOOST_CHECK_EQUAL(--it1, itcopy);    // pre -decrement
-    BOOST_CHECK_EQUAL(++it1, itcopy+1);  // pre -increment
-    BOOST_CHECK_EQUAL(it1--, itcopy+1);  // post-decrement
-    BOOST_CHECK_EQUAL(it1, itcopy);
+    BOOST_CHECK_EQUAL(it1++, it_repl);    // post-increment
+    BOOST_CHECK_EQUAL(it1, it_repl+1);
+    BOOST_CHECK_EQUAL(--it1, it_repl);    // pre -decrement
+    BOOST_CHECK_EQUAL(++it1, it_repl+1);  // pre -increment
+    BOOST_CHECK_EQUAL(it1--, it_repl+1);  // post-decrement
+    BOOST_CHECK_EQUAL(it1, it_repl);
 
 
     // dereference and member-of-pointer check

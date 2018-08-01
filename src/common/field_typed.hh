@@ -34,6 +34,15 @@
 #include <sstream>
 
 namespace muSpectre {
+  namespace internal {
+
+    /* ---------------------------------------------------------------------- */
+    //! declaraton for friending
+    template <class FieldCollection, typename T, Dim_t NbComponents, bool isConst>
+    class FieldMap;
+
+  }  // internal
+
 
   /**
    * Dummy intermediate class to provide a run-time polymorphic
@@ -44,6 +53,9 @@ namespace muSpectre {
   template <class FieldCollection, typename T>
   class TypedField: public internal::FieldBase<FieldCollection>
   {
+    friend class internal::FieldMap<FieldCollection, T, Eigen::Dynamic, true>;
+    friend class internal::FieldMap<FieldCollection, T, Eigen::Dynamic, false>;
+
   public:
     using Parent = internal::FieldBase<FieldCollection>; //!< base class
     //! for type checks when mapping this field
@@ -118,7 +130,8 @@ namespace muSpectre {
     virtual void set_zero() override final;
 
     //! add a new value at the end of the field
-    inline void push_back(const Stored_t & value);
+    template <class Derived>
+    inline void push_back(const Eigen::DenseBase<Derived> & value);
 
 
     //! raw pointer to content (e.g., for Eigen maps)
@@ -314,8 +327,9 @@ namespace muSpectre {
 
   /* ---------------------------------------------------------------------- */
   template <class FieldCollection, typename T>
+  template <class Derived>
   void TypedField<FieldCollection, T>::
-  push_back(const Stored_t & value) {
+  push_back(const Eigen::DenseBase<Derived> & value) {
     static_assert (not FieldCollection::Global,
                    "You can only push_back data into local field collections");
     if (value.cols() != 1) {
