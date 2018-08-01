@@ -62,14 +62,18 @@ endif(${MPI_PARALLEL})
 
 include(muspectreTools)
 
+string( TOLOWER "${CMAKE_BUILD_TYPE}" build_type )
 if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang" OR "${CMAKE_CXX_COMPILER_ID}" STREQUAL "AppleClang")
   # using Clang
   add_compile_options(-Wno-missing-braces)
+  if ("debug" STREQUAL "${build_type}")
+    add_compile_options(-O0)
+  endif()
 elseif ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
   # using GCC
   add_compile_options(-Wno-non-virtual-dtor)
-  string( TOLOWER "${CMAKE_BUILD_TYPE}" build_type )
-  if ("release" STREQUAL "${build_type}" )
+  add_compile_options(-march=native)
+  if (("relwithdebinfo" STREQUAL "${build_type}") OR ("release" STREQUAL "${build_type}" ))
     add_compile_options(-march=native)
   endif()
   if ("debug" STREQUAL "${build_type}" )

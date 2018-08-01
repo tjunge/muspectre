@@ -166,24 +166,32 @@ namespace muSpectre {
   template <class FieldCollection, typename T, bool ConstField>
   auto TypedFieldMap<FieldCollection, T, ConstField>::
   operator[](size_type index) -> reference {
+    return reference{this->get_ptr_to_entry(index),
+        Dim_t(this->field.get_nb_components())};
   }
 
   //----------------------------------------------------------------------------//
   template <class FieldCollection, typename T, bool ConstField>
   auto TypedFieldMap<FieldCollection, T, ConstField>::
   operator[](const Ccoord & ccoord) -> reference {
+    size_t index{this->collection.get_index(ccoord)};
+    return (*this)[index];
   }
 
   //----------------------------------------------------------------------------//
   template <class FieldCollection, typename T, bool ConstField>
   auto TypedFieldMap<FieldCollection, T, ConstField>::
   operator[](size_type index) const -> const_reference {
+    return const_reference{this->get_ptr_to_entry(index),
+        Dim_t(this->field.get_nb_components())};
   }
 
   //----------------------------------------------------------------------------//
   template <class FieldCollection, typename T, bool ConstField>
   auto TypedFieldMap<FieldCollection, T, ConstField>::
   operator[](const Ccoord & ccoord) const -> const_reference {
+    size_t index{this->collection.get_index(ccoord)};
+    return (*this)[index];
   }
 
 }  // muSpectre

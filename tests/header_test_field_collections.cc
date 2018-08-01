@@ -224,6 +224,7 @@ namespace muSpectre {
     Tensor4Map T4map{F::fc["Tensorfield Real o4"]};
     TypedFieldMap<FC_t, Real> dyn_map{F::fc["Tensorfield Real o4"]};
     F::fc["Tensorfield Real o4"].set_zero();
+
     for (auto && tens:T4map) {
       BOOST_CHECK_EQUAL(Real(Eigen::Tensor<Real, 0>(tens.abs().sum().eval())()), 0);
     }
@@ -234,7 +235,6 @@ namespace muSpectre {
     for (auto && tup: akantu::zip(T4map, dyn_map) ) {
       auto & tens = std::get<0>(tup);
       auto & dyn = std::get<1>(tup);
-      using Map_t = std::remove_reference<decltype(tens)>;
       constexpr Dim_t nb_comp{ipow(F::mdim(), order)};
       Eigen::Map<Eigen::Array<Real, nb_comp, 1>> tens_arr(tens.data());
       Real error{(dyn-tens_arr).matrix().norm()};
