@@ -216,8 +216,6 @@ namespace muSpectre {
 
   }
 
-  
-
   BOOST_FIXTURE_TEST_CASE_TEMPLATE(iter_field_test, F, iter_collections, F) {
     using FC_t = typename F::Parent::FC_t;
     using Tensor4Map = TensorFieldMap<FC_t, Real, order, F::Parent::mdim()>;
@@ -468,10 +466,17 @@ namespace muSpectre {
   }
   /* ---------------------------------------------------------------------- */
   BOOST_FIXTURE_TEST_CASE_TEMPLATE(assignment_test, Fix, iter_collections, Fix) {
-    auto t4map = Fix::t4_field.get_map();
-    auto t2map = Fix::t2_field.get_map();
-    auto scmap = Fix::sc_field.get_map();
-    auto m2map = Fix::m2_field.get_map();
+    auto t4map{Fix::t4_field.get_map()};
+    auto t2map{Fix::t2_field.get_map()};
+    auto scmap{Fix::sc_field.get_map()};
+    auto m2map{Fix::m2_field.get_map()};
+    auto dymap{Fix::dyn_field.get_map()};
+
+    auto t4map_c{Fix::t4_field.get_const_map()};
+    auto t2map_c{Fix::t2_field.get_const_map()};
+    auto scmap_c{Fix::sc_field.get_const_map()};
+    auto m2map_c{Fix::m2_field.get_const_map()};
+    auto dymap_c{Fix::dyn_field.get_const_map()};
 
     const auto t4map_val{Matrices::Isymm<Fix::mdim()>()};
     t4map = t4map_val;

@@ -30,7 +30,7 @@
 #define FIELD_H
 
 #include "common/T4_map_proxy.hh"
-#include "field_typed.hh"
+#include "common/field_typed.hh"
 
 #include <Eigen/Dense>
 
@@ -41,7 +41,6 @@
 #include <vector>
 #include <algorithm>
 #include <cmath>
-#include <memory>
 #include <type_traits>
 
 namespace muSpectre {
@@ -124,8 +123,8 @@ namespace muSpectre {
       template <typename T2>
       inline Real inner_product(const TypedSizedFieldBase<
                                 FieldCollection, T2, NbComponents> & other) const;
-    protected:
 
+    protected:
       //! returns a raw pointer to the entry, for `Eigen::Map`
       inline T* get_ptr_to_entry(const size_t&& index);
 
@@ -207,7 +206,7 @@ namespace muSpectre {
      * order @a order is 2.
      * - A `T4MatrixFieldMap` if the tensorial order is 4.
      */
-    decltype(auto) get_map();
+    inline decltype(auto) get_map();
     /**
      * Convenience functions to return a map onto this field. A map allows
      * iteration over all pixels. The map's iterator returns an object that
@@ -220,7 +219,7 @@ namespace muSpectre {
      * order @a order is 2.
      * - A `T4MatrixFieldMap` if the tensorial order is 4.
      */
-    decltype(auto) get_const_map();
+    inline decltype(auto) get_const_map();
     /**
      * Convenience functions to return a map onto this field. A map allows
      * iteration over all pixels. The map's iterator returns an object that
@@ -233,7 +232,13 @@ namespace muSpectre {
      * order @a order is 2.
      * - A `T4MatrixFieldMap` if the tensorial order is 4.
      */
-    decltype(auto) get_map() const;
+    inline decltype(auto) get_map() const;
+
+    /**
+     * creates a `TensorField` same size and type as this, but all
+     * entries are zero. Convenience function
+     */
+    inline TensorField & get_zeros_like(std::string unique_name) const;
 
   protected:
     //! constructor protected!
@@ -306,7 +311,7 @@ namespace muSpectre {
       * - A `MatrixFieldMap` with @a NbRows rows and @a NbCols columns
       * otherwise.
       */
-    decltype(auto) get_map();
+    inline decltype(auto) get_map();
     /**
      * Convenience functions to return a map onto this field. A map allows
      * iteration over all pixels. The map's iterator returns an object that
@@ -317,7 +322,7 @@ namespace muSpectre {
      * - A `MatrixFieldMap` with @a NbRows rows and @a NbCols columns
      * otherwise.
      */
-    decltype(auto) get_const_map();
+    inline decltype(auto) get_const_map();
     /**
      * Convenience functions to return a map onto this field. A map allows
      * iteration over all pixels. The map's iterator returns an object that
@@ -328,8 +333,13 @@ namespace muSpectre {
      * - A `MatrixFieldMap` with @a NbRows rows and @a NbCols columns
      * otherwise.
      */
-    decltype(auto) get_map() const;
+    inline decltype(auto) get_map() const;
 
+    /**
+     * creates a `MatrixField` same size and type as this, but all
+     * entries are zero. Convenience function
+     */
+    inline MatrixField & get_zeros_like(std::string unique_name) const;
 
 protected:
     //! constructor protected!
@@ -479,21 +489,6 @@ protected:
   }  // internal
 
   /* ---------------------------------------------------------------------- */
-  //! Factory function, guarantees that only fields get created that are
-  //! properly registered and linked to a collection.
-  template <class FieldType, class FieldCollection, typename... Args>
-  inline FieldType &
-  make_field(std::string unique_name,
-             FieldCollection & collection,
-             Args&&... args) {
-    std::unique_ptr<FieldType> ptr{
-      new FieldType(unique_name, collection, args...)};
-    auto& retref{*ptr};
-    collection.register_field(std::move(ptr));
-    return retref;
-  }
-
-  /* ---------------------------------------------------------------------- */
   template <class FieldCollection, typename T, Dim_t order, Dim_t dim>
   TensorField<FieldCollection, T, order, dim>::
   TensorField(std::string unique_name, FieldCollection & collection)
@@ -629,6 +624,14 @@ namespace muSpectre {
   }
 
   /* ---------------------------------------------------------------------- */
+  template <class FieldCollection, typename T, Dim_t order, Dim_t dim>
+  auto TensorField<FieldCollection, T, order, dim>::
+  get_zeros_like(std::string unique_name) const -> TensorField & {
+    return make_field<TensorField>(unique_name,
+                                   this->collection);
+  }
+
+  /* ---------------------------------------------------------------------- */
   template <class FieldCollection, typename T, Dim_t NbRow, Dim_t NbCol>
   auto MatrixField<FieldCollection, T, NbRow, NbCol>::
   get_map() -> decltype(auto) {
@@ -660,6 +663,15 @@ namespace muSpectre {
                                          map_constness>::type;
     return RawMap_t(*this);
   }
+
+  /* ---------------------------------------------------------------------- */
+  template <class FieldCollection, typename T, Dim_t order, Dim_t dim>
+  auto MatrixField<FieldCollection, T, order, dim>::
+  get_zeros_like(std::string unique_name) const -> MatrixField & {
+    return make_field<MatrixField>(unique_name,
+                                   this->collection);
+  }
+
 
 
 }  // muSpectre

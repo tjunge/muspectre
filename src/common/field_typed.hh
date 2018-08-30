@@ -5,7 +5,7 @@
  *
  * @date   10 Apr 2018
  *
- * @brief  Typed Field for dynamically sized fields and base class for fields 
+ * @brief  Typed Field for dynamically sized fields and base class for fields
  *         of tensors, matrices, etc
  *
  * Copyright © 2018 Till Junge
@@ -29,11 +29,19 @@
 #ifndef FIELD_TYPED_H
 #define FIELD_TYPED_H
 
-#include "field_base.hh"
+#include "common/field_base.hh"
+#include "common/field_helpers.hh"
 
 #include <sstream>
 
 namespace muSpectre {
+
+  /**
+   * forward-declaration
+   */
+  template <class FieldCollection, typename T, bool ConstField>
+  class TypedFieldMap;
+
   namespace internal {
 
     /* ---------------------------------------------------------------------- */
@@ -73,6 +81,10 @@ namespace muSpectre {
     using EigenVec_t = Eigen::Map<EigenVecRep_t>;
     //! vector map returned when accessing entire field
     using EigenVecConst_t = Eigen::Map<const EigenVecRep_t>;
+    //! associated non-const field map
+    using FieldMap_t = TypedFieldMap<FieldCollection, T, false>;
+    //! associated const field map
+    using ConstFieldMap_t = TypedFieldMap<FieldCollection, T, true>;
 
     /**
      * type stored (unfortunately, we can't statically size the second
@@ -150,7 +162,36 @@ namespace muSpectre {
     //! return a map representing the entire field as a single Eigen vector
     EigenVecConst_t const_eigenvec() const;
 
-    
+    /**
+     * Convenience function to return a map onto this field. A map
+     * allows iteration over all pixels. The map's iterator returns a
+     * dynamically sized `Eigen::Map` the data associated with a
+     * pixel.
+     */
+    inline FieldMap_t get_map();
+
+    /**
+     * Convenience function to return a map onto this field. A map
+     * allows iteration over all pixels. The map's iterator returns a
+     * dynamically sized `Eigen::Map` the data associated with a
+     * pixel.
+     */
+    inline ConstFieldMap_t get_map() const;
+
+    /**
+     * Convenience function to return a map onto this field. A map
+     * allows iteration over all pixels. The map's iterator returns a
+     * dynamically sized `Eigen::Map` the data associated with a
+     * pixel.
+     */
+    inline ConstFieldMap_t get_const_map() const;
+
+
+    /**
+     * creates a `TypedField` same size and type as this, but all
+     * entries are zero. Convenience function
+     */
+    inline TypedField & get_zeros_like(std::string unique_name) const;
 
   protected:
     //! returns a raw pointer to the entry, for `Eigen::Map`
@@ -196,6 +237,12 @@ namespace muSpectre {
 
   private:
   };
+}  // muSpectre
+
+#include "common/field_map_dynamic.hh"
+
+namespace muSpectre {
+
 
   /* ---------------------------------------------------------------------- */
   /* Implementations                                                        */
@@ -273,6 +320,33 @@ namespace muSpectre {
   template <class FieldCollection, typename T>
   auto TypedField<FieldCollection, T>:: const_eigenvec() const -> EigenVecConst_t {
     return EigenVecConst_t(this->data(), this->get_nb_components() * this->size());
+  }
+
+  /* ---------------------------------------------------------------------- */
+  template <class FieldCollection, typename T>
+  auto TypedField<FieldCollection, T>::get_map() -> FieldMap_t {
+    return FieldMap_t(*this);
+  }
+
+  /* ---------------------------------------------------------------------- */
+  template <class FieldCollection, typename T>
+  auto TypedField<FieldCollection, T>::get_map() const -> ConstFieldMap_t {
+    return ConstFieldMap_t(*this);
+  }
+
+  /* ---------------------------------------------------------------------- */
+  template <class FieldCollection, typename T>
+  auto TypedField<FieldCollection, T>::get_const_map() const -> ConstFieldMap_t {
+    return ConstFieldMap_t(*this);
+  }
+
+  /* ---------------------------------------------------------------------- */
+  template <class FieldCollection, typename T>
+  auto TypedField<FieldCollection, T>::
+  get_zeros_like(std::string unique_name) const -> TypedField& {
+    return make_field<TypedField>(unique_name,
+                                  this->collection,
+                                  this->nb_components);
   }
 
   /* ---------------------------------------------------------------------- */
