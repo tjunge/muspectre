@@ -63,8 +63,8 @@ class FieldCollection_Check(unittest.TestCase):
         self.assertRaises(Exception, collection.get_uint_field, field_name)
         eigen_strain_field = collection.get_real_field(field_name)
 
-        print(eigen_strain_field.eigen.T)
-        for i, row in enumerate(eigen_strain_field.eigen.T):
+        print(eigen_strain_field.array.T)
+        for i, row in enumerate(eigen_strain_field.array.T):
             error = np.linalg.norm(i/self.cell.size*eigen_strain -
                                    row.reshape(eigen_strain.shape).T)
             self.assertEqual(0, error)

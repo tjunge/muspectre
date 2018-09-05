@@ -42,7 +42,13 @@
 namespace muSpectre {
 
   namespace internal {
-    //----------------------------------------------------------------------------//
+    /**
+     * Forward-declaration
+     */
+    template <class FieldCollection, typename T, Dim_t NbComponents>
+    class TypedSizedFieldBase;
+
+
     //! little helper to automate creation of const maps without duplication
     template<class T, bool isConst>
     struct const_corrector {
@@ -329,7 +335,7 @@ namespace muSpectre {
           (NbComponents != Eigen::Dynamic)) {
         throw FieldInterpretationError
           ("Cannot create a Map of type '" +
-           this->info_string() 
+           this->info_string()
            +           "' for field '" + this->field.get_name() + "' with " +
            std::to_string(this->field.get_nb_components()) + " components");
       }

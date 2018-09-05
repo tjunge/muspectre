@@ -50,21 +50,24 @@ namespace muSpectre {
                                            GlobalFieldCollection<SDim>,
                                            LocalFieldCollection<SDim>>;
     using TField_t = TensorField<FieldColl_t, Real, Order, MDim>;
+    using MField_t = MatrixField<FieldColl_t, Real, SDim, MDim>;
     using DField_t = TypedField<FieldColl_t, Real>;
 
     FieldFixture()
       : tensor_field{make_field<TField_t>("TensorField", this->fc)},
+        matrix_field{make_field<MField_t>("MatrixField", this->fc)},
         dynamic_field1{
           make_field<DField_t>("Dynamically sized field with correct number of"
                                " components", this->fc, ipow(MDim, Order))},
         dynamic_field2{
           make_field<DField_t>("Dynamically sized field with incorrect number"
-                               "of components", this->fc, NbComponents+1)}
+                               " of components", this->fc, NbComponents+1)}
     {}
     ~FieldFixture() = default;
 
     FieldColl_t fc{};
     TField_t & tensor_field;
+    MField_t & matrix_field;
     DField_t & dynamic_field1;
     DField_t & dynamic_field2;
   };
@@ -183,6 +186,33 @@ namespace muSpectre {
     using FC_t = GlobalFieldCollection<sdim>;
     FC_t fc{};
     make_field<TypedField<FC_t, Real>>("Dynamic Field", fc, nb_components);
+  }
+
+  BOOST_FIXTURE_TEST_CASE_TEMPLATE(get_zeros_like, Fix, field_fixtures, Fix) {
+    auto & t_clone{Fix::tensor_field.get_zeros_like("tensor clone")};
+    static_assert(std::is_same<
+                  std::remove_reference_t<decltype(t_clone)>,
+                  typename Fix::TField_t>::value, "wrong overloaded function");
+
+    auto & m_clone{Fix::matrix_field.get_zeros_like("matrix clone")};
+    static_assert(std::is_same<
+                  std::remove_reference_t<decltype(m_clone)>,
+                  typename Fix::MField_t>::value, "wrong overloaded function");
+    using FieldColl_t = typename Fix::FieldColl_t;
+    using T = typename Fix::TField_t::Scalar;
+    TypedField<FieldColl_t, T> & t_ref{t_clone};
+
+    auto & typed_clone{t_ref.get_zeros_like("dynamically sized clone")};
+    static_assert(std::is_same<
+                  std::remove_reference_t<decltype(typed_clone)>,
+                  TypedField<FieldColl_t, T>>::value,
+                  "Field type incorrectly deduced");
+    BOOST_CHECK_EQUAL(typed_clone.get_nb_components(), t_clone.get_nb_components());
+
+    auto & dyn_clone{Fix::dynamic_field1.get_zeros_like("dynamic clone")};
+    static_assert(std::is_same<decltype(dyn_clone), decltype(typed_clone)>::value,
+                  "mismatch");
+    BOOST_CHECK_EQUAL(typed_clone.get_nb_components(), dyn_clone.get_nb_components());
   }
 
   BOOST_AUTO_TEST_SUITE_END();

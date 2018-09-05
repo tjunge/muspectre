@@ -191,11 +191,13 @@ namespace muSpectre {
   void FieldCollectionBase<DimS, FieldCollectionDerived>::register_field(Field_p &&field) {
     if (this->check_field_exists(field->get_name())) {
       std::stringstream err_str;
-      err_str << "a field named " << field->get_name()
-              << "is already registered in this field collection. "
+      err_str << "a field named '" << field->get_name()
+              << "' is already registered in this field collection. "
               << "Currently registered fields: ";
+      std::string prelude{""};
       for (const auto& name_field_pair: this->fields) {
-        err_str << ", " << name_field_pair.first;
+        err_str << prelude << '\'' << name_field_pair.first << '\'';
+        prelude = ", ";
       }
       throw FieldCollectionError(err_str.str());
     }
@@ -213,11 +215,13 @@ namespace muSpectre {
     auto&& does_exist = search_it != this->statefields.end();
     if (does_exist) {
       std::stringstream err_str;
-      err_str << "a state field named " << field->get_prefix()
-              << "is already registered in this field collection. "
+      err_str << "a state field named '" << field->get_prefix()
+              << "' is already registered in this field collection. "
               << "Currently registered fields: ";
+      std::string prelude{""};
       for (const auto& name_field_pair: this->statefields) {
-        err_str << ", " << name_field_pair.first;
+        err_str << prelude << '\'' << name_field_pair.first << '\'';
+        prelude = ", ";
       }
       throw FieldCollectionError(err_str.str());
     }

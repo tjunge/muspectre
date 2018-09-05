@@ -386,7 +386,7 @@ class ElastoPlastic_Check(unittest.TestCase):
 
             print(self.hard.list_fields())
             print(self.hard.collection.statefield_names)
-            print(self.hard.collection.get_real_statefield("Previous left Cauchy-Green deformation bₑᵗ").get_current_field().eigen)
+            print(self.hard.collection.get_real_statefield("Previous left Cauchy-Green deformation bₑᵗ").get_current_field().array)
             sys.exit()
 
             # iterate as long as the iterative update does not vanish
