@@ -382,12 +382,49 @@ namespace muSpectre {
                                   this->nb_components);
   }
 
-  // /* ---------------------------------------------------------------------- */
-  // template <class FieldCollection, typename T>
-  // template <bool IsGlobal>
-  // std::enable_if_t<IsGlobal> fill_from_local(const LocalField_t & local) {
-  //   static_assert(IsGlobal == Global, "SFINAE parameter, do not touch");
-  // }
+  /* ---------------------------------------------------------------------- */
+  template <class FieldCollection, typename T>
+  template <bool IsGlobal>
+  std::enable_if_t<IsGlobal> TypedField<FieldCollection, T>::
+  fill_from_local(const LocalField_t & local) {
+    static_assert(IsGlobal == Global, "SFINAE parameter, do not touch");
+    if (not (local.get_nb_components() == this->get_nb_components())) {
+      std::stringstream err_str{};
+      err_str << "Fields not compatible: You are trying to write a local "
+              << local.get_nb_components() << "-component field into a global "
+              << this->get_nb_components() << "-component field.";
+      throw std::runtime_error(err_str.str());
+    }
+    auto this_map{this->get_map()};
+    for (const auto && key_val: local.get_map().enumerate()) {
+      const auto & key{std::get<0>(key_val)};
+      const auto & value{std::get<1>(key_val)};
+      this_map[key] = value;
+    }
+  }
+
+  /* ---------------------------------------------------------------------- */
+  template <class FieldCollection, typename T>
+  template <bool IsLocal>
+  std::enable_if_t<IsLocal> TypedField<FieldCollection, T>::
+  fill_from_global(const GlobalField_t & global) {
+    static_assert(IsLocal == not Global, "SFINAE parameter, do not touch");
+    if (not (global.get_nb_components() == this->get_nb_components())) {
+      std::stringstream err_str{};
+      err_str << "Fields not compatible: You are trying to write a global "
+              << global.get_nb_components() << "-component field into a local "
+              << this->get_nb_components() << "-component field.";
+      throw std::runtime_error(err_str.str());
+    }
+
+    auto global_map{global.get_map()};
+
+    for (auto && key_val: this->get_map().enumerate()) {
+      const auto & key{std::get<0>(key_val)};
+      auto & value{std::get<1>(key_val)};
+      value = global_map[key];
+    }
+  }
 
   /* ---------------------------------------------------------------------- */
   template <class FieldCollection, typename T>

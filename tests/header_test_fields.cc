@@ -215,6 +215,50 @@ namespace muSpectre {
     BOOST_CHECK_EQUAL(typed_clone.get_nb_components(), dyn_clone.get_nb_components());
   }
 
+  /* ---------------------------------------------------------------------- */
+  BOOST_AUTO_TEST_CASE(fill_global_local) {
+    FieldFixture<true> global;
+    FieldFixture<false> local;
+    constexpr Dim_t len{2};
+    constexpr auto sizes{CcoordOps::get_cube<FieldFixture<true>::SDim>(len)};
+
+    global.fc.initialise(sizes,{});
+
+    local.fc.add_pixel({1, 1});
+    local.fc.add_pixel({0, 1});
+    local.fc.initialise();
+
+    // fill the local matrix field and then transfer it to the global field
+    for (auto mat: local.matrix_field.get_map()) {
+      mat.setRandom();
+    }
+    global.matrix_field.fill_from_local(local.matrix_field);
+
+    for (const auto & ccoord: local.fc) {
+      const auto & a{local.matrix_field.get_map()[ccoord]};
+      const auto & b{global.matrix_field.get_map()[ccoord]};
+      const Real error{(a -b).norm()};
+      BOOST_CHECK_EQUAL(error, 0.);
+    }
+
+    // fill the global tensor field and then transfer it to the global field
+    for (auto mat: global.tensor_field.get_map()) {
+      mat.setRandom();
+    }
+    local.tensor_field.fill_from_global(global.tensor_field);
+    for (const auto & ccoord: local.fc) {
+      const auto & a{local.matrix_field.get_map()[ccoord]};
+      const auto & b{global.matrix_field.get_map()[ccoord]};
+      const Real error{(a -b).norm()};
+      BOOST_CHECK_EQUAL(error, 0.);
+    }
+
+    BOOST_CHECK_THROW(local.tensor_field.fill_from_global(global.matrix_field),
+                      std::runtime_error);
+    BOOST_CHECK_THROW(global.tensor_field.fill_from_local(local.matrix_field),
+                      std::runtime_error);
+  }
+
   BOOST_AUTO_TEST_SUITE_END();
 
 }  // muSpectre
