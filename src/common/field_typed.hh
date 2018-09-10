@@ -64,10 +64,26 @@ namespace muSpectre {
     friend class internal::FieldMap<FieldCollection, T, Eigen::Dynamic, true>;
     friend class internal::FieldMap<FieldCollection, T, Eigen::Dynamic, false>;
 
+    static constexpr bool Global{FieldCollection::is_global()};
+
   public:
     using Parent = internal::FieldBase<FieldCollection>; //!< base class
     //! for type checks when mapping this field
     using collection_t = typename Parent::collection_t;
+
+    //! for filling global fields from local fields and vice-versa
+    using LocalField_t =
+      std::conditional_t<Global,
+                         TypedField<typename
+                                    FieldCollection::LocalFieldCollection_t, T>,
+                         TypedField>;
+    //! for filling global fields from local fields and vice-versa
+    using GlobalField_t =
+      std::conditional_t<Global,
+                         TypedField,
+                         TypedField<typename
+                                    FieldCollection::GlobalFieldCollection_t, T>>;
+
     using Scalar = T; //!< for type checks
     using Base = Parent; //!< for uniformity of interface
     //! Plain Eigen type to map
@@ -192,6 +208,23 @@ namespace muSpectre {
      * entries are zero. Convenience function
      */
     inline TypedField & get_zeros_like(std::string unique_name) const;
+
+    /**
+     * Fill the content of the local field into the global field
+     * (obviously only for pixels that actually are present in the
+     * local field)
+     */
+    template <bool IsGlobal = Global>
+    inline std::enable_if_t<IsGlobal>
+    fill_from_local(const LocalField_t & local);
+
+    /**
+     * For pixels that are present in the local field, fill them with
+     * the content of the global field at those pixels
+     */
+    template <bool IsLocal = not Global>
+    inline std::enable_if_t<IsLocal>
+    fill_from_global(const GlobalField_t & global);
 
   protected:
     //! returns a raw pointer to the entry, for `Eigen::Map`
@@ -348,6 +381,13 @@ namespace muSpectre {
                                   this->collection,
                                   this->nb_components);
   }
+
+  // /* ---------------------------------------------------------------------- */
+  // template <class FieldCollection, typename T>
+  // template <bool IsGlobal>
+  // std::enable_if_t<IsGlobal> fill_from_local(const LocalField_t & local) {
+  //   static_assert(IsGlobal == Global, "SFINAE parameter, do not touch");
+  // }
 
   /* ---------------------------------------------------------------------- */
   template <class FieldCollection, typename T>

@@ -149,8 +149,7 @@ namespace muSpectre {
   template <class FieldCollection, typename T, Dim_t order, Dim_t dim>
   class TensorField: public internal::TypedSizedFieldBase<FieldCollection,
                                                      T,
-                                                     ipow(dim,order)>
-  {
+                                                     ipow(dim,order)>  {
   public:
     //! base class
     using Parent = internal::TypedSizedFieldBase<FieldCollection,
