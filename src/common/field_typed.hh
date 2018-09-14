@@ -147,6 +147,11 @@ namespace muSpectre {
     //! return type_id of stored type
     virtual const std::type_info & get_stored_typeid() const override final;
 
+    //! safe reference cast
+    static TypedField & check_ref(Base & other);
+    //! safe reference cast
+    static const TypedField & check_ref(const Base & other);
+
     virtual size_t size() const override final;
 
     //! add a pad region to the end of the field buffer; required for
@@ -441,6 +446,33 @@ namespace muSpectre {
   template <class FieldCollection, typename T>
   void TypedField<FieldCollection, T>::set_zero() {
     std::fill(this->values.begin(), this->values.end(), T{});
+  }
+
+  /* ---------------------------------------------------------------------- */
+  template <class FieldCollection, typename T>
+  auto TypedField<FieldCollection, T>::check_ref(Base & other) -> TypedField & {
+    if (typeid(T).hash_code() != other.get_stored_typeid().hash_code()) {
+        std::string err ="Cannot create a Reference of requested type " +(
+           "for field '" + other.get_name() + "' of type '" +
+           other.get_stored_typeid().name() + "'");
+        throw std::runtime_error
+          (err);
+      }
+    return static_cast<TypedField&>(other);
+  }
+
+  /* ---------------------------------------------------------------------- */
+  template <class FieldCollection, typename T>
+  auto TypedField<FieldCollection, T>::
+  check_ref(const Base & other) -> const TypedField & {
+    if (typeid(T).hash_code() != other.get_stored_typeid().hash_code()) {
+        std::string err ="Cannot create a Reference of requested type " +(
+           "for field '" + other.get_name() + "' of type '" +
+           other.get_stored_typeid().name() + "'");
+        throw std::runtime_error
+          (err);
+      }
+    return static_cast<const TypedField&>(other);
   }
 
   /* ---------------------------------------------------------------------- */

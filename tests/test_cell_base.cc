@@ -214,6 +214,29 @@ namespace muSpectre {
 
   }
 
+  BOOST_FIXTURE_TEST_CASE_TEMPLATE(test_managed_fields, Fix, fixlist, Fix) {
+    Cell & dyn_handle{*this};
+    CellBase<Fix::sdim, Fix::mdim> & base_handle{*this};
+
+    const std::string name1{"aaa"};
+    constexpr size_t nb_comp{5};
+
+    auto new_dyn_array{dyn_handle.get_managed_real_array(name1, nb_comp)};
+    BOOST_CHECK_EQUAL(new_dyn_array.rows(), nb_comp);
+    BOOST_CHECK_EQUAL(new_dyn_array.cols(), dyn_handle.size());
+
+    BOOST_CHECK_THROW(dyn_handle.get_managed_real_array(name1, nb_comp+1),
+                      std::runtime_error);
+
+    auto & new_field{base_handle.get_managed_real_field(name1, nb_comp)};
+    BOOST_CHECK_EQUAL(new_field.get_nb_components(), nb_comp);
+    // TODO: Check this
+    //BOOST_CHECK_EQUAL(new_field.size(), dyn_handle.size());
+
+    BOOST_CHECK_THROW(base_handle.get_managed_real_field(name1, nb_comp+1),
+                      std::runtime_error);
+  }
+
   BOOST_AUTO_TEST_SUITE_END();
 
 }  // muSpectre

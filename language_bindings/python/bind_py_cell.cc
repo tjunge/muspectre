@@ -138,8 +138,8 @@ void add_cell_base_helper(py::module & mod) {
            const std::string in_name{"temp input for directional stiffness"};
            constexpr bool create_tangent{true};
            auto & K = cell.get_tangent(create_tangent);
-           auto & input = cell.get_managed_field(in_name);
-           auto & output = cell.get_managed_field(out_name);
+           auto & input = cell.get_managed_T2_field(in_name);
+           auto & output = cell.get_managed_T2_field(out_name);
            input.eigen() = v;
            cell.directional_stiffness(K, input, output);
            return output.eigen();
@@ -159,7 +159,7 @@ void add_cell_base_helper(py::module & mod) {
              cell.initialise();
            }
            const std::string in_name{"temp input for projection"};
-           auto & input = cell.get_managed_field(in_name);
+           auto & input = cell.get_managed_T2_field(in_name);
            input.eigen() = v;
            cell.project(input);
            return input.eigen();

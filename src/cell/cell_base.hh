@@ -72,6 +72,14 @@ namespace muSpectre {
     //! dynamic matrix type for setting strains
     using Matrix_t = Eigen::Matrix<Real, Eigen::Dynamic, Eigen::Dynamic>;
 
+    //! dynamic generic array type for interaction with numpy, i/o, etc
+    template <typename T>
+    using Array_t = Eigen::Array<T, Eigen::Dynamic, Eigen::Dynamic>;
+
+    //! ref to dynamic generic array
+    template <typename T>
+    using Array_ref = Eigen::Map<Array_t<T>>;
+
     //! ref to constant vector
     using ConstVector_ref = Eigen::Map<const Vector_t>;
 
@@ -101,6 +109,9 @@ namespace muSpectre {
 
     //! returns the number of degrees of freedom in the cell
     virtual Dim_t get_nb_dof() const = 0;
+
+    //! number of pixels in the cell
+    virtual size_t size() const = 0;
 
     //! return the communicator object
     virtual const Communicator & get_communicator() const = 0;
@@ -170,6 +181,9 @@ namespace muSpectre {
       (Eigen::Ref<const Vector_t> delF) = 0;
 
 
+    //! returns a ref to a temporary field of real values managed by the cell
+    virtual Array_ref<Real> get_managed_real_array(std::string unique_name,
+                                                   size_t nb_components) = 0;
     /**
      * set uniform strain (typically used to initialise problems
      */
@@ -203,6 +217,9 @@ namespace muSpectre {
     using Projection_t = ProjectionBase<DimS, DimM>;
     //! projections handled through `std::unique_ptr`s
     using Projection_ptr = std::unique_ptr<Projection_t>;
+    //! dynamic global fields
+    template <typename T>
+    using Field_t = TypedField<FieldCollection_t, T>;
     //! expected type for strain fields
     using StrainField_t =
       TensorField<FieldCollection_t, Real, secondOrder, DimM>;
@@ -227,6 +244,13 @@ namespace muSpectre {
     //! output vector reference for solvers
     using Vector_ref = typename Parent::Vector_ref;
 
+    //! dynamic array type for interactions with numpy/scipy/solvers, etc.
+    template <typename T>
+    using Array_t = typename Parent::Array_t<T>;
+
+    //! dynamic array type for interactions with numpy/scipy/solvers, etc.
+    template <typename T>
+    using Array_ref = typename Parent::Array_ref<T>;
 
     //! sparse matrix emulation
     using Adaptor = Parent::Adaptor;
@@ -360,8 +384,16 @@ namespace muSpectre {
     const TangentField_t & get_tangent(bool create = false);
 
     //! returns a ref to a temporary field managed by the cell
-    StrainField_t & get_managed_field(std::string unique_name);
+    StrainField_t & get_managed_T2_field(std::string unique_name);
 
+    //! returns a ref to a temporary field of real values managed by the cell
+    Field_t<Real> & get_managed_real_field(std::string unique_name,
+                                           size_t nb_components);
+
+    //! returns a Array ref to a temporary field of real values managed by the cell
+    virtual Array_ref<Real>
+    get_managed_real_array(std::string unique_name,
+                           size_t nb_components) override;
     /**
      * general initialisation; initialises the projection and
      * fft_engine (i.e. infrastructure) but not the materials. These
@@ -379,7 +411,7 @@ namespace muSpectre {
     iterator begin(); //!< iterator to the first pixel
     iterator end();  //!< iterator past the last pixel
     //! number of pixels in the cell
-    size_t size() const {return pixels.size();}
+    size_t size() const override final{return pixels.size();}
 
     //! return the subdomain resolutions of the cell
     const Ccoord & get_subdomain_resolutions() const {

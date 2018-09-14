@@ -162,7 +162,7 @@ namespace muSpectre {
     }
 
     const std::string out_name{"δP; temp output for directional stiffness"};
-    auto & delP = this->get_managed_field(out_name);
+    auto & delP = this->get_managed_T2_field(out_name);
 
     auto Kmap{this->K.value().get().get_map()};
     auto delPmap{delP.get_map()};
@@ -252,8 +252,8 @@ namespace muSpectre {
     const std::string out_name{"temp output for directional stiffness"};
     const std::string in_name{"temp input for directional stiffness"};
 
-    auto & out_tempref = this->get_managed_field(out_name);
-    auto & in_tempref = this->get_managed_field(in_name);
+    auto & out_tempref = this->get_managed_T2_field(out_name);
+    auto & in_tempref = this->get_managed_T2_field(in_name);
     Vector_ref(in_tempref.data(), this->get_nb_dof()) = delF;
 
     this->directional_stiffness(this->K.value(), in_tempref, out_tempref);
@@ -275,8 +275,8 @@ namespace muSpectre {
     const std::string out_name{"temp output for directional stiffness"};
     const std::string in_name{"temp input for directional stiffness"};
 
-    auto & out_tempref = this->get_managed_field(out_name);
-    auto & in_tempref = this->get_managed_field(in_name);
+    auto & out_tempref = this->get_managed_T2_field(out_name);
+    auto & in_tempref = this->get_managed_T2_field(in_name);
     in_tempref.eigen() = delF;
     this->directional_stiffness(this->K.value(), in_tempref, out_tempref);
     return out_tempref.eigen();
@@ -325,13 +325,47 @@ namespace muSpectre {
   /* ---------------------------------------------------------------------- */
   template <Dim_t DimS, Dim_t DimM>
   typename CellBase<DimS, DimM>::StrainField_t &
-  CellBase<DimS, DimM>::get_managed_field(std::string unique_name) {
+  CellBase<DimS, DimM>::get_managed_T2_field(std::string unique_name) {
     if (!this->fields->check_field_exists(unique_name)) {
       return make_field<StressField_t>(unique_name, *this->fields);
     } else {
       return static_cast<StressField_t&>(this->fields->at(unique_name));
     }
   }
+
+  /* ---------------------------------------------------------------------- */
+  template <Dim_t DimS, Dim_t DimM>
+  auto
+  CellBase<DimS, DimM>::get_managed_real_field(std::string unique_name,
+                                               size_t nb_components) ->
+    Field_t<Real> & {
+    if (!this->fields->check_field_exists(unique_name)) {
+      return make_field<Field_t<Real>>(unique_name, *this->fields,
+                                       nb_components);
+    } else {
+      auto & ret_ref{Field_t<Real>::check_ref(this->fields->at(unique_name))};
+      if (ret_ref.get_nb_components() != nb_components) {
+        std::stringstream err{};
+        err << "Field '" << unique_name << "' already exists and it has "
+            << ret_ref.get_nb_components() << " components. You asked for a field "
+            << "with " << nb_components << "components.";
+        throw std::runtime_error(err.str());
+      }
+      return ret_ref;
+    }
+  }
+
+  /* ---------------------------------------------------------------------- */
+  template <Dim_t DimS, Dim_t DimM>
+  auto CellBase<DimS, DimM>::get_managed_real_array(std::string unique_name,
+                                                    size_t nb_components)
+    -> Array_ref<Real>
+  {
+    return Array_ref<Real>
+      {this->get_managed_real_field(unique_name, nb_components).data(),
+          Dim_t(nb_components), Dim_t(this->size())};
+  }
+
 
   /* ---------------------------------------------------------------------- */
   template <Dim_t DimS, Dim_t DimM>
