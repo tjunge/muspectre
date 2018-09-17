@@ -283,12 +283,14 @@ namespace muSpectre {
     auto & global_compatible_field{
       this->get_globalised_internal_field(compatible_name)};
 
-    for (auto && tup: global_compatible_field.get_map().enumerate()) {
+    auto glo_map{global_compatible_field.get_map()};
+    for (auto && tup: glo_map.enumerate()) {
       const auto & pixel{std::get<0>(tup)};
-      auto & val{std::get<1>(tup)};
+      const auto & val(std::get<1>(tup));
+
       using Map_t = Eigen::Map<const Eigen::Array<Dim_t, Dim, 1>>;
-      Real err = (val -
-                  Map_t(pixel.data()).template cast<Real>()).matrix().norm();
+      Real err {(val -
+                 Map_t(pixel.data()).template cast<Real>()).matrix().norm()};
       BOOST_CHECK_LT(err, tol);
     }
 

@@ -406,12 +406,12 @@ namespace muSpectre {
 
       //! dereference
       value_type operator*() {
-        return value_type{it.get_ccoord(), *it};
+        return value_type{it.get_ccoord(), *this->it};
       }
 
       //! dereference
       const_value_type operator*() const {
-        return const_value_type{it.get_ccoord(), *it};
+        return const_value_type{it.get_ccoord(), *this->it};
       };
 
       //! pre-decrement
