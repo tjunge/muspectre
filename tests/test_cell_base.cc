@@ -230,8 +230,7 @@ namespace muSpectre {
 
     auto & new_field{base_handle.get_managed_real_field(name1, nb_comp)};
     BOOST_CHECK_EQUAL(new_field.get_nb_components(), nb_comp);
-    // TODO: Check this
-    //BOOST_CHECK_EQUAL(new_field.size(), dyn_handle.size());
+    BOOST_CHECK_EQUAL(new_field.size(), dyn_handle.size());
 
     BOOST_CHECK_THROW(base_handle.get_managed_real_field(name1, nb_comp+1),
                       std::runtime_error);

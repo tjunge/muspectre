@@ -48,7 +48,10 @@ namespace muSpectre {
      F{make_field<StrainField_t>("Gradient", *this->fields)},
      P{make_field<StressField_t>("Piola-Kirchhoff-1", *this->fields)},
      projection{std::move(projection_)}
-  { }
+  {
+    // resize all global fields (strain, stress, etc)
+    this->fields->initialise(this->subdomain_resolutions, this->subdomain_locations);
+  }
 
   /**
    * turns out that the default move container in combination with
@@ -361,6 +364,9 @@ namespace muSpectre {
                                                     size_t nb_components)
     -> Array_ref<Real>
   {
+    if (not this->fields->initialised()) {
+      
+    }
     return Array_ref<Real>
       {this->get_managed_real_field(unique_name, nb_components).data(),
           Dim_t(nb_components), Dim_t(this->size())};
@@ -375,8 +381,6 @@ namespace muSpectre {
     for (auto && mat: this->materials) {
       mat->initialise();
     }
-    // resize all global fields (strain, stress, etc)
-    this->fields->initialise(this->subdomain_resolutions, this->subdomain_locations);
     // initialise the projection and compute the fft plan
     this->projection->initialise(flags);
     this->initialised = true;

@@ -160,6 +160,9 @@ namespace muSpectre {
     //! check whether a field is present
     bool check_field_exists(std::string unique_name);
 
+    //! check whether the collection is initialised
+    bool initialised() const {return this->is_initialised;}
+
 
   protected:
     std::map<const std::string, Field_p> fields{}; //!< contains the field ptrs
