@@ -52,6 +52,7 @@ class CellCheck(unittest.TestCase):
                          lengths,
                          formulation)
             mat = µ.material.MaterialLinearElastic1_2d.make(sys, "material", 210e9, .33)
+
         except Exception as err:
             print(err)
             raise err
@@ -119,6 +120,14 @@ class EigenStrainCheck(unittest.TestCase):
             self.cell1, "simple", 210e9, .33)
         self.mat2 = µ.material.MaterialLinearElastic2_2d.make(
             self.cell2, "eigen", 210e9, .33)
+
+    def test_globalisation(self):
+        for pixel in self.cell2:
+            self.mat2.add_pixel(pixel, np.random.rand(2,2))
+        loc_eigenstrain = self.mat2.collection.get_real_field("Eigenstrain").array
+        glo_eigenstrain = self.cell2.get_globalised_internal_array("Eigenstrain")
+        error = np.linalg.norm(loc_eigenstrain-glo_eigenstrain)
+        self.assertEqual(error, 0)
 
     def test_solve(self):
         verbose_test = False
