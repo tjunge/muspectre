@@ -8,8 +8,6 @@
  * @brief  helper functions that needed to be sequestered to avoid circular 
  *         inclusions
  *
- * @section LICENSE
- *
  * Copyright © 2018 Till Junge
  *
  * µSpectre is free software; you can redistribute it and/or
