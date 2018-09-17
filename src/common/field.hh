@@ -375,19 +375,20 @@ protected:
     TypedSizedFieldBase<FieldCollection, T, NbComponents>::
     check_ref(Base & other) {
       if (typeid(T).hash_code() != other.get_stored_typeid().hash_code()) {
-        std::string err ="Cannot create a Reference of requested type " +(
-           "for field '" + other.get_name() + "' of type '" +
-           other.get_stored_typeid().name() + "'");
-        throw std::runtime_error
-          (err);
+        std::stringstream err_str{};
+        err_str << "Cannot create a reference of type '" << typeid(T).name()
+                << "' for field '" << other.get_name() << "' of type '"
+                << other.get_stored_typeid().name() << "'";
+      throw std::runtime_error(err_str.str());
       }
       //check size compatibility
       if (NbComponents != other.get_nb_components()) {
-        throw std::runtime_error
-          ("Cannot create a Reference to a field with " +
-           std::to_string(NbComponents) + " components " +
-           "for field '" + other.get_name() + "' with " +
-           std::to_string(other.get_nb_components()) + " components");
+        std::stringstream err_str{};
+        err_str << "Cannot create a reference to a field with "
+                << NbComponents << " components "
+                << "for field '" << other.get_name() << "' with "
+                << other.get_nb_components() << " components";
+        throw std::runtime_error{err_str.str()};
       }
       return static_cast<TypedSizedFieldBase&>(other);
     }
@@ -399,19 +400,20 @@ protected:
     check_ref(const Base & other) {
       if (typeid(T).hash_code() != other.get_stored_typeid().hash_code()) {
         std::stringstream err_str{};
-        err_str << "Cannot create a Reference of requested type "
-                << "for field '"  << other.get_name() << "' of type '"
+        err_str << "Cannot create a reference of type '" << typeid(T).name()
+                << "' for field '"  << other.get_name() << "' of type '"
                 << other.get_stored_typeid().name() << "'";
         throw std::runtime_error
           (err_str.str());
       }
       //check size compatibility
       if (NbComponents != other.get_nb_components()) {
-        throw std::runtime_error
-          ("Cannot create a Reference to a field with " +
-           std::to_string(NbComponents) + " components " +
-           "for field '" + other.get_name() + "' with " +
-           std::to_string(other.get_nb_components()) + " components");
+        std::stringstream err_str{};
+        err_str << "Cannot create a reference toy a field with "
+                << NbComponents << " components "
+                << "for field '" << other.get_name() << "' with "
+                << other.get_nb_components() << " components";
+        throw std::runtime_error{err_str.str()};
       }
       return static_cast<const TypedSizedFieldBase&>(other);
     }

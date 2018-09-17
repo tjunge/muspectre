@@ -158,7 +158,7 @@ namespace muSpectre {
     inline size_t size() const {return this->size_;}
 
     //! check whether a field is present
-    bool check_field_exists(std::string unique_name);
+    bool check_field_exists(const std::string & unique_name);
 
     //! check whether the collection is initialised
     bool initialised() const {return this->is_initialised;}
@@ -264,7 +264,7 @@ namespace muSpectre {
   template <Dim_t DimS, class FieldCollectionDerived>
   bool
   FieldCollectionBase<DimS, FieldCollectionDerived>::
-  check_field_exists(std::string unique_name) {
+  check_field_exists(const std::string & unique_name) {
     return this->fields.find(unique_name) != this->fields.end();
   }
 

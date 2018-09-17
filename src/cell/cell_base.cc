@@ -32,7 +32,8 @@
 
 #include <sstream>
 #include <algorithm>
-
+#include <set>
+#include <functional>
 
 namespace muSpectre {
 
@@ -360,18 +361,82 @@ namespace muSpectre {
 
   /* ---------------------------------------------------------------------- */
   template <Dim_t DimS, Dim_t DimM>
+  auto CellBase<DimS, DimM>::
+  get_globalised_internal_field(const std::string & unique_name)
+    -> Field_t<Real> &
+  {
+    using LField_t = typename Field_t<Real>::LocalField_t;
+    // start by checking that the field exists at least once, and that
+    // it always has th same number of components
+    std::set<Dim_t> nb_component_categories{};
+    std::vector<std::reference_wrapper<LField_t>> local_fields;
+    for (auto & mat: this->materials) {
+      auto & coll = mat->get_collection();
+      if (coll.check_field_exists(unique_name)) {
+        auto & field{LField_t::check_ref(coll[unique_name])};
+        local_fields.emplace_back(field);
+        nb_component_categories.insert(field.get_nb_components());
+      }
+    }
+    if (nb_component_categories.size() != 1) {
+      const auto & nb_match{nb_component_categories.size()};
+      std::stringstream err_str{};
+      if (nb_match > 1) {
+        err_str << "The fields named '" << unique_name << "' do not have the "
+                << "same number of components in every material, which is a "
+                << "requirement for globalising them! The following values were "
+                << "found by material:" << std::endl;
+        for (auto & mat: this->materials) {
+          auto & coll = mat->get_collection();
+          if (coll.check_field_exists(unique_name)) {
+            auto & field{LField_t::check_ref(coll[unique_name])};
+            err_str << field.get_nb_components() << " components in material '"
+                    << mat->get_name() << "'" << std::endl;
+          }
+        }
+      } else {
+        err_str << "The field named '" << unique_name << "' does not exist in "
+                << "any of the materials and can therefore not be globalised!";
+      }
+      throw std::runtime_error(err_str.str());
+    }
+    const Dim_t nb_components{*nb_component_categories.begin()};
+
+    // get and prepare the field
+    auto & field{this->get_managed_real_field(unique_name, nb_components)};
+    field.set_zero();
+
+    // fill it with local internal values
+    auto field_map{field.get_map()};
+    for (auto & local_field: local_fields) {
+      for (auto && tup: local_field.get().get_map().enumerate()) {
+        const auto & pixel = std::get<0>(tup);
+        const auto & value = std::get<1>(tup);
+        field_map[pixel] = value;
+      }
+    }
+    return field;
+  }
+
+  /* ---------------------------------------------------------------------- */
+  template <Dim_t DimS, Dim_t DimM>
   auto CellBase<DimS, DimM>::get_managed_real_array(std::string unique_name,
                                                     size_t nb_components)
     -> Array_ref<Real>
   {
-    if (not this->fields->initialised()) {
-      
-    }
+    auto & field{this->get_managed_real_field(unique_name, nb_components)};
     return Array_ref<Real>
-      {this->get_managed_real_field(unique_name, nb_components).data(),
-          Dim_t(nb_components), Dim_t(this->size())};
+      {field.data(), Dim_t(nb_components), Dim_t(field.size())};
   }
 
+  /* ---------------------------------------------------------------------- */
+  template <Dim_t DimS, Dim_t DimM>
+  auto CellBase<DimS, DimM>::
+  get_globalised_internal_array(const std::string & unique_name) -> Array_ref<Real> {
+    auto & field{this->get_globalised_internal_field(unique_name)};
+    return Array_ref<Real>
+      {field.data(), Dim_t(field.get_nb_components()), Dim_t(field.size())};
+  }
 
   /* ---------------------------------------------------------------------- */
   template <Dim_t DimS, Dim_t DimM>

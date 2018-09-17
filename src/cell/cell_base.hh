@@ -181,9 +181,42 @@ namespace muSpectre {
       (Eigen::Ref<const Vector_t> delF) = 0;
 
 
-    //! returns a ref to a temporary field of real values managed by the cell
+    /**
+     * returns a ref to a field named 'unique_name" of real values
+     * managed by the cell. If the field does not yet exist, it is
+     * created.
+     *
+     * @param unique_name name of the field. If the field already
+     * exists, an array ref mapped onto it is returned. Else, a new
+     * field with that name is created and returned-
+     *
+     * @param nb_components number of components to be stored *per
+     * pixel*. For new fields any positive number can be chosen. When
+     * accessing an existing field, this must correspond to the
+     * existing field size, and a `std::runtime_error` is thrown if
+     * this is not satisfied
+     */
     virtual Array_ref<Real> get_managed_real_array(std::string unique_name,
                                                    size_t nb_components) = 0;
+
+    /**
+     * Convenience function to copy local (internal) fields of
+     * materials into a global field. At least one of the materials in
+     * the cell needs to contain an internal field named
+     * `unique_name`. If multiple materials contain such a field, they
+     * all need to be of same scalar type and same number of
+     * components. This does not work for split pixel cells or
+     * laminate pixel cells, as they can have multiple entries for the
+     * same pixel. Pixels for which no field named `unique_name`
+     * exists get an array of zeros.
+     *
+     * @param unique_name fieldname to fill the global field with. At
+     * least one material must have such a field, or a
+     * `std::runtime_error` is thrown
+     */
+    virtual Array_ref<Real>
+    get_globalised_internal_array(const std::string & unique_name) = 0;
+
     /**
      * set uniform strain (typically used to initialise problems
      */
@@ -393,7 +426,19 @@ namespace muSpectre {
     //! returns a Array ref to a temporary field of real values managed by the cell
     virtual Array_ref<Real>
     get_managed_real_array(std::string unique_name,
-                           size_t nb_components) override;
+                           size_t nb_components) override final;
+
+    /**
+     * returns a global field filled from local (internal) fields of
+     * the materials. see `Cell::get_globalised_internal_array` for
+     * details.
+     */
+    Field_t<Real> & get_globalised_internal_field(const std::string & unique_name);
+
+    //! see `Cell::get_globalised_internal_array` for details
+    Array_ref<Real>
+    get_globalised_internal_array(const std::string & unique_name) override final;
+
     /**
      * general initialisation; initialises the projection and
      * fft_engine (i.e. infrastructure) but not the materials. These
