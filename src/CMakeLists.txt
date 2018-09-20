@@ -61,6 +61,22 @@ if( NOT HAS_STD_OPTIONAL)
   add_definitions(-DNO_EXPERIMENTAL)
 endif()
 
+if (${NETCDF})
+  # the following checks whether std::filesystem exists and replaces
+  # it by boost::filesystem if necessary
+  set (CMAKE_REQUIRED_LIBRARIES stdc++fs)
+  check_cxx_source_compiles(
+    "#include <experimental/filesystem>
+  int main() {
+    std::experimental::filesystem::path(\"/bin/ban/bun\");
+  }" HAS_STD_FILESYSTEM )
+
+  if (NOT HAS_STD_FILESYSTEM)
+    add_definitions (-DNO_FILESYSTEM)
+  endif(NOT HAS_STD_FILESYSTEM)
+
+endif (${NETCDF})
+
 file(GLOB_RECURSE _headers RELATIVE "${CMAKE_CURRENT_SOURCE_DIR}" "*.hh")
 
 list(APPEND muSpectre_SRC ${_headers})
