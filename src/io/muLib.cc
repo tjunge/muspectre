@@ -28,3 +28,43 @@
 
 #include "io/muLib.hh"
 
+#include <ncException.h>
+
+#include <sstream>
+#include <system_error>
+
+namespace muSpectre {
+
+  MuLibInput::MuLibInput(filesystem::path path):
+    path(path),
+    file(path.native(), netCDF::NcFile::FileMode::read,
+         netCDF::NcFile::FileFormat::classic)
+  {
+    file_error_code ec{};
+    if (not filesystem::is_regular_file(path, ec)) {
+      std::stringstream err_str{};
+      err_str << "Path '" << path.native()
+              << "' does not point to a regular file";
+      throw filesystem::filesystem_error(err_str.str(), path, ec);
+    }
+
+    if (this->file.isNull()) {
+      std::stringstream err_str{};
+      err_str << "Could not open file '" << path.native() << "'";
+      throw std::runtime_error(err_str.str());
+    }
+
+    auto mat_indices{this->file.getVar("materialIndices")};
+    if (mat_indices.isNull()) {
+      throw std::runtime_error("Could not read material indices");
+    }
+
+    auto dims{mat_indices.getDims()};
+
+    for (auto & dim: dims) {
+      std::cout << dim.getName() << std::endl;
+    }
+
+  }
+
+}  // muSpectre

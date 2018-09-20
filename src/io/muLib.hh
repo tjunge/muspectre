@@ -35,8 +35,12 @@
 #define MULIB_H
 
 #include "common/common.hh"
+#include "common/utilities.hh"
 
 #include <netcdf>
+
+#include <string>
+#include <vector>
 
 namespace muSpectre {
 
@@ -45,6 +49,11 @@ namespace muSpectre {
   public:
     //! Default constructor
     MuLibInput() = delete;
+
+    /**
+     * Constructor from file path
+     */
+    MuLibInput(filesystem::path path);
 
     //! Copy constructor
     MuLibInput(const MuLibInput &other) = delete;
@@ -71,8 +80,9 @@ namespace muSpectre {
     bool is_valid();
 
   protected:
-    Dim_t dim;
+    const filesystem::path path;
     netCDF::NcFile file;
+    std::vector<Dim_t> dims{};
   private:
   };
 

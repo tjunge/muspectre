@@ -73,7 +73,13 @@ if (${NETCDF})
 
   if (NOT HAS_STD_FILESYSTEM)
     add_definitions (-DNO_FILESYSTEM)
+    target_link_libraries(muSpectre PUBLIC boost_filesystem)
+  else ()
+    target_link_libraries(muSpectre PUBLIC stdc++fs)
   endif(NOT HAS_STD_FILESYSTEM)
+
+  target_link_libraries(muSpectre PUBLIC ${NETCDF_LIBRARIES_CXX})
+  target_include_directories(muSpectre SYSTEM PUBLIC ${NETCDF_INCLUDES})
 
 endif (${NETCDF})
 
@@ -87,8 +93,6 @@ target_include_directories(muSpectre INTERFACE ${muSpectre_INCLUDES})
 target_link_libraries(muSpectre PRIVATE ${FFTW_LIBRARIES} ${PRIVATE_MUSPECTRE_LIBS})
 
 target_link_libraries(muSpectre PUBLIC Eigen3::Eigen)
-
-target_compile_definitions(muSpectre PRIVATE  ${-DNO_EXPERIMENTAL})
 
 set_property(TARGET muSpectre PROPERTY PUBLIC_HEADER ${_headers})
 

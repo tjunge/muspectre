@@ -37,6 +37,12 @@
 #  include <experimental/optional>
 #endif
 
+#ifdef NO_FILESYSTEM
+#  include <boost/filesystem.hpp>
+#else
+#  include <experimental/filesystem>
+#endif
+
 namespace std_replacement {
 
   namespace detail {
@@ -292,6 +298,14 @@ namespace muSpectre {
   using optional = typename boost::optional<T>;
 #else
   using optional = typename std::experimental::optional<T>;
+#endif
+
+#ifdef NO_FILESYSTEM
+  namespace filesystem = boost::filesystem;
+  using file_error_code = boost::system::error_code;
+#else
+  namespace filesystem = std::experimental::filesystem;
+  using file_error_code = std::error_code;
 #endif
 
 }  // muSpectre
