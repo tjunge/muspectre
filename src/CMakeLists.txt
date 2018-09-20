@@ -35,6 +35,7 @@ add_subdirectory(materials)
 add_subdirectory(fft)
 add_subdirectory(cell)
 add_subdirectory(solver)
+add_subdirectory(io)
 
 
 if (${MPI_PARALLEL})
@@ -56,7 +57,6 @@ std::experimental::optional<double> A{};
 }"
     HAS_STD_OPTIONAL)
 
-add_definitions(-DBAR)
 if( NOT HAS_STD_OPTIONAL)
   add_definitions(-DNO_EXPERIMENTAL)
 endif()

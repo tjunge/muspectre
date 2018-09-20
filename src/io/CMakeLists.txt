@@ -1,11 +1,11 @@
-# =============================================================================
+#==============================================================================
 # file   CMakeLists.txt
 #
 # @author Till Junge <till.junge@epfl.ch>
 #
-# @date   08 Jan 2018
+# @date   20 Sep 2018
 #
-# @brief  configuration for files in common
+# @brief  configuration for compiling µSpectre's input/output facilities
 #
 # @section LICENSE
 #
@@ -25,11 +25,15 @@
 # along with GNU Emacs; see the file COPYING. If not, write to the
 # Free Software Foundation, Inc., 59 Temple Place - Suite 330,
 # Boston, MA 02111-1307, USA.
-# =============================================================================
+#
 
-set (common_SRC
-  ${CMAKE_CURRENT_SOURCE_DIR}/common.cc
-  ${CMAKE_CURRENT_SOURCE_DIR}/voigt_conversion.cc
-  )
+set (io_SRC "")
 
-target_sources(muSpectre PRIVATE ${common_SRC})
+if (${NETCDF})
+  set(io_SRC
+    ${io_SRC}
+    ${CMAKE_CURRENT_SOURCE_DIR}/muLib.cc
+    )
+endif (${NETCDF})
+
+target_sources (muSpectre PRIVATE ${io_SRC})

@@ -45,6 +45,7 @@ set(MAKE_TESTS "ON" CACHE BOOL "If on, several ctest targets will be built autom
 set(MAKE_EXAMPLES "ON" CACHE BOOL "If on, the executables in the bin folder will be compiled")
 set(MAKE_BENCHMARKS "ON" CACHE BOOL "If on, the benchmarks will be compiled")
 set(MPI_PARALLEL "OFF" CACHE BOOL "If on, MPI-parallel solvers become available")
+set(NETCDF "OFF" CACHE BOOL "If on, netCDF support becomes available")
 set(RUNNING_IN_CI "OFF" CACHE INTERNAL "changes output format for tests")
 
 if(${MAKE_TESTS})
@@ -59,6 +60,11 @@ if(${MPI_PARALLEL})
     message(SEND_ERROR "You chose MPI but CMake cannot find the MPI package")
   endif(NOT ${MPI_FOUND})
 endif(${MPI_PARALLEL})
+
+if(${NETCDF})
+  set(NETCDF_CXX "YES")
+  find_package(NetCDF REQUIRED)
+endif(${NETCDF})
 
 include(muspectreTools)
 

@@ -29,8 +29,6 @@
 #ifndef UTILITIES_H
 #define UTILITIES_H
 
-#include <boost/tuple/tuple.hpp>
-
 #include <tuple>
 
 #ifdef NO_EXPERIMENTAL
@@ -313,25 +311,6 @@ namespace muSpectre {
 #else
   using optional = typename std::experimental::optional<T>;
 #endif
-
-  /* ---------------------------------------------------------------------- */
-  /**
-   * conversion helper from `boost::tuple` to `std::tuple`
-   */
-  template <typename BoostTuple, std::size_t... Is>
-  auto asStdTuple(BoostTuple&& boostTuple, std::index_sequence<Is...>) {
-    return std::tuple<typename boost::tuples::element<Is, std::decay_t<BoostTuple>>::type...>
-      (boost::get<Is>(std::forward<BoostTuple>(boostTuple))...);
-  }
-  /**
-   * conversion from `boost::tuple` to `std::tuple`
-   */
-  template <typename BoostTuple>
-  auto asStdTuple(BoostTuple&& boostTuple) {
-    return asStdTuple(std::forward<BoostTuple>(boostTuple),
-                      std::make_index_sequence<boost::tuples::length<std::decay_t<BoostTuple>>::value>());
-  }
-
 
 }  // muSpectre
 
