@@ -36,8 +36,8 @@
 #include "fft/fftw_engine.hh"
 
 #ifdef WITH_MPI
-#include "common/communicator.hh"
-#include "fft/fftwmpi_engine.hh"
+# include "common/communicator.hh"
+# include "fft/fftwmpi_engine.hh"
 #endif
 
 #include <memory>

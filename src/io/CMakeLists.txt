@@ -32,7 +32,7 @@ set (io_SRC "")
 if (${NETCDF})
   set(io_SRC
     ${io_SRC}
-    ${CMAKE_CURRENT_SOURCE_DIR}/muLib.cc
+    ${CMAKE_CURRENT_SOURCE_DIR}/mulib_input.cc
     )
 endif (${NETCDF})
 

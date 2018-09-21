@@ -39,4 +39,10 @@ set (solvers_SRC
   ${CMAKE_CURRENT_SOURCE_DIR}/solver_eigen.cc
   )
 
+if (${MULIB})
+  set (solvers_SRC
+    ${solvers_SRC}
+    ${CMAKE_CURRENT_SOURCE_DIR}/mulib_solver.cc)
+endif (${MULIB})
+
 target_sources(muSpectre PRIVATE ${solvers_SRC})

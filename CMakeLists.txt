@@ -46,7 +46,13 @@ set(MAKE_EXAMPLES "ON" CACHE BOOL "If on, the executables in the bin folder will
 set(MAKE_BENCHMARKS "ON" CACHE BOOL "If on, the benchmarks will be compiled")
 set(MPI_PARALLEL "OFF" CACHE BOOL "If on, MPI-parallel solvers become available")
 set(NETCDF "OFF" CACHE BOOL "If on, netCDF support becomes available")
+set(MULIB "OFF" CACHE BOOL "If on, mulib input reader is build. turns on NETCDF")
 set(RUNNING_IN_CI "OFF" CACHE INTERNAL "changes output format for tests")
+
+if(${MULIB})
+  set(NETCDF "ON")
+  add_definitions(-DWITH_MULIB)
+endif(${MULIB})
 
 if(${MAKE_TESTS})
   enable_testing()
@@ -61,9 +67,23 @@ if(${MPI_PARALLEL})
   endif(NOT ${MPI_FOUND})
 endif(${MPI_PARALLEL})
 
+include(CheckCXXSourceCompiles)
 if(${NETCDF})
   set(NETCDF_CXX "YES")
   find_package(NetCDF REQUIRED)
+  if (${NETCDF})
+    # the following checks whether std::filesystem exists and replaces
+    # it by boost::filesystem if necessary
+    set (CMAKE_REQUIRED_LIBRARIES stdc++fs)
+    check_cxx_source_compiles(
+      "#include <experimental/filesystem>
+  int main() {
+    std::experimental::filesystem::path(\"/bin/ban/bun\");
+  }" HAS_STD_FILESYSTEM )
+  endif (${NETCDF})
+  if (NOT HAS_STD_FILESYSTEM)
+    add_definitions (-DNO_FILESYSTEM)
+  endif (NOT HAS_STD_FILESYSTEM)
 endif(${NETCDF})
 
 include(muspectreTools)
@@ -118,6 +138,10 @@ if (${MAKE_TESTS})
 
   # build library tests
   file( GLOB TEST_SRCS "${CMAKE_SOURCE_DIR}/tests/test_*.cc")
+  
+  if (${NETCDF})
+    file (GLOB TEST_SRCS ${TEST_SRCS} "${CMAKE_SOURCE_DIR}/tests/netcdf_test_*.cc")
+  endif (${NETCDF}) 
 
   add_executable(main_test_suite tests/main_test_suite.cc ${TEST_SRCS})
   target_link_libraries(main_test_suite ${Boost_LIBRARIES} muSpectre)

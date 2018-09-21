@@ -1,5 +1,5 @@
 /**
- * file   muLib.hh
+ * file   mulib_input.hh
  *
  * @author Till Junge <till.junge@epfl.ch>
  *
@@ -38,12 +38,23 @@
 #include "common/utilities.hh"
 
 #include <netcdf>
+#include <Eigen/Dense>
 
 #include <string>
 #include <vector>
 
 namespace muSpectre {
 
+  /**
+   * Forward declaration
+   */
+  template <Dim_t DimS, Dim_t DimM>
+  class CellBase;
+
+
+  /**
+   * thin wrapper around a netcdf file for input from µLib
+   */
   class MuLibInput
   {
   public:
@@ -71,18 +82,28 @@ namespace muSpectre {
     MuLibInput& operator=(MuLibInput &&other) = default;
 
     //! returns the spatial dimension of the problem defined in the file
-    const Dim_t & get_dim();
+    Dim_t get_dim() const;
 
+    //! returns the spatial dimension of the problem defined in the file
+    const std::vector<Dim_t> & get_resolutions() const;
+
+    //! returns the number of materials in the microstructure
+    Dim_t get_nb_materials() const {return this->nb_materials;}
     /**
-     * checks the file's validity (i.e. internal consistency,
-     * compatibility with muSpectre.
+     * fills the materials for the provided Cell and initialises it
      */
-    bool is_valid();
+    template <Dim_t DimS>
+    void setup_cell(CellBase<DimS, DimS> & cell);
+
 
   protected:
     const filesystem::path path;
     netCDF::NcFile file;
-    std::vector<Dim_t> dims{};
+    std::vector<Dim_t> resolutions{};
+    Dim_t nb_materials{};
+    netCDF::NcVar mat_params{};
+    netCDF::NcVar micro_structure{};
+    std::vector<Dim_t> mat_labels{};
   private:
   };
 

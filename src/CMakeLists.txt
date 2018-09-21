@@ -49,7 +49,6 @@ find_package(FFTW REQUIRED)
 
 # The following checks whether std::optional exists and replaces it by
 # boost::optional if necessary
-include(CheckCXXSourceCompiles)
 check_cxx_source_compiles(
     "#include <experimental/optional>
 int main() {
@@ -62,18 +61,9 @@ if( NOT HAS_STD_OPTIONAL)
 endif()
 
 if (${NETCDF})
-  # the following checks whether std::filesystem exists and replaces
-  # it by boost::filesystem if necessary
-  set (CMAKE_REQUIRED_LIBRARIES stdc++fs)
-  check_cxx_source_compiles(
-    "#include <experimental/filesystem>
-  int main() {
-    std::experimental::filesystem::path(\"/bin/ban/bun\");
-  }" HAS_STD_FILESYSTEM )
-
   if (NOT HAS_STD_FILESYSTEM)
     add_definitions (-DNO_FILESYSTEM)
-    target_link_libraries(muSpectre PUBLIC boost_filesystem)
+    target_link_libraries(muSpectre PUBLIC boost_filesystem boost_system)
   else ()
     target_link_libraries(muSpectre PUBLIC stdc++fs)
   endif(NOT HAS_STD_FILESYSTEM)
