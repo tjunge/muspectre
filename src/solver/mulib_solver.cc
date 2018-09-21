@@ -33,6 +33,41 @@
 
 namespace muSpectre {
 
+  namespace internal {
+
+    template <Dim_t Dim>
+    struct VoigtVec { };
+
+    template <>
+    struct VoigtVec<twoD> {
+      static decltype(auto) get() {
+        Eigen::Matrix<Dim_t, twoD*twoD, 2> mat{};
+        mat << 0, 0,
+          1, 1,
+          0, 1,
+          1, 0;
+        return mat;
+      }
+    };
+    template <>
+    struct VoigtVec<threeD> {
+      static decltype(auto) get() {
+        Eigen::Matrix<Dim_t, threeD*threeD, 2> mat{};
+        mat << 0, 0,
+          1, 1,
+          2, 2,
+          1, 2,
+          0, 2,
+          0, 1,
+          2, 1,
+          2, 0,
+          1, 0;
+        return mat;
+      }
+    };
+
+  }  // internal
+
   template <Dim_t Dim>
   void mulib_worker(MuLibInput & file,
                     Real newton_tol, Real equil_tol, Real cg_tol,
@@ -70,23 +105,54 @@ namespace muSpectre {
     Delta_vec mean_delta_stresses{};
     T4Mat<Real, Dim> C{};
     C.setZero();
-    for (const auto & opt_result: results) {
-      auto get_mean = [](const auto & vec) {
-        Eigen::Map<const Eigen::MatrixXd>
-        matrix(vec.data(),
-               Dim*Dim, vec.rows()/(Dim*Dim));
-        auto& mat{ matrix.rowwise().mean()};
-        Eigen::Matrix<Real, Dim, Dim> mean;
-        Eigen::Map<Eigen::Matrix<Real, Dim* Dim, 1 >>(mean.data()) = mat;
-        return mean;
-      };
-      std::cout << std::endl<< "mean stress:" << std::endl
-                << get_mean(opt_result.stress) << std::endl;
-      std::cout << "mean strain:" << std::endl
-                << get_mean(opt_result.grad) << std::endl;
+    {
+      size_t counter{};
+      for (int i{0}; i < Dim; ++i) {
+        for (int j{i}; j < Dim; ++j, ++counter) {
+          auto get_mean = [](const auto & vec) {
+            Eigen::Map<const Eigen::MatrixXd>
+            matrix(vec.data(),
+                   Dim*Dim, vec.rows()/(Dim*Dim));
+            auto& mat{ matrix.rowwise().mean()};
+            Eigen::Matrix<Real, Dim, Dim> mean;
+            Eigen::Map<Eigen::Matrix<Real, Dim* Dim, 1 >>(mean.data()) = mat;
+            return mean;
+          };
+          const auto & opt_result = results[counter];
+          auto stress{get_mean(opt_result.stress)};
+          std::cout << std::endl<< "mean stress:" << std::endl
+                    << stress << std::endl;
+          std::cout << "mean strain:" << std::endl
+                    << get_mean(opt_result.grad) << std::endl;
+
+          for (int k{0}; k < Dim; ++k) {
+            for (int l{0}; l < Dim; ++l) {
+              get(C, i,j,k,l) = get(C, j,i,k,l) = stress(k,l);
+            }
+          }
+        }
+      }
     }
+    std::cout << "stiffness tensor :" << std::endl
+              << C << std::endl;
+
+    Eigen::Matrix<Real, vsize(Dim), vsize(Dim)> C_voigt{};
+    C_voigt.setZero();
+    const auto redirect{internal::VoigtVec<Dim>::get()};
+    for (int I{0}; I < vsize(Dim); ++I) {
+      const Dim_t & i{redirect(I,0)};
+      const Dim_t & j{redirect(I,1)};
+      for (int J{0}; J < vsize(Dim); ++J) {
+        const Dim_t & k{redirect(J,0)};
+        const Dim_t & l{redirect(J,1)};
+        C_voigt(I,J) = get(C, i,j,k,l);
+      }
+    }
+    std::cout << "stiffness tensor voigt :" << std::endl
+              << C_voigt << std::endl;
 
   }
+
 
   void mulib(const filesystem::path & path,
              Real newton_tol, Real equil_tol, Real cg_tol,
