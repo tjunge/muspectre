@@ -50,7 +50,7 @@ set(MULIB "OFF" CACHE BOOL "If on, mulib input reader is build. turns on NETCDF"
 set(RUNNING_IN_CI "OFF" CACHE INTERNAL "changes output format for tests")
 
 if(${MULIB})
-  set(NETCDF "ON")
+  set(NETCDF "ON" CACHE BOOL "must be on now" FORCE)
   add_definitions(-DWITH_MULIB)
 endif(${MULIB})
 
