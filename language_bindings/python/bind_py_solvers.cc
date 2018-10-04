@@ -29,6 +29,7 @@
 #include "solver/solvers.hh"
 #include "solver/solver_cg.hh"
 #include "solver/solver_eigen.hh"
+#include "solver/mulib_solver.hh"
 
 #include <pybind11/pybind11.h>
 #include <pybind11/stl.h>
@@ -130,9 +131,29 @@ void add_de_geus_helper(py::module & mod) {
           "verbose"_a=0);
 }
 
+void add_mulib_solver(py::module & mod) {
+  mod.def("muLib", [](const std::string & path,
+                      Real newton_tol,
+                      Real equil_tol,
+                      Real cg_tol,
+                      Uint maxiter,
+                      Dim_t verbose) {
+            mulib(path, newton_tol, equil_tol, cg_tol, maxiter, verbose);
+          },
+          "file_name"_a,
+          "newton_tol"_a,
+          "equilibrium_tol"_a,
+          "cg_tol"_a,
+          "max_iter"_a,
+          "verbose"_a=0 ,
+          "Solver for µLib integration. Takes a netcdf-3 input file and "
+          "prints output to standard output");
+}
+
 void add_solver_helper(py::module & mod) {
   add_newton_cg_helper(mod);
   add_de_geus_helper  (mod);
+  add_mulib_solver(mod);
 }
 
 void add_solvers(py::module & mod) {
