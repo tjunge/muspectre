@@ -20,7 +20,7 @@
  * General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with GNU Emacs; see the file COPYING. If not, write to the
+ * along with µSpectre; see the file COPYING. If not, write to the
  * Free Software Foundation, Inc., 59 Temple Place - Suite 330,
  * Boston, MA 02111-1307, USA.
  */
@@ -86,7 +86,14 @@ namespace muSpectre {
     using reverse_iterator = std::reverse_iterator<iterator>;
     //! stl conformance
     using const_reverse_iterator = std::reverse_iterator<const_iterator>;
-    //! stl conformance
+      //! enumerator over a constant scalar field
+      using const_enumerator = typename Parent::template enumerator<const_iterator>;
+      //! enumerator over a scalar field
+      using enumerator = std::conditional_t<
+        ConstField,
+        const_enumerator,
+        typename Parent::template enumerator<iterator>>;
+    //! give access to the protected fields
     friend iterator;
 
     //! Default constructor
@@ -138,6 +145,17 @@ namespace muSpectre {
     inline const_iterator cend() const {return const_iterator(*this, false);}
     //! return an iterator past the last entry of field
     inline const_iterator end() const {return this->cend();}
+
+      /**
+       * return an iterable proxy to this field that can be iterated
+       * in Ccoord-value tuples
+       */
+      enumerator enumerate() {return enumerator(*this);}
+      /**
+       * return an iterable proxy to this field that can be iterated
+       * in Ccoord-value tuples
+       */
+      const_enumerator enumerate() const {return const_enumerator(*this);}
 
     //! evaluate the average of the field
     inline T_t mean() const;

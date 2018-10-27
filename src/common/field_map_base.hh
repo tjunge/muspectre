@@ -20,7 +20,7 @@
  * General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with GNU Emacs; see the file COPYING. If not, write to the
+ * along with µSpectre; see the file COPYING. If not, write to the
  * Free Software Foundation, Inc., 59 Temple Place - Suite 330,
  * Boston, MA 02111-1307, USA.
  */
@@ -165,117 +165,16 @@ namespace muSpectre {
        * and dereferences to an Eigen map to the currently used field.
        */
       template <class FullyTypedFieldMap, bool ConstIter=false>
-      class iterator
-      {
-        static_assert(!((ConstIter==false) && (ConstField==true)),
-                      "You can't have a non-const iterator over a const "
-                      "field");
-      public:
-        //! stl conformance
-        using value_type =
-          const_corrector_t<FullyTypedFieldMap, ConstIter>;
-        //! stl conformance
-        using const_value_type =
-          const_corrector_t<FullyTypedFieldMap, true>;
-        //! stl conformance
-        using pointer = typename FullyTypedFieldMap::pointer;
-        //! stl conformance
-        using difference_type = std::ptrdiff_t;
-        //! stl conformance
-        using iterator_category = std::random_access_iterator_tag;
-        //! cell coordinates type
-        using Ccoord = typename FieldCollection::Ccoord;
-        //! stl conformance
-        using reference = typename FullyTypedFieldMap::reference;
-        //! fully typed reference as seen by the iterator
-        using TypedRef = std::conditional_t<ConstIter,
-                                            const FullyTypedFieldMap,
-                                            FullyTypedFieldMap> &;
+      class iterator;
 
-        //! Default constructor
-        iterator() = delete;
-
-        //! constructor
-        inline iterator(TypedRef fieldmap, bool begin=true);
-
-        //! constructor for random access
-        inline iterator(TypedRef fieldmap, size_t index);
-
-        //! Move constructor
-        iterator(iterator &&other) = default;
-
-        //! Destructor
-        virtual ~iterator() = default;
-
-        //! Copy assignment operator
-        iterator& operator=(const iterator &other) = default;
-
-        //! Move assignment operator
-        iterator& operator=(iterator &&other) = default;
-
-        //! pre-increment
-        inline iterator & operator++();
-        //! post-increment
-        inline iterator operator++(int);
-        //! dereference
-        inline value_type operator*();
-        //! dereference
-        inline const_value_type operator*() const;
-        //! member of pointer
-        inline pointer operator->();
-        //! pre-decrement
-        inline iterator & operator--();
-        //! post-decrement
-        inline iterator operator--(int);
-        //! access subscripting
-        inline value_type operator[](difference_type diff);
-        //! access subscripting
-        inline const_value_type operator[](const difference_type diff) const;
-        //! equality
-        inline bool operator==(const iterator & other) const;
-        //! inequality
-        inline bool operator!=(const iterator & other) const;
-        //! div. comparisons
-        inline bool operator<(const iterator & other) const;
-        //! div. comparisons
-        inline bool operator<=(const iterator & other) const;
-        //! div. comparisons
-        inline bool operator>(const iterator & other) const;
-        //! div. comparisons
-        inline bool operator>=(const iterator & other) const;
-        //! additions, subtractions and corresponding assignments
-        inline iterator operator+(difference_type diff) const;
-        //! additions, subtractions and corresponding assignments
-        inline iterator operator-(difference_type diff) const;
-        //! additions, subtractions and corresponding assignments
-        inline iterator& operator+=(difference_type diff);
-        //! additions, subtractions and corresponding assignments
-        inline iterator& operator-=(difference_type diff);
-
-        //! get pixel coordinates
-        inline Ccoord get_ccoord() const;
-
-        //! ostream operator (mainly for debugging)
-        friend std::ostream & operator<<(std::ostream & os,
-                                         const iterator& it) {
-          if (ConstIter) {
-            os << "const ";
-          }
-          os << "iterator on field '"
-             << it.fieldmap.get_name()
-             << "', entry " << it.index;
-          return os;
-        }
-
-      protected:
-        //! Copy constructor
-        iterator(const iterator &other) = default;
-
-        const FieldCollection & collection; //!< collection of the field
-        TypedRef fieldmap; //!< ref to the field itself
-        size_t index; //!< index of currently pointed-to pixel
-      private:
-      };
+      /**
+       * Simple iterable proxy wrapper object around a FieldMap. When
+       * iterated over, rather than dereferencing to the reference
+       * type of iterator, it dereferences to a tuple of the pixel,
+       * and the reference type of iterator
+       */
+      template<class Iterator>
+      class enumerator;
 
       TypedField_t & get_field() {return this->field;}
 
@@ -288,6 +187,315 @@ namespace muSpectre {
       TypedField_t & field;  //!< mapped Field
     private:
     };
+
+
+    /**
+     * iterates over all pixels in the `muSpectre::FieldCollection`
+     * and dereferences to an Eigen map to the currently used field.
+     */
+    template <class FieldCollection, typename T, Dim_t NbComponents,
+              bool ConstField>
+    template <class FullyTypedFieldMap, bool ConstIter>
+    class FieldMap<FieldCollection, T, NbComponents, ConstField>::iterator
+    {
+      static_assert(!((ConstIter==false) && (ConstField==true)),
+                    "You can't have a non-const iterator over a const "
+                    "field");
+    public:
+      //! for use by enumerator
+      using FullyTypedFieldMap_t = FullyTypedFieldMap;
+      //! stl conformance
+      using value_type =
+        const_corrector_t<FullyTypedFieldMap, ConstIter>;
+      //! stl conformance
+      using const_value_type =
+        const_corrector_t<FullyTypedFieldMap, true>;
+      //! stl conformance
+      using pointer = typename FullyTypedFieldMap::pointer;
+      //! stl conformance
+      using difference_type = std::ptrdiff_t;
+      //! stl conformance
+      using iterator_category = std::random_access_iterator_tag;
+      //! cell coordinates type
+      using Ccoord = typename FieldCollection::Ccoord;
+      //! stl conformance
+      using reference = typename FullyTypedFieldMap::reference;
+      //! fully typed reference as seen by the iterator
+      using TypedRef = std::conditional_t<ConstIter,
+                                          const FullyTypedFieldMap,
+                                          FullyTypedFieldMap> &;
+
+      //! Default constructor
+      iterator() = delete;
+
+      //! constructor
+      inline iterator(TypedRef fieldmap, bool begin=true);
+
+      //! constructor for random access
+      inline iterator(TypedRef fieldmap, size_t index);
+
+      //! Move constructor
+      iterator(iterator &&other) = default;
+
+      //! Destructor
+      virtual ~iterator() = default;
+
+      //! Copy assignment operator
+      iterator& operator=(const iterator &other) = default;
+
+      //! Move assignment operator
+      iterator& operator=(iterator &&other) = default;
+
+      //! pre-increment
+      inline iterator & operator++();
+      //! post-increment
+      inline iterator operator++(int);
+      //! dereference
+      inline value_type operator*();
+      //! dereference
+      inline const_value_type operator*() const;
+      //! member of pointer
+      inline pointer operator->();
+      //! pre-decrement
+      inline iterator & operator--();
+      //! post-decrement
+      inline iterator operator--(int);
+      //! access subscripting
+      inline value_type operator[](difference_type diff);
+      //! access subscripting
+      inline const_value_type operator[](const difference_type diff) const;
+      //! equality
+      inline bool operator==(const iterator & other) const;
+      //! inequality
+      inline bool operator!=(const iterator & other) const;
+      //! div. comparisons
+      inline bool operator<(const iterator & other) const;
+      //! div. comparisons
+      inline bool operator<=(const iterator & other) const;
+      //! div. comparisons
+      inline bool operator>(const iterator & other) const;
+      //! div. comparisons
+      inline bool operator>=(const iterator & other) const;
+      //! additions, subtractions and corresponding assignments
+      inline iterator operator+(difference_type diff) const;
+      //! additions, subtractions and corresponding assignments
+      inline iterator operator-(difference_type diff) const;
+      //! additions, subtractions and corresponding assignments
+      inline iterator& operator+=(difference_type diff);
+      //! additions, subtractions and corresponding assignments
+      inline iterator& operator-=(difference_type diff);
+
+      //! get pixel coordinates
+      inline Ccoord get_ccoord() const;
+
+      //! ostream operator (mainly for debugging)
+      friend std::ostream & operator<<(std::ostream & os,
+                                       const iterator& it) {
+        if (ConstIter) {
+          os << "const ";
+        }
+        os << "iterator on field '"
+           << it.fieldmap.get_name()
+           << "', entry " << it.index;
+        return os;
+      }
+
+    protected:
+      //! Copy constructor
+      iterator(const iterator &other) = default;
+
+      const FieldCollection & collection; //!< collection of the field
+      TypedRef fieldmap; //!< ref to the field itself
+      size_t index; //!< index of currently pointed-to pixel
+    private:
+    };
+
+
+    /* ---------------------------------------------------------------------- */
+    template <class FieldCollection, typename T, Dim_t NbComponents,
+              bool ConstField>
+    template <class Iterator>
+    class FieldMap<FieldCollection, T, NbComponents, ConstField>::enumerator
+    {
+    public:
+      //! fully typed reference as seen by the iterator
+      using TypedRef =typename Iterator::TypedRef;
+
+      //! Default constructor
+      enumerator() = delete;
+
+      //! constructor with field mapped
+      enumerator(TypedRef& field_map): field_map{field_map} {}
+
+      /**
+       * similar to iterators of the field map, but dereferences to a
+       * tuple containing the cell coordinates and teh corresponding
+       * entry
+       */
+      class iterator;
+
+      iterator begin() {return iterator(this->field_map);}
+      iterator end() {return iterator(this->field_map, false);}
+
+    protected:
+      TypedRef & field_map;
+    };
+
+    /* ---------------------------------------------------------------------- */
+    template <class FieldCollection, typename T, Dim_t NbComponents,
+              bool ConstField>
+    template <class SimpleIterator>
+    class FieldMap<FieldCollection, T, NbComponents, ConstField>::
+    enumerator<SimpleIterator>::iterator {
+    public:
+      //! cell coordinates type
+      using Ccoord = typename FieldCollection::Ccoord;
+      //! stl conformance
+      using value_type = std::tuple<Ccoord, typename SimpleIterator::value_type>;
+      //! stl conformance
+      using const_value_type = std::tuple<Ccoord,
+                                          typename SimpleIterator::const_value_type>;
+      //! stl conformance
+      using difference_type = std::ptrdiff_t;
+      //! stl conformance
+      using iterator_category = std::random_access_iterator_tag;
+      //! stl conformance
+      using reference = std::tuple<
+        Ccoord,
+        typename SimpleIterator::FullyTypedFieldMap_t::reference>;
+
+      //! Default constructor
+      iterator() = delete;
+
+      //! constructor for begin/end
+      iterator(TypedRef fieldmap, bool begin=true): it{fieldmap, begin} {}
+
+      //! constructor for random access
+      iterator(TypedRef fieldmap, size_t index): it{fieldmap, index} {}
+
+      //! constructor from iterator
+      iterator(const SimpleIterator & it): it{it} {}
+
+      //! Copy constructor
+      iterator(const iterator &other) = default;
+
+      //! Move constructor
+      iterator(iterator &&other) = default;
+
+      //! Destructor
+      virtual ~iterator() = default;
+
+      //! Copy assignment operator
+      iterator& operator=(const iterator &other) = default;
+
+      //! Move assignment operator
+      iterator& operator=(iterator &&other) = default;
+
+      //! pre-increment
+      iterator & operator++() {
+        ++(this->it);
+        return *this;
+      }
+
+      //! post-increment
+      iterator operator++(int) {
+        iterator current = *this;
+        ++(this->it);
+        return current;
+      }
+
+      //! dereference
+      value_type operator*() {
+        return value_type{it.get_ccoord(), *this->it};
+      }
+
+      //! dereference
+      const_value_type operator*() const {
+        return const_value_type{it.get_ccoord(), *this->it};
+      };
+
+      //! pre-decrement
+      iterator & operator--() {
+        --(this->it);
+        return *this;
+      }
+
+      //! post-decrement
+      iterator operator--(int) {
+        iterator current = *this;
+        --(this->it);
+        return current;
+      }
+
+      //! access subscripting
+      value_type operator[](difference_type diff) {
+        SimpleIterator accessed{this->it + diff};
+        return *accessed;
+      }
+
+      //! access subscripting
+      const_value_type operator[](const difference_type diff) const {
+        SimpleIterator accessed{this->it + diff};
+        return *accessed;
+      }
+
+      //! equality
+      bool operator==(const iterator & other) const {
+        return this->it == other.it;
+      }
+
+      //! inequality
+      bool operator!=(const iterator & other) const {
+        return this->it != other.it;
+      }
+
+      //! div. comparisons
+      bool operator<(const iterator & other) const {
+        return this->it < other.it;
+      }
+
+      //! div. comparisons
+      bool operator<=(const iterator & other) const {
+        return this->it <= other.it;
+      }
+
+      //! div. comparisons
+      bool operator>(const iterator & other) const {
+        return this->it > other.it;
+      }
+
+      //! div. comparisons
+      bool operator>=(const iterator & other) const {
+        return this->it >= other.it;
+      }
+
+      //! additions, subtractions and corresponding assignments
+      iterator operator+(difference_type diff) const {
+        return iterator{this->it + diff};
+      }
+
+      //! additions, subtractions and corresponding assignments
+      iterator operator-(difference_type diff) const {
+        return iterator{this->it - diff};
+      }
+
+      //! additions, subtractions and corresponding assignments
+      iterator& operator+=(difference_type diff) {
+        this->it += diff;
+      }
+
+      //! additions, subtractions and corresponding assignments
+      iterator& operator-=(difference_type diff) {
+        this->it -= diff;
+      }
+
+    protected:
+      SimpleIterator it;
+    private:
+    };
+
+
+
   }  // internal
 
 

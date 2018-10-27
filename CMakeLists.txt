@@ -22,7 +22,7 @@
 # General Public License for more details.
 #
 # You should have received a copy of the GNU General Public License
-# along with GNU Emacs; see the file COPYING. If not, write to the
+# along with µSpectre; see the file COPYING. If not, write to the
 # Free Software Foundation, Inc., 59 Temple Place - Suite 330,
 # Boston, MA 02111-1307, USA.
 # =============================================================================
@@ -110,11 +110,12 @@ endif()
 if (${MAKE_TESTS})
   ##############################################################################
 
-  # build tests
+  # build library tests
   file( GLOB TEST_SRCS "${CMAKE_SOURCE_DIR}/tests/test_*.cc")
 
   add_executable(main_test_suite tests/main_test_suite.cc ${TEST_SRCS})
   target_link_libraries(main_test_suite ${Boost_LIBRARIES} muSpectre)
+
 
   muSpectre_add_test(main_test_suite TYPE BOOST main_test_suite --report_level=detailed)
 

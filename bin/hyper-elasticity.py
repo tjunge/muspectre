@@ -23,7 +23,7 @@ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
 General Public License for more details.
 
 You should have received a copy of the GNU General Public License
-along with GNU Emacs; see the file COPYING. If not, write to the
+along with µSpectre; see the file COPYING. If not, write to the
 Free Software Foundation, Inc., 59 Temple Place - Suite 330,
 Boston, MA 02111-1307, USA.
 """
@@ -43,9 +43,9 @@ def compute():
 
     formulation = µ.Formulation.finite_strain
     cell = µ.Cell(N, lens, formulation)
-    hard = µ.material.MaterialHooke3d.make(cell, "hard",
+    hard = µ.material.MaterialLinearElastic1_3d.make(cell, "hard",
                                            210.e9, .33)
-    soft = µ.material.MaterialHooke3d.make(cell, "soft",
+    soft = µ.material.MaterialLinearElastic1_3d.make(cell, "soft",
                                             70.e9, .33)
     for  pixel in cell:
         # if ((pixel[0] >= N[0]-incl_size) and
@@ -66,7 +66,7 @@ def compute():
     if formulation == µ.Formulation.small_strain:
         dF_bar = .5*(dF_bar + dF_bar.T)
 
-    test_grad = np.zeros((9, cell.size()))
+    test_grad = np.zeros((9, cell.size))
     test_grad[:,:] = dF_bar.reshape(-1,1)
     print(cell.directional_stiffness(test_grad)[:,:3])
     solver = µ.solvers.SolverCG(cell, cg_tol, maxiter, verbose=False);

@@ -23,7 +23,7 @@ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
 General Public License for more details.
 
 You should have received a copy of the GNU General Public License
-along with GNU Emacs; see the file COPYING. If not, write to the
+along with µSpectre; see the file COPYING. If not, write to the
 Free Software Foundation, Inc., 59 Temple Place - Suite 330,
 Boston, MA 02111-1307, USA.
 """
@@ -37,6 +37,7 @@ from python_fft_tests import FFT_Check
 from python_projection_tests import *
 from python_material_linear_elastic3_test import MaterialLinearElastic3_Check
 from python_material_linear_elastic4_test import MaterialLinearElastic4_Check
+from python_field_tests import FieldCollection_Check
 
 from python_material_crystal_plasticity_finite1 import MaterialCrystalPlasticityFinite1_Check
 
@@ -58,6 +59,7 @@ class CellCheck(unittest.TestCase):
                          lengths,
                          formulation)
             mat = µ.material.MaterialLinearElastic1_2d.make(sys, "material", 210e9, .33)
+
         except Exception as err:
             print(err)
             raise err
@@ -125,6 +127,26 @@ class EigenStrainCheck(unittest.TestCase):
             self.cell1, "simple", 210e9, .33)
         self.mat2 = µ.material.MaterialLinearElastic2_2d.make(
             self.cell2, "eigen", 210e9, .33)
+        self.mat3 = µ.material.MaterialLinearElastic2_2d.make(
+            self.cell2, "eigen2", 120e9, .33)
+
+    def test_globalisation(self):
+        for pixel in self.cell2:
+            self.mat2.add_pixel(pixel, np.random.rand(2,2))
+        loc_eigenstrain = self.mat2.collection.get_real_field("Eigenstrain").array
+        glo_eigenstrain = self.cell2.get_globalised_internal_real_array("Eigenstrain")
+        error = np.linalg.norm(loc_eigenstrain-glo_eigenstrain)
+        self.assertEqual(error, 0)
+
+    def test_globalisation_constant(self):
+        for i, pixel in enumerate(self.cell2):
+            if i%2 == 0:
+                self.mat2.add_pixel(pixel, np.ones((2,2)))
+            else:
+                self.mat3.add_pixel(pixel, np.ones((2,2)))
+        glo_eigenstrain = self.cell2.get_globalised_internal_real_array("Eigenstrain")
+        error = np.linalg.norm(glo_eigenstrain-1)
+        self.assertEqual(error, 0)
 
     def test_solve(self):
         verbose_test = False

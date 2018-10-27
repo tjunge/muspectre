@@ -20,7 +20,7 @@
  * General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with GNU Emacs; see the file COPYING. If not, write to the
+ * along with µSpectre; see the file COPYING. If not, write to the
  * Free Software Foundation, Inc., 59 Temple Place - Suite 330,
  * Boston, MA 02111-1307, USA.
  */
@@ -103,6 +103,7 @@ void add_material_linear_elastic3_helper(py::module & mod) {
   using Sys_t = CellBase<dim, dim>;
 
   py::class_<Mat_t, MaterialBase<dim, dim>>(mod, name.c_str())
+    .def(py::init<std::string>(), "name"_a)
     .def_static("make",
                 [](Sys_t & sys, std::string n) -> Mat_t & {
                   return Mat_t::make(sys, n);
@@ -128,6 +129,7 @@ void add_material_linear_elastic4_helper(py::module & mod) {
   using Sys_t = CellBase<dim, dim>;
 
   py::class_<Mat_t, MaterialBase<dim, dim>>(mod, name.c_str())
+    .def(py::init<std::string>(), "name"_a)
     .def_static("make",
                 [](Sys_t & sys, std::string n) -> Mat_t & {
                   return Mat_t::make(sys, n);

@@ -21,7 +21,7 @@
  * General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with GNU Emacs; see the file COPYING. If not, write to the
+ * along with µSpectre; see the file COPYING. If not, write to the
  * Free Software Foundation, Inc., 59 Temple Place - Suite 330,
  * Boston, MA 02111-1307, USA.
  */
@@ -64,10 +64,26 @@ namespace muSpectre {
     friend class internal::FieldMap<FieldCollection, T, Eigen::Dynamic, true>;
     friend class internal::FieldMap<FieldCollection, T, Eigen::Dynamic, false>;
 
+    static constexpr bool Global{FieldCollection::is_global()};
+
   public:
     using Parent = internal::FieldBase<FieldCollection>; //!< base class
     //! for type checks when mapping this field
     using collection_t = typename Parent::collection_t;
+
+    //! for filling global fields from local fields and vice-versa
+    using LocalField_t =
+      std::conditional_t<Global,
+                         TypedField<typename
+                                    FieldCollection::LocalFieldCollection_t, T>,
+                         TypedField>;
+    //! for filling global fields from local fields and vice-versa
+    using GlobalField_t =
+      std::conditional_t<Global,
+                         TypedField,
+                         TypedField<typename
+                                    FieldCollection::GlobalFieldCollection_t, T>>;
+
     using Scalar = T; //!< for type checks
     using Base = Parent; //!< for uniformity of interface
     //! Plain Eigen type to map
@@ -131,6 +147,11 @@ namespace muSpectre {
     //! return type_id of stored type
     virtual const std::type_info & get_stored_typeid() const override final;
 
+    //! safe reference cast
+    static TypedField & check_ref(Base & other);
+    //! safe reference cast
+    static const TypedField & check_ref(const Base & other);
+
     virtual size_t size() const override final;
 
     //! add a pad region to the end of the field buffer; required for
@@ -192,6 +213,23 @@ namespace muSpectre {
      * entries are zero. Convenience function
      */
     inline TypedField & get_zeros_like(std::string unique_name) const;
+
+    /**
+     * Fill the content of the local field into the global field
+     * (obviously only for pixels that actually are present in the
+     * local field)
+     */
+    template <bool IsGlobal = Global>
+    inline std::enable_if_t<IsGlobal>
+    fill_from_local(const LocalField_t & local);
+
+    /**
+     * For pixels that are present in the local field, fill them with
+     * the content of the global field at those pixels
+     */
+    template <bool IsLocal = not Global>
+    inline std::enable_if_t<IsLocal>
+    fill_from_global(const GlobalField_t & global);
 
   protected:
     //! returns a raw pointer to the entry, for `Eigen::Map`
@@ -351,6 +389,50 @@ namespace muSpectre {
 
   /* ---------------------------------------------------------------------- */
   template <class FieldCollection, typename T>
+  template <bool IsGlobal>
+  std::enable_if_t<IsGlobal> TypedField<FieldCollection, T>::
+  fill_from_local(const LocalField_t & local) {
+    static_assert(IsGlobal == Global, "SFINAE parameter, do not touch");
+    if (not (local.get_nb_components() == this->get_nb_components())) {
+      std::stringstream err_str{};
+      err_str << "Fields not compatible: You are trying to write a local "
+              << local.get_nb_components() << "-component field into a global "
+              << this->get_nb_components() << "-component field.";
+      throw std::runtime_error(err_str.str());
+    }
+    auto this_map{this->get_map()};
+    for (const auto && key_val: local.get_map().enumerate()) {
+      const auto & key{std::get<0>(key_val)};
+      const auto & value{std::get<1>(key_val)};
+      this_map[key] = value;
+    }
+  }
+
+  /* ---------------------------------------------------------------------- */
+  template <class FieldCollection, typename T>
+  template <bool IsLocal>
+  std::enable_if_t<IsLocal> TypedField<FieldCollection, T>::
+  fill_from_global(const GlobalField_t & global) {
+    static_assert(IsLocal == not Global, "SFINAE parameter, do not touch");
+    if (not (global.get_nb_components() == this->get_nb_components())) {
+      std::stringstream err_str{};
+      err_str << "Fields not compatible: You are trying to write a global "
+              << global.get_nb_components() << "-component field into a local "
+              << this->get_nb_components() << "-component field.";
+      throw std::runtime_error(err_str.str());
+    }
+
+    auto global_map{global.get_map()};
+
+    for (auto && key_val: this->get_map().enumerate()) {
+      const auto & key{std::get<0>(key_val)};
+      auto & value{std::get<1>(key_val)};
+      value = global_map[key];
+    }
+  }
+
+  /* ---------------------------------------------------------------------- */
+  template <class FieldCollection, typename T>
   void TypedField<FieldCollection, T>::resize(size_t size) {
     if (this->alt_values) {
       throw FieldError("Field proxies can't resize.");
@@ -364,6 +446,33 @@ namespace muSpectre {
   template <class FieldCollection, typename T>
   void TypedField<FieldCollection, T>::set_zero() {
     std::fill(this->values.begin(), this->values.end(), T{});
+  }
+
+  /* ---------------------------------------------------------------------- */
+  template <class FieldCollection, typename T>
+  auto TypedField<FieldCollection, T>::check_ref(Base & other) -> TypedField & {
+    if (typeid(T).hash_code() != other.get_stored_typeid().hash_code()) {
+        std::string err ="Cannot create a Reference of requested type " +(
+           "for field '" + other.get_name() + "' of type '" +
+           other.get_stored_typeid().name() + "'");
+        throw std::runtime_error
+          (err);
+      }
+    return static_cast<TypedField&>(other);
+  }
+
+  /* ---------------------------------------------------------------------- */
+  template <class FieldCollection, typename T>
+  auto TypedField<FieldCollection, T>::
+  check_ref(const Base & other) -> const TypedField & {
+    if (typeid(T).hash_code() != other.get_stored_typeid().hash_code()) {
+        std::string err ="Cannot create a Reference of requested type " +(
+           "for field '" + other.get_name() + "' of type '" +
+           other.get_stored_typeid().name() + "'");
+        throw std::runtime_error
+          (err);
+      }
+    return static_cast<const TypedField&>(other);
   }
 
   /* ---------------------------------------------------------------------- */

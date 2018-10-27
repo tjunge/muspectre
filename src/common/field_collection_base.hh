@@ -20,7 +20,7 @@
  * General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with GNU Emacs; see the file COPYING. If not, write to the
+ * along with µSpectre; see the file COPYING. If not, write to the
  * Free Software Foundation, Inc., 59 Temple Place - Suite 330,
  * Boston, MA 02111-1307, USA.
  */
@@ -158,7 +158,10 @@ namespace muSpectre {
     inline size_t size() const {return this->size_;}
 
     //! check whether a field is present
-    bool check_field_exists(std::string unique_name);
+    bool check_field_exists(const std::string & unique_name);
+
+    //! check whether the collection is initialised
+    bool initialised() const {return this->is_initialised;}
 
     /**
      * list the names of all fields
@@ -188,7 +191,8 @@ namespace muSpectre {
 
   /* ---------------------------------------------------------------------- */
   template <Dim_t DimS, class FieldCollectionDerived>
-  void FieldCollectionBase<DimS, FieldCollectionDerived>::register_field(Field_p &&field) {
+  void FieldCollectionBase<DimS, FieldCollectionDerived>::
+  register_field(Field_p &&field) {
     if (this->check_field_exists(field->get_name())) {
       std::stringstream err_str;
       err_str << "a field named '" << field->get_name()
@@ -262,7 +266,7 @@ namespace muSpectre {
   template <Dim_t DimS, class FieldCollectionDerived>
   bool
   FieldCollectionBase<DimS, FieldCollectionDerived>::
-  check_field_exists(std::string unique_name) {
+  check_field_exists(const std::string & unique_name) {
     return this->fields.find(unique_name) != this->fields.end();
   }
 

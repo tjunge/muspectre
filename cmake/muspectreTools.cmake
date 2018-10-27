@@ -22,7 +22,7 @@
 # General Public License for more details.
 #
 # You should have received a copy of the GNU General Public License
-# along with GNU Emacs; see the file COPYING. If not, write to the
+# along with µSpectre; see the file COPYING. If not, write to the
 # Free Software Foundation, Inc., 59 Temple Place - Suite 330,
 # Boston, MA 02111-1307, USA.
 #
@@ -248,6 +248,10 @@ function(muSpectre_add_test test_name)
     elseif("${_mat_args_TYPE}" STREQUAL "PYTHON")
       set(_exe ${PYTHON_EXECUTABLE} -m pytest --junitxml test_results_${test_name}.xml ${_exe})
     endif ("${_mat_args_TYPE}" STREQUAL "BOOST")
+  else ()
+    if("${_mat_args_TYPE}" STREQUAL "PYTHON")
+      set(_exe ${PYTHON_EXECUTABLE} ${_exe})
+    endif ("${_mat_args_TYPE}" STREQUAL "PYTHON")
   endif (${RUNNING_IN_CI})
 
   if(${_mat_args_MPI_NB_PROCS})

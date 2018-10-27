@@ -22,7 +22,7 @@
 # General Public License for more details.
 #
 # You should have received a copy of the GNU General Public License
-# along with GNU Emacs; see the file COPYING. If not, write to the
+# along with µSpectre; see the file COPYING. If not, write to the
 # Free Software Foundation, Inc., 59 Temple Place - Suite 330,
 # Boston, MA 02111-1307, USA.
 # =============================================================================
@@ -71,8 +71,6 @@ target_include_directories(muSpectre INTERFACE ${muSpectre_INCLUDES})
 target_link_libraries(muSpectre PRIVATE ${FFTW_LIBRARIES} ${PRIVATE_MUSPECTRE_LIBS})
 
 target_link_libraries(muSpectre PUBLIC Eigen3::Eigen)
-
-target_compile_definitions(muSpectre PRIVATE  ${-DNO_EXPERIMENTAL})
 
 set_property(TARGET muSpectre PROPERTY PUBLIC_HEADER ${_headers})
 

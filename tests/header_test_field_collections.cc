@@ -21,7 +21,7 @@
  * General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with GNU Emacs; see the file COPYING. If not, write to the
+ * along with µSpectre; see the file COPYING. If not, write to the
  * Free Software Foundation, Inc., 59 Temple Place - Suite 330,
  * Boston, MA 02111-1307, USA.
  */
@@ -306,7 +306,6 @@ namespace muSpectre {
                                                                    F::fc.get_locations(),
                                                                    i)), i);
     }
-
   }
 
   BOOST_FIXTURE_TEST_CASE_TEMPLATE(iterator_methods_test, F, iter_collections, F) {
@@ -581,6 +580,111 @@ namespace muSpectre {
     auto & field = fc.template get_typed_field<Real>("Tensorfield Real o4");
     BOOST_CHECK_EQUAL(field.get_nb_components(), ipow(mdim, fourthOrder));
   }
+
+  /* ---------------------------------------------------------------------- */
+  BOOST_FIXTURE_TEST_CASE_TEMPLATE(enumeration, Fix, iter_collections, Fix) {
+    auto t4map{Fix::t4_field.get_map()};
+    auto t2map{Fix::t2_field.get_map()};
+    auto scmap{Fix::sc_field.get_map()};
+    auto m2map{Fix::m2_field.get_map()};
+    auto dymap{Fix::dyn_field.get_map()};
+
+    for (auto && tup: akantu::zip(scmap.get_collection(), scmap,
+                                  scmap.enumerate())) {
+
+      const auto & ccoord_ref = std::get<0>(tup);
+      const auto & val_ref = std::get<1>(tup);
+      const auto & key_val = std::get<2>(tup);
+      const auto & ccoord = std::get<0>(key_val);
+      const auto & val = std::get<1>(key_val);
+
+      for (auto && ccoords: akantu::zip(ccoord_ref, ccoord)) {
+        const auto & ref{std::get<0>(ccoords)};
+        const auto & val{std::get<1>(ccoords)};
+        BOOST_CHECK_EQUAL(ref, val);
+      }
+
+      const auto error{std::abs(val-val_ref)};
+      BOOST_CHECK_EQUAL(error, 0);
+    }
+
+  for (auto && tup: akantu::zip(t4map.get_collection(), t4map,
+                                  t4map.enumerate())) {
+
+      const auto & ccoord_ref = std::get<0>(tup);
+      const auto & val_ref = std::get<1>(tup);
+      const auto & key_val = std::get<2>(tup);
+      const auto & ccoord = std::get<0>(key_val);
+      const auto & val = std::get<1>(key_val);
+
+      for (auto && ccoords: akantu::zip(ccoord_ref, ccoord)) {
+        const auto & ref{std::get<0>(ccoords)};
+        const auto & val{std::get<1>(ccoords)};
+        BOOST_CHECK_EQUAL(ref, val);
+      }
+
+      const auto error{(val-val_ref).norm()};
+      BOOST_CHECK_EQUAL(error, 0);
+    }
+
+  for (auto && tup: akantu::zip(t2map.get_collection(), t2map,
+                                  t2map.enumerate())) {
+
+      const auto & ccoord_ref = std::get<0>(tup);
+      const auto & val_ref = std::get<1>(tup);
+      const auto & key_val = std::get<2>(tup);
+      const auto & ccoord = std::get<0>(key_val);
+      const auto & val = std::get<1>(key_val);
+
+      for (auto && ccoords: akantu::zip(ccoord_ref, ccoord)) {
+        const auto & ref{std::get<0>(ccoords)};
+        const auto & val{std::get<1>(ccoords)};
+        BOOST_CHECK_EQUAL(ref, val);
+      }
+
+      const auto error{(val-val_ref).norm()};
+      BOOST_CHECK_EQUAL(error, 0);
+    }
+
+  for (auto && tup: akantu::zip(m2map.get_collection(), m2map,
+                                  m2map.enumerate())) {
+
+      const auto & ccoord_ref = std::get<0>(tup);
+      const auto & val_ref = std::get<1>(tup);
+      const auto & key_val = std::get<2>(tup);
+      const auto & ccoord = std::get<0>(key_val);
+      const auto & val = std::get<1>(key_val);
+
+      for (auto && ccoords: akantu::zip(ccoord_ref, ccoord)) {
+        const auto & ref{std::get<0>(ccoords)};
+        const auto & val{std::get<1>(ccoords)};
+        BOOST_CHECK_EQUAL(ref, val);
+      }
+
+      const auto error{(val-val_ref).norm()};
+      BOOST_CHECK_EQUAL(error, 0);
+    }
+
+  for (auto && tup: akantu::zip(dymap.get_collection(), dymap,
+                                  dymap.enumerate())) {
+
+      const auto & ccoord_ref = std::get<0>(tup);
+      const auto & val_ref = std::get<1>(tup);
+      const auto & key_val = std::get<2>(tup);
+      const auto & ccoord = std::get<0>(key_val);
+      const auto & val = std::get<1>(key_val);
+
+      for (auto && ccoords: akantu::zip(ccoord_ref, ccoord)) {
+        const auto & ref{std::get<0>(ccoords)};
+        const auto & val{std::get<1>(ccoords)};
+        BOOST_CHECK_EQUAL(ref, val);
+      }
+
+      const auto error{(val-val_ref).matrix().norm()};
+      BOOST_CHECK_EQUAL(error, 0);
+    }
+  }
+
 
 
   BOOST_AUTO_TEST_SUITE_END();
