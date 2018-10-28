@@ -385,19 +385,43 @@ namespace muSpectre {
 
   /* ---------------------------------------------------------------------- */
   template <Dim_t DimS, Dim_t DimM>
+  template <typename T, bool IsStateField>
   auto CellBase<DimS, DimM>::
-  get_globalised_internal_real_field(const std::string & unique_name)
-    -> Field_t<Real> &
+  globalised_field_helper(const std::string & unique_name,
+                          int nb_steps_ago) -> Field_t<T> &
   {
-    using LField_t = typename Field_t<Real>::LocalField_t;
+    using LField_t = const typename Field_t<T>::LocalField_t;
     // start by checking that the field exists at least once, and that
     // it always has th same number of components
     std::set<Dim_t> nb_component_categories{};
     std::vector<std::reference_wrapper<LField_t>> local_fields;
+    auto check{[&unique_name](auto & coll) -> bool {
+        if (IsStateField) {
+          return coll.check_statefield_exists(unique_name);
+        } else {
+          return coll.check_field_exists(unique_name);
+        }
+      }};
+    auto get{ [&unique_name, &nb_steps_ago](auto & coll)
+        -> const typename LField_t::Base & {
+        if (IsStateField) {
+          using Coll_t = typename Material_t::MFieldCollection_t;
+          using TypedStateField_t = TypedStateField<Coll_t, T>;
+          auto & statefield{coll.get_statefield(unique_name)};
+          auto & typed_statefield{TypedStateField_t::check_ref(statefield)};
+          const typename LField_t::Base & f1{
+            typed_statefield.get_old_field(nb_steps_ago)};
+          const typename LField_t::Base & f2{
+            typed_statefield.get_current_field()};
+          return (nb_steps_ago ? f1: f2);
+        } else {
+          return coll[unique_name];
+        }
+      }};
     for (auto & mat: this->materials) {
       auto & coll = mat->get_collection();
-      if (coll.check_field_exists(unique_name)) {
-        auto & field{LField_t::check_ref(coll[unique_name])};
+      if (check(coll)) {
+        const auto & field{LField_t::check_ref(get(coll))};
         local_fields.emplace_back(field);
         nb_component_categories.insert(field.get_nb_components());
       }
@@ -419,7 +443,8 @@ namespace muSpectre {
           }
         }
       } else {
-        err_str << "The field named '" << unique_name << "' does not exist in "
+        err_str << "The " << (IsStateField ? "state" : "")
+                << "field named '" << unique_name << "' does not exist in "
                 << "any of the materials and can therefore not be globalised!";
       }
       throw std::runtime_error(err_str.str());
@@ -439,6 +464,40 @@ namespace muSpectre {
 
   /* ---------------------------------------------------------------------- */
   template <Dim_t DimS, Dim_t DimM>
+  auto CellBase<DimS, DimM>::
+  get_globalised_internal_real_field(const std::string & unique_name)
+    -> Field_t<Real> &
+  {
+    constexpr bool IsStateField{false};
+    return this->template globalised_field_helper<Real, IsStateField>
+      (unique_name, -1); // the -1 is a moot argument
+  }
+
+  /* ---------------------------------------------------------------------- */
+  template <Dim_t DimS, Dim_t DimM>
+  auto CellBase<DimS, DimM>::
+  get_globalised_current_real_field(const std::string & unique_name)
+    -> Field_t<Real> &
+  {
+    constexpr bool IsStateField{true};
+    return this->template globalised_field_helper<Real, IsStateField>
+      (unique_name, 0);
+  }
+
+  /* ---------------------------------------------------------------------- */
+  template <Dim_t DimS, Dim_t DimM>
+  auto CellBase<DimS, DimM>::
+  get_globalised_old_real_field(const std::string & unique_name,
+                                int nb_steps_ago)
+    -> Field_t<Real> &
+  {
+    constexpr bool IsStateField{true};
+    return this->template globalised_field_helper<Real, IsStateField>
+      (unique_name, nb_steps_ago);
+  }
+
+  /* ---------------------------------------------------------------------- */
+  template <Dim_t DimS, Dim_t DimM>
   auto CellBase<DimS, DimM>::get_managed_real_array(std::string unique_name,
                                                     size_t nb_components)
     -> Array_ref<Real>
@@ -453,6 +512,27 @@ namespace muSpectre {
   auto CellBase<DimS, DimM>::
   get_globalised_internal_real_array(const std::string & unique_name) -> Array_ref<Real> {
     auto & field{this->get_globalised_internal_real_field(unique_name)};
+    return Array_ref<Real>
+      {field.data(), Dim_t(field.get_nb_components()), Dim_t(field.size())};
+  }
+
+  /* ---------------------------------------------------------------------- */
+  template <Dim_t DimS, Dim_t DimM>
+  auto CellBase<DimS, DimM>::
+  get_globalised_current_real_array(const std::string & unique_prefix)
+    -> Array_ref<Real> {
+    auto & field{this->get_globalised_current_real_field(unique_prefix)};
+    return Array_ref<Real>
+      {field.data(), Dim_t(field.get_nb_components()), Dim_t(field.size())};
+  }
+
+  /* ---------------------------------------------------------------------- */
+  template <Dim_t DimS, Dim_t DimM>
+  auto CellBase<DimS, DimM>::
+  get_globalised_old_real_array(const std::string & unique_prefix,
+                                int nb_steps_ago) -> Array_ref<Real> {
+    auto & field{this->get_globalised_old_real_field(unique_prefix,
+                                                          nb_steps_ago)};
     return Array_ref<Real>
       {field.data(), Dim_t(field.get_nb_components()), Dim_t(field.size())};
   }

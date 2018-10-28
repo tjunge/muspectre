@@ -386,7 +386,13 @@ class ElastoPlastic_Check(unittest.TestCase):
 
             print(self.hard.list_fields())
             print(self.hard.collection.statefield_names)
-            print(self.hard.collection.get_real_statefield("Previous left Cauchy-Green deformation bₑᵗ").get_current_field().array)
+            hard_be_t = self.hard.collection.get_real_statefield("Previous left Cauchy-Green deformation bₑᵗ").current_field
+            soft_be_t = self.soft.collection.get_real_statefield("Previous left Cauchy-Green deformation bₑᵗ").current_field
+            global_be_t = self.rve.get_managed_real_array("global_be_t", 3)
+            global_be_t.fill_from_local(soft_be_t)
+            global_be_t.fill_from_local(hard_be_t)
+            print(global_be_t)
+
             sys.exit()
 
             # iterate as long as the iterative update does not vanish

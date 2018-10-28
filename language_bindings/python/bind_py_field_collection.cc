@@ -113,6 +113,48 @@ void add_field_collection(py::module & mod) {
                            "collection");
 }
 
+namespace internal_fill {
+
+  /**
+   * Needed for static switch when adding fillers to fields (static
+   * switch on whether they are global). Default case is for global
+   * fields.
+   */
+  template <bool IsGlobal, class Field, class PyField>
+  struct FillHelper
+  {
+    static void add_fill(PyField & py_field) {
+      py_field.def("fill_from_local",
+                   [](Field & field,
+                      const typename Field::LocalField_t & local) {
+                     field.fill_from_local(local);
+                   },
+                   "local"_a,
+                   "Fills the content of a local field into a global field "
+                   "(modifies only the pixels that are not present in the "
+                   "local field");
+    }
+  };
+
+  /**
+   * Specialisation for local fields
+   */
+  template <class Field, class PyField>
+  struct FillHelper<false, Field, PyField>
+  {
+    static void add_fill(PyField & py_field) {
+      py_field.def("fill_from_global",
+                 [](Field & field,
+                    const typename Field::GlobalField_t & global) {
+                   field.fill_from_global(global);
+                 },
+                 "global"_a,
+                 "Fills the content of a global field into a local field.");
+    }
+  };
+
+
+}  // internal_fill
 template <typename T, class FieldCollection>
 void add_field(py::module & mod, std::string dtype_name) {
   using Field_t = TypedField<FieldCollection, T>;
@@ -121,7 +163,8 @@ void add_field(py::module & mod, std::string dtype_name) {
               << "Field" << dtype_name << "_" << FieldCollection::spatial_dim();
   std::string name{name_stream.str()};
   using Ref_t = py::EigenDRef<Eigen::Matrix<T, Eigen::Dynamic, Eigen::Dynamic>>;
-  py::class_<Field_t, typename Field_t::Parent>(mod, name.c_str())
+  py::class_<Field_t, typename Field_t::Parent> py_field(mod, name.c_str());
+  py_field
     .def_property("array", [](Field_t & field) {return field.eigen();},
                   [](Field_t & field, Ref_t mat) {field.eigen() = mat;},
                   "array of stored data")
@@ -135,6 +178,10 @@ void add_field(py::module & mod, std::string dtype_name) {
     .def_property_readonly("vector",
                            [](const Field_t& field) {return field.eigenvec();},
                            "flattened array of stored data");
+  using FillHelper_t = internal_fill::FillHelper<FieldCollection::Global,
+                                                 Field_t,
+                                                 decltype(py_field)>;
+  FillHelper_t::add_fill(py_field);
 }
 
 template <Dim_t Dim, class FieldCollection>
@@ -172,9 +219,8 @@ void add_statefield(py::module & mod, std::string dtype_name) {
               << "_" << FieldCollection::spatial_dim();
   std::string name{name_stream.str()};
   py::class_<StateField_t, typename StateField_t::Parent>(mod, name.c_str())
-    .def("get_current_field", &StateField_t::get_current_field,
-         "returns the current field value",
-         py::return_value_policy::reference_internal)
+    .def_property_readonly("current_field", &StateField_t::get_current_field,
+                           "returns the current field value")
     .def("get_old_field", &StateField_t::get_old_field,
          "nb_steps_ago"_a = 1,
          "returns the value this field held 'nb_steps_ago' steps ago",

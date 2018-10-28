@@ -160,6 +160,9 @@ namespace muSpectre {
     //! check whether a field is present
     bool check_field_exists(const std::string & unique_name);
 
+    //! check whether a field is present
+    bool check_statefield_exists(const std::string & unique_prefix);
+
     //! check whether the collection is initialised
     bool initialised() const {return this->is_initialised;}
 
@@ -268,6 +271,14 @@ namespace muSpectre {
   FieldCollectionBase<DimS, FieldCollectionDerived>::
   check_field_exists(const std::string & unique_name) {
     return this->fields.find(unique_name) != this->fields.end();
+  }
+
+  /* ---------------------------------------------------------------------- */
+  template <Dim_t DimS, class FieldCollectionDerived>
+  bool
+  FieldCollectionBase<DimS, FieldCollectionDerived>::
+  check_statefield_exists(const std::string & unique_prefix) {
+    return this->statefields.find(unique_prefix) != this->statefields.end();
   }
 
   //! retrieve typed field by unique_name

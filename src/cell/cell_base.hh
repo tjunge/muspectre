@@ -227,6 +227,43 @@ namespace muSpectre {
     get_globalised_internal_real_array(const std::string & unique_name) = 0;
 
     /**
+     * Convenience function to copy local (internal) state fields
+     * (current state) of materials into a global field. At least one
+     * of the materials in the cell needs to contain an internal field
+     * named `unique_name`. If multiple materials contain such a
+     * field, they all need to be of same scalar type and same number
+     * of components. This does not work for split pixel cells or
+     * laminate pixel cells, as they can have multiple entries for the
+     * same pixel. Pixels for which no field named `unique_name`
+     * exists get an array of zeros.
+     *
+     * @param unique_name fieldname to fill the global field with. At
+     * least one material must have such a field, or a
+     * `std::runtime_error` is thrown
+     */
+    virtual Array_ref<Real>
+    get_globalised_current_real_array(const std::string & unique_name) = 0;
+
+    /**
+     * Convenience function to copy local (internal) state fields
+     * (old state) of materials into a global field. At least one
+     * of the materials in the cell needs to contain an internal field
+     * named `unique_name`. If multiple materials contain such a
+     * field, they all need to be of same scalar type and same number
+     * of components. This does not work for split pixel cells or
+     * laminate pixel cells, as they can have multiple entries for the
+     * same pixel. Pixels for which no field named `unique_name`
+     * exists get an array of zeros.
+     *
+     * @param unique_name fieldname to fill the global field with. At
+     * least one material must have such a field, or a
+     * `std::runtime_error` is thrown
+     */
+    virtual Array_ref<Real>
+    get_globalised_old_real_array(const std::string & unique_name,
+                                  int nb_steps_ago=1) = 0;
+
+    /**
      * set uniform strain (typically used to initialise problems
      */
     virtual void set_uniform_strain(const Eigen::Ref<const Matrix_t> &) = 0;
@@ -448,14 +485,36 @@ namespace muSpectre {
 
     /**
      * returns a global field filled from local (internal) fields of
-     * the materials. see `Cell::get_globalised_internal_array` for
+     * the materials. see `Cell::get_globalised_internal_real_array` for
      * details.
      */
     Field_t<Real> & get_globalised_internal_real_field(const std::string & unique_name);
 
-    //! see `Cell::get_globalised_internal_array` for details
+    /**
+     * returns a global field filled from local (internal) statefields of
+     * the materials. see `Cell::get_globalised_current_real_array` for
+     * details.
+     */
+    Field_t<Real> & get_globalised_current_real_field(const std::string & unique_name);
+
+    /**
+     * returns a global field filled from local (internal) statefields of
+     * the materials. see `Cell::get_globalised_old_real_array` for
+     * details.
+     */
+    Field_t<Real> & get_globalised_old_real_field(const std::string & unique_name,
+                                                  int nb_steps_ago=1);
+
+    //! see `Cell::get_globalised_internal_real_array` for details
     Array_ref<Real>
     get_globalised_internal_real_array(const std::string & unique_name) override final;
+    //! see `Cell::get_globalised_current_reald_array` for details
+    Array_ref<Real>
+    get_globalised_current_real_array(const std::string & unique_name) override final;
+        //! see `Cell::get_globalised_old_real_array` for details
+    Array_ref<Real>
+    get_globalised_old_real_array(const std::string & unique_name,
+                                  int nb_steps_ago=1) override final;
 
     /**
      * general initialisation; initialises the projection and
@@ -515,6 +574,9 @@ namespace muSpectre {
     }
 
   protected:
+    template <typename T, bool IsStateField>
+    Field_t<T> & globalised_field_helper(const std::string& unique_name,
+                                         int nb_steps_ago);
     //! make sure that every pixel is assigned to one and only one material
     void check_material_coverage();
 

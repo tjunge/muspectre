@@ -239,7 +239,11 @@ void add_cell_base(py::module & mod) {
          "Parameters:\n"
          "unique_name: fieldname to fill the global field with. At "
          "least one material must have such a field, or an "
-         "Exception is raised.");
+         "Exception is raised.")
+    .def("get_managed_real_array", &Cell::get_managed_real_array,
+         "unique_name"_a,
+         "nb_components"_a,
+         "returns a field or nb_components real numbers per pixel");
   add_cell_base_helper<twoD>  (mod);
   add_cell_base_helper<threeD>(mod);
 }

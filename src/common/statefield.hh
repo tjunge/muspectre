@@ -122,6 +122,19 @@ namespace muSpectre {
     //! returns a const TypedField ref to an old value of this state field
     virtual const TypedField_t & get_old_field(size_t nb_steps_ago=1) const = 0;
 
+    //! returns a `StateField` reference if `other is a compatible state field
+    inline static TypedStateField& check_ref(Parent& other) {
+      // the following triggers and exception if the fields are incompatible
+      if (typeid(T).hash_code() != other.get_stored_typeid().hash_code()) {
+        std::stringstream err_str{};
+        err_str << "Cannot create a rerference of requested type "
+                << "for statefield '" << other.get_prefix() << "' of type '"
+                << other.get_stored_typeid().name() << "'";
+        throw std::runtime_error(err_str.str());
+      }
+      return static_cast<TypedStateField&> (other);
+    }
+
     //! return type_id of stored type
     const std::type_info & get_stored_typeid() const override final {
       return typeid(T);
