@@ -117,10 +117,14 @@ namespace muSpectre {
     F_.cycle();
     be_.cycle();
     eps_.cycle();
+    // TODO:
+    T4Mat<Real, mdim> debug;
+    T4MatMap<Real, mdim> debug_map(debug.data());
     Strain_t stress{Fix::mat.evaluate_stress(F,
                                              F_prev[0],
                                              be_prev[0],
-                                             eps_prev[0])};
+                                             eps_prev[0],
+                                             debug_map)};
 
     if (has_precomputed_values) {
       Strain_t tau_ref{};
@@ -160,7 +164,8 @@ namespace muSpectre {
     stress = Fix::mat.evaluate_stress(F,
                                       F_prev[0],
                                       be_prev[0],
-                                      eps_prev[0]);
+                                      eps_prev[0],
+                                      debug_map);
 
     if (has_precomputed_values) {
       Strain_t tau_ref{};
@@ -240,11 +245,16 @@ namespace muSpectre {
     eps_.cycle();
     Strain_t stress{};
     Stiffness_t stiffness{};
+    
+    // TODO:
+    T4Mat<Real, mdim> debug;
+    T4MatMap<Real, mdim> debug_map(debug.data());
     std::tie(stress, stiffness) =
       Fix::mat.evaluate_stress_tangent(F,
                                        F_prev[0],
                                        be_prev[0],
-                                       eps_prev[0]);
+                                       eps_prev[0],
+                                       debug_map);
 
     if (has_precomputed_values) {
       Strain_t tau_ref{};
@@ -301,7 +311,8 @@ namespace muSpectre {
       Fix::mat.evaluate_stress_tangent(F,
                                        F_prev[0],
                                        be_prev[0],
-                                       eps_prev[0]);
+                                       eps_prev[0],
+                                       debug_map);
 
     if (has_precomputed_values) {
       Strain_t tau_ref{};

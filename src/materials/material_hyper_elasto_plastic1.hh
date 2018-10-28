@@ -77,19 +77,25 @@ namespace muSpectre {
      */
     using LStrainMap_t = StateFieldMap<
       MatrixFieldMap<LFieldColl_t, Real, DimM, DimM, false>>;
+
+    /**
+     * // TODO: for debugging only
+     */
+    using LTangentMap_t = T4MatrixFieldMap<LFieldColl_t, Real, DimM>;
     /**
      * format in which to receive internals (previous gradient Fᵗ,
      * previous elastic lef Cauchy-Green deformation tensor bₑᵗ, and
      * the plastic flow measure εₚ
      */
     using InternalVariables = std::tuple<LStrainMap_t, LStrainMap_t,
-                                         LScalarMap_t>;
+                                         LScalarMap_t,
+                                         LTangentMap_t>;
 
   };
 
 
   /**
-   * Material implementation for hyper-elastoplastic constitutive law
+   * material implementation for hyper-elastoplastic constitutive law
    */
   template <Dim_t DimS, Dim_t DimM=DimS>
   class MaterialHyperElastoPlastic1: public
@@ -123,6 +129,8 @@ namespace muSpectre {
     using StrainStRef_t = typename traits::LStrainMap_t::reference;
     //! type in which the previous plastic flow is referenced
     using FlowStRef_t = typename traits::LScalarMap_t::reference;
+    //! // TODO: type in which interim_k is referenced
+    using DebugRef_t = typename traits::LTangentMap_t::reference;
 
     //! Default constructor
     MaterialHyperElastoPlastic1() = delete;
@@ -153,15 +161,18 @@ namespace muSpectre {
      */
     T2_t evaluate_stress(const T2_t& F, StrainStRef_t F_prev,
                          StrainStRef_t be_prev,
-                         FlowStRef_t plast_flow);
+                         FlowStRef_t plast_flow,
+                         DebugRef_t debug_ref);
     /**
      * evaluates Kirchhoff stress and stiffness given the current placement gradient
      * Fₜ, the previous Gradient Fₜ₋₁ and the cumulated plastic flow
      * εₚ
      */
-    std::tuple<T2_t, T4_t> evaluate_stress_tangent(const T2_t & F, StrainStRef_t F_prev,
+    std::tuple<T2_t, T4_t> evaluate_stress_tangent(const T2_t & F,
+                                                   StrainStRef_t F_prev,
                                                    StrainStRef_t be_prev,
-                                                   FlowStRef_t plast_flow);
+                                                   FlowStRef_t plast_flow,
+                                                   DebugRef_t debug_ref);
 
     /**
      * The statefields need to be cycled at the end of each load increment
@@ -200,6 +211,9 @@ namespace muSpectre {
 
     //! storage for elastic left Cauchy-Green deformation tensor bₑᵗ
     StateField<TensorField<LColl_t, Real, secondOrder, DimM>> & be_prev_field;
+
+    // TODO: for debugging, storing the value of dlnbe4_s
+    TensorField<LColl_t, Real, fourthOrder, DimM> & interim_K;
 
     // material properties
     const Real young;          //!< Young's modulus

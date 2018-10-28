@@ -43,6 +43,7 @@ import sys
 
 from python_exact_reference_elastic_test import deserialise_t4, t2_to_goose
 from python_exact_reference_elastic_test import t2_vec_to_goose
+from python_exact_reference_elastic_test import scalar_vec_to_goose
 from python_exact_reference_elastic_test import t4_to_goose
 from python_exact_reference_elastic_test import t4_vec_to_goose
 from python_exact_reference_elastic_test import t2_from_goose
@@ -207,9 +208,9 @@ def constitutive(F,F_t,be_t,ep_t):
     K4a       = np.where(phi_s<=0, C4e/2., C4ep)
     K4b       = ddot44(K4a,ddot44(dlnbe4_s,dbe4_s))
     K4c       = dot42(-I4rt,tau)+K4b
-    K4       = dot42(dot24(inv2(F),K4c),trans2(inv2(F)))
+    K4        = dot42(dot24(inv2(F),K4c),trans2(inv2(F)))
 
-    return P,K4,be,ep
+    return P,K4,be,ep, dlnbe4_s
 
 # phase indicator: square inclusion of volume fraction (3*3*15)/(11*13*15)
 phase  = np.zeros([Nx,Ny,Nz]); phase[0,0,0] = 1.
@@ -244,6 +245,28 @@ K4     = K*II+2.*mu*(I4s-1./3.*II)
 class ElastoPlastic_Check(unittest.TestCase):
     t2_comparator = elastic_ref.LinearElastic_Check.t2_comparator
     t4_comparator = elastic_ref.LinearElastic_Check.t4_comparator
+
+    def scalar_comparator(self, µ, g):
+        err_sum = 0.
+        err_max = 0.
+        for counter, (i, j, k) in enumerate(self.rve):
+            print((i,j,k))
+            µ_arr = µ[counter]
+            g_arr = g[i,j,k]
+            self.assertEqual(Nz*Ny*i+Nz*j + k, counter)
+            print("µSpectre:")
+            print(µ_arr)
+            print("Goose:")
+            print(g_arr)
+            print(µ_arr-g_arr)
+            err = linalg.norm(µ_arr-g_arr)
+            print("error norm = {}".format(err))
+            err_sum += err
+            err_max = max(err_max, err)
+            pass
+        print("∑(err) = {}, max(err) = {}".format (err_sum, err_max))
+        return err_sum
+
 
     def setUp(self):
         #---------------------------- µSpectre init -----------------------------------
@@ -304,6 +327,19 @@ class ElastoPlastic_Check(unittest.TestCase):
             barF      = np.array(I,copy=True)
             barF[0,0] =    (1.+lam)
             barF[1,1] = 1./(1.+lam)
+
+            def rel_error_scalar(µ, g, tol, do_assert=True):
+                err = (linalg.norm(scalar_vec_to_goose(µ) - g.reshape(-1)) /
+                       linalg.norm(g))
+                if not (err < tol):
+                    self.scalar_comparator(µ.reshape(-1), g)
+                    if do_assert:
+                        self.assertLess(err, tol)
+                    else:
+                        print("AssertionWarning: {} is not less than {}".format(
+                            err, tol))
+                    pass
+                return err
 
             def rel_error_t2(µ, g, tol, do_assert=True):
                 err = linalg.norm(t2_vec_to_goose(µ) - g.reshape(-1)) / linalg.norm(g)
@@ -384,16 +420,12 @@ class ElastoPlastic_Check(unittest.TestCase):
             if inc == 1:
                 self.assertLess(linalg.norm(µb), strict_tol)
 
-            print(self.hard.list_fields())
-            print(self.hard.collection.statefield_names)
-            hard_be_t = self.hard.collection.get_real_statefield("Previous left Cauchy-Green deformation bₑᵗ").current_field
-            soft_be_t = self.soft.collection.get_real_statefield("Previous left Cauchy-Green deformation bₑᵗ").current_field
-            global_be_t = self.rve.get_managed_real_array("global_be_t", 3)
-            global_be_t.fill_from_local(soft_be_t)
-            global_be_t.fill_from_local(hard_be_t)
-            print(global_be_t)
+            #print(self.hard.list_fields())
+            #print(self.hard.collection.statefield_names)
+            #sys.exit()
 
-            sys.exit()
+            global_be_t = self.rve.get_globalised_current_real_array(
+                "Previous left Cauchy-Green deformation bₑᵗ")
 
             # iterate as long as the iterative update does not vanish
             while True:
@@ -401,12 +433,14 @@ class ElastoPlastic_Check(unittest.TestCase):
                 # solve linear system using the Conjugate Gradient iterative solver
                 g_counter = Counter()
                 dFm,_ = sp.cg(tol=cg_tol,
+                              atol=1e-10,
                               A   = sp.LinearOperator(shape=(F.size,F.size),matvec=G_K_dF,dtype='float'),
                               b   = b,
                               callback=g_counter
                 )
                 µ_counter = Counter()
                 µdFm,_ = sp.cg(tol=cg_tol,
+                               atol=1e-10,
                                A =  sp.LinearOperator(shape=(F.size,F.size),
                                                       matvec=µG_K_dF,dtype='float'),
                                b = µb,
@@ -431,14 +465,26 @@ class ElastoPlastic_Check(unittest.TestCase):
 
                 err = rel_error_t2(µF, F, strict_tol, do_assert=True)
                 # compute residual stress and tangent, convert to residual
-                P,K4,be,ep = constitutive(F,F_t,be_t,ep_t)
+                P,K4,be,ep,dln = constitutive(F,F_t,be_t,ep_t)
                 µP, µK = self.rve.evaluate_stress_tangent(µF)
                 err = rel_error_t2(µP, P, strict_tol)
                 try:
                     err = rel_error_t4(µK, K4, strict_tol, do_assert=True)
                 except AssertionError as err:
-                    raise AssertionError("at iiter = {}, inc = {}, caught this: '{}'".format(
-                        iiter, inc, err))
+                    raise AssertionError(
+                        "at iiter = {}, inc = {}, caught this: '{}'".format(
+                            iiter, inc, err))
+                µbe = self.rve.get_globalised_current_real_array(
+                    "Previous left Cauchy-Green deformation bₑᵗ")
+                err = rel_error_t2(µbe, be, strict_tol)
+
+                µep = self.rve.get_globalised_current_real_array(
+                    "cumulated plastic flow εₚ")
+                err = rel_error_scalar(µep, ep, strict_tol)
+
+                µdln = self.rve.get_globalised_internal_real_array(
+                    "dlnbe4_s")
+                err = rel_error_t4(µdln, dln, strict_tol, do_assert=True)
                 b          = -G(P)
                 µb = -µG(µP)
 

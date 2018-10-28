@@ -240,6 +240,13 @@ void add_cell_base(py::module & mod) {
          "unique_name: fieldname to fill the global field with. At "
          "least one material must have such a field, or an "
          "Exception is raised.")
+    .def("get_globalised_current_real_array",
+         &Cell::get_globalised_current_real_array,
+         "unique_name"_a)
+    .def("get_globalised_old_real_array",
+         &Cell::get_globalised_old_real_array,
+         "unique_name"_a,
+         "nb_steps_ago"_a=1)
     .def("get_managed_real_array", &Cell::get_managed_real_array,
          "unique_name"_a,
          "nb_components"_a,

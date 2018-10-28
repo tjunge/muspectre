@@ -52,6 +52,16 @@ def deserialise_t4(t4):
         pass
     return retval
 
+def scalar_to_goose(s_msp):
+    s_goose = np.zeros((Nx, Ny, Nz))
+    for i in range(Nx):
+        for j in range(Ny):
+            for k in range(Nz):
+                s_goose[i,j,k] = s_msp[Nz*Ny*i + Nz*j + k]
+            pass
+        pass
+    return s_goose
+
 def t2_to_goose(t2_msp):
     t2_goose = np.zeros((ndim, ndim, Nx, Ny, Nz))
     for i in range(Nx):
@@ -65,6 +75,8 @@ def t2_to_goose(t2_msp):
 def t2_vec_to_goose(t2_msp_vec):
     return t2_to_goose(t2_msp_vec.reshape(ndim*ndim, Nx*Ny*Nz)).reshape(-1)
 
+def scalar_vec_to_goose(s_msp_vec):
+    return scalar_to_goose(s_msp_vec.reshape(Nx*Ny*N)).reshape(-1)
 
 def t4_to_goose(t4_msp, right_transposed=True):
     t4_goose = np.zeros((ndim, ndim, ndim, ndim, Nx, Ny, Nz))
