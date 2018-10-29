@@ -25,10 +25,14 @@
  * Boston, MA 02111-1307, USA.
  */
 
+#include "common/common.hh"
+#include "common/T4_map_proxy.hh"
+#include "materials/stress_transformations_Kirchhoff.hh"
 #include "materials/material_hyper_elasto_plastic1.hh"
 
 
 namespace muSpectre {
+
 
   //----------------------------------------------------------------------------//
   template <Dim_t DimS, Dim_t DimM>
@@ -45,8 +49,6 @@ namespace muSpectre {
           LColl_t, Real, secondOrder, DimM>>>
           ("Previous left Cauchy-Green deformation bₑᵗ",
            this->internal_fields)},
-      interim_K{make_field<TensorField<LColl_t, Real, fourthOrder, DimM>>
-                           ("debug-T4", this->internal_fields)},
       young{young}, poisson{poisson},
       lambda{Hooke::compute_lambda(young, poisson)},
       mu{Hooke::compute_mu(young, poisson)},
@@ -56,7 +58,7 @@ namespace muSpectre {
       // (https://doi.org/10.1016/j.cma.2003.07.014)
       C{0.5*Hooke::compute_C_T4(lambda, mu)},
       internal_variables{F_prev_field.get_map(), be_prev_field.get_map(),
-          plast_flow_field.get_map(), interim_K.get_map()}
+          plast_flow_field.get_map()}
   {}
 
   /* ---------------------------------------------------------------------- */
@@ -133,8 +135,7 @@ namespace muSpectre {
   auto
   MaterialHyperElastoPlastic1<DimS, DimM>::
   evaluate_stress(const T2_t & F, StrainStRef_t F_prev, StrainStRef_t be_prev,
-                  FlowStRef_t eps_p,
-                  DebugRef_t /*debug_ref*/) -> T2_t {
+                  FlowStRef_t eps_p) -> T2_t {
     Eigen::Matrix<Real, DimM, DimM> tau;
     std::tie(tau, std::ignore,
              std::ignore, std::ignore,
@@ -150,9 +151,7 @@ namespace muSpectre {
   MaterialHyperElastoPlastic1<DimS, DimM>::
   evaluate_stress_tangent(const T2_t & F, StrainStRef_t F_prev,
                           StrainStRef_t be_prev,
-                          FlowStRef_t eps_p,
-                          DebugRef_t debug_ref
-                          ) -> std::tuple<T2_t, T4_t> {
+                          FlowStRef_t eps_p) -> std::tuple<T2_t, T4_t> {
     //! after the stress computation, all internals are up to date
     auto && vals{this->stress_n_internals_worker
         (F, F_prev, be_prev, eps_p)};
@@ -221,7 +220,6 @@ namespace muSpectre {
 
     //T4_t dtau_dbe{mat_tangent * dlnbe_dbe * dbe4s};
     T4_t dtau_dF{mat_tangent * dlnbe_dbe * dbe_dF};
-    debug_ref = dtau_dF;
     //return std::tuple<Mat_t, T4_t>(tau, dtau_dbe);
     return std::tuple<Mat_t, T4_t>(tau, dtau_dF);
   }

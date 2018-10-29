@@ -469,7 +469,7 @@ class ElastoPlastic_Check(unittest.TestCase):
                 µP, µK = self.rve.evaluate_stress_tangent(µF)
                 err = rel_error_t2(µP, P, strict_tol)
                 try:
-                    err = rel_error_t4(µK, K4, strict_tol, do_assert=True)
+                    err = rel_error_t4(µK, K4, -strict_tol, do_assert=True)
                 except AssertionError as err:
                     raise AssertionError(
                         "at iiter = {}, inc = {}, caught this: '{}'".format(

@@ -32,6 +32,7 @@
 #define MATERIAL_LINEAR_ELASTIC1_H
 
 #include "common/common.hh"
+#include "materials/stress_transformations_PK2.hh"
 #include "materials/material_muSpectre_base.hh"
 #include "materials/materials_toolbox.hh"
 

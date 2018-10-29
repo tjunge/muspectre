@@ -31,6 +31,7 @@
 #define MATERIAL_LINEAR_ELASTIC_GENERIC_H
 
 #include "common/common.hh"
+#include "materials/stress_transformations_PK2.hh"
 #include "common/T4_map_proxy.hh"
 #include "materials/material_muSpectre_base.hh"
 #include "common/tensor_algebra.hh"

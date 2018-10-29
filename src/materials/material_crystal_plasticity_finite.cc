@@ -26,6 +26,7 @@
  * Boston, MA 02111-1307, USA.
  */
 
+#include "materials/stress_transformations_PK2.hh"
 #include "materials/material_crystal_plasticity_finite.hh"
 #include "common/iterators.hh"
 
