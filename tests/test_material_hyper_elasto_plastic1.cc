@@ -28,6 +28,7 @@
 
 #include "boost/mpl/list.hpp"
 
+#include "materials/stress_transformations_Kirchhoff.hh"
 #include "materials/material_hyper_elasto_plastic1.hh"
 #include "materials/materials_toolbox.hh"
 #include "tests.hh"

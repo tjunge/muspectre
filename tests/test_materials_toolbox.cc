@@ -29,6 +29,10 @@
 
 #include "tests.hh"
 #include "materials/materials_toolbox.hh"
+#include "materials/stress_transformations_default_case.hh"
+#include "materials/stress_transformations_PK1_impl.hh"
+#include "materials/stress_transformations_PK2_impl.hh"
+#include "materials/stress_transformations.hh"
 #include "common/T4_map_proxy.hh"
 #include "common/tensor_algebra.hh"
 #include "tests/test_goodies.hh"

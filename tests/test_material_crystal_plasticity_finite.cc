@@ -30,6 +30,10 @@
 
 
 #include "tests.hh"
+#include "materials/stress_transformations_default_case.hh"
+#include "materials/stress_transformations_PK2_impl.hh"
+#include "materials/stress_transformations_Kirchhoff_impl.hh"
+#include "materials/stress_transformations.hh"
 #include "materials/material_crystal_plasticity_finite.hh"
 #include "materials/material_linear_elastic1.hh"
 #include "materials/materials_toolbox.hh"
