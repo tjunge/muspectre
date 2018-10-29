@@ -210,7 +210,7 @@ def constitutive(F,F_t,be_t,ep_t):
     K4c       = dot42(-I4rt,tau)+K4b
     K4        = dot42(dot24(inv2(F),K4c),trans2(inv2(F)))
 
-    return P,K4,be,ep, dlnbe4_s, dbe4_s, K4a, K4b
+    return P,K4,be,ep, dlnbe4_s, dbe4_s, K4a, K4b, K4c
 
 # phase indicator: square inclusion of volume fraction (3*3*15)/(11*13*15)
 phase  = np.zeros([Nx,Ny,Nz]); phase[0,0,0] = 1.
@@ -465,7 +465,7 @@ class ElastoPlastic_Check(unittest.TestCase):
 
                 err = rel_error_t2(µF, F, strict_tol, do_assert=True)
                 # compute residual stress and tangent, convert to residual
-                P,K4,be,ep,dln, dbe4_s, K4a, K4b = constitutive(F,F_t,be_t,ep_t)
+                P,K4,be,ep,dln, dbe4_s, K4a, K4b, K4c = constitutive(F,F_t,be_t,ep_t)
                 µP, µK = self.rve.evaluate_stress_tangent(µF)
                 err = rel_error_t2(µP, P, strict_tol)
                 try:
@@ -484,7 +484,7 @@ class ElastoPlastic_Check(unittest.TestCase):
 
                 µK4b = self.rve.get_globalised_internal_real_array(
                     "debug-T4")
-                err = rel_error_t4(µK4b, K4b, strict_tol, do_assert=True)
+                err = rel_error_t4(µK4c, K4c, strict_tol, do_assert=True)
                 b          = -G(P)
                 µb = -µG(µP)
 
