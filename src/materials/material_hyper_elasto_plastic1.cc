@@ -46,7 +46,7 @@ namespace muSpectre {
           ("Previous left Cauchy-Green deformation bₑᵗ",
            this->internal_fields)},
       interim_K{make_field<TensorField<LColl_t, Real, fourthOrder, DimM>>
-                           ("dlnbe4_s", this->internal_fields)},
+                           ("debug-T4", this->internal_fields)},
       young{young}, poisson{poisson},
       lambda{Hooke::compute_lambda(young, poisson)},
       mu{Hooke::compute_mu(young, poisson)},
@@ -92,6 +92,7 @@ namespace muSpectre {
     // computation of trial state
     using Mat_t = Eigen::Matrix<Real, DimM, DimM>;
     Mat_t f{F*F_prev.old().inverse()};
+    // trial elastic left Cauchy–Green deformation tensor
     Mat_t be_star{f*be_prev.old()*f.transpose()};
     const Decomp_t<DimM> spectral_decomp{spectral_decomposition(be_star)};
     Mat_t ln_be_star{logm_alt(spectral_decomp)};
@@ -191,8 +192,8 @@ namespace muSpectre {
           if (std::abs((eig_vals(i)-eig_vals(j))/eig_vals(i)) < 1e-12 ) {
             g_vals(i, j) = g_vals(j,i) = g_vals(i, i);
           } else {
-          g_vals(i, j) = g_vals(j, i) = ((log_eig_vals(j) - log_eig_vals(i)) /
-                                         (eig_vals(j) - eig_vals(i)));
+            g_vals(i, j) = g_vals(j, i) = ((log_eig_vals(j) - log_eig_vals(i)) /
+                                           (eig_vals(j) - eig_vals(i)));
           }
         }
       }
@@ -200,21 +201,27 @@ namespace muSpectre {
       for (int i{0}; i < DimM; ++i) {
         for (int j{0}; j < DimM; ++j) {
           Mat_t dyad = eig_vecs.col(i) * eig_vecs.col(j).transpose();
-          T4_t outerDyad = Matrices::outer(dyad, dyad);
+          T4_t outerDyad = Matrices::outer(dyad, dyad.transpose());
           dlnbe_dbe += g_vals(i,j) * outerDyad;
         }
       }
     }
 
-    debug_ref = dlnbe_dbe;
     // compute variation δbe_star
     T2_t I{Matrices::I2<DimM>()};
+    // computation of trial state
+    Mat_t f{F*F_prev.old().inverse()};
+    // trial elastic left Cauchy–Green deformation tensor
+    Mat_t be_star{f*be_prev.old()*f.transpose()};
+
     //T4_t ISymm{Matrices::Isymm<DimM>()};
     //T4_t dbe4s{2* Matrices::dot<DimM>(ISymm, be_star)};//;compute_dbe4s()};
-    T4_t dbe_dF{Matrices::outer_under(I, F*be_prev.old()) + Matrices::outer_over(F*be_prev.old(), I)};
+    T4_t dbe_dF{Matrices::outer_under(I, be_star) + Matrices::outer_over(be_star, I)};
+
 
     //T4_t dtau_dbe{mat_tangent * dlnbe_dbe * dbe4s};
     T4_t dtau_dF{mat_tangent * dlnbe_dbe * dbe_dF};
+    debug_ref = dtau_dF;
     //return std::tuple<Mat_t, T4_t>(tau, dtau_dbe);
     return std::tuple<Mat_t, T4_t>(tau, dtau_dF);
   }
