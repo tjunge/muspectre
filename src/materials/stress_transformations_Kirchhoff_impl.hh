@@ -74,7 +74,7 @@ namespace muSpectre {
           using Mat_t = Eigen::Matrix<Real, Dim, Dim>;
           Mat_t F_inv{F.inverse()};
           Mat_t F_copy{F};
-          Mat_t tau_copy{F};
+          Mat_t tau_copy{tau};
           T4_t C_copy{C};
 
           //T4_t K{T4_t::Zero()};
@@ -90,16 +90,18 @@ namespace muSpectre {
           //     }
           //   }
           // }
-          T4_t Ka{C};
+          T4_t increment{T4_t::Zero()};
           for (int i{0}; i < Dim; ++i) {
             const int k{i};
             for (int j{0}; j < Dim; ++j) {
               const int a{j};
               for (int l{0}; l < Dim; ++l) {
-                get(Ka, i,j,k,l) -= tau(a,l);
+                get(increment, i,j,k,l) -= tau(a,l);
               }
             }
           }
+          T4_t Ka{C};//+increment};
+
           T4_t Kb{T4_t::Zero()};
           for (int i{0}; i < Dim; ++i) {
             for (int j{0}; j < Dim; ++j) {
@@ -115,7 +117,7 @@ namespace muSpectre {
             }
           }
           Mat_t P = tau * F_inv.transpose();
-          return std::make_tuple(std::move(P), std::move(Kb));
+          return std::make_tuple(std::move(P), std::move(Ka));//b));
         }
       };
 

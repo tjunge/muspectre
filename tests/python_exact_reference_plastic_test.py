@@ -356,8 +356,9 @@ class ElastoPlastic_Check(unittest.TestCase):
             def rel_error_t4(µ, g, tol, right_transposed=True, do_assert=True):
                 err = linalg.norm(t4_vec_to_goose(µ) - g.reshape(-1)) / linalg.norm(g)
                 if not (err < tol):
-                    self.t4_comparator(µ.reshape(µK.shape), g.reshape(K4.shape),
-                                       right_transposed)
+                    err_sum = self.t4_comparator(µ.reshape(µK.shape),
+                                                 g.reshape(K4.shape),
+                                                 right_transposed)
                     if do_assert:
                         self.assertLess(err, tol)
                     else:
@@ -468,12 +469,6 @@ class ElastoPlastic_Check(unittest.TestCase):
                 P,K4,be,ep,dln, dbe4_s, K4a, K4b, K4c = constitutive(F,F_t,be_t,ep_t)
                 µP, µK = self.rve.evaluate_stress_tangent(µF)
                 err = rel_error_t2(µP, P, strict_tol)
-                try:
-                    err = rel_error_t4(µK, K4, -strict_tol, do_assert=True)
-                except AssertionError as err:
-                    raise AssertionError(
-                        "at iiter = {}, inc = {}, caught this: '{}'".format(
-                            iiter, inc, err))
                 µbe = self.rve.get_globalised_current_real_array(
                     "Previous left Cauchy-Green deformation bₑᵗ")
                 err = rel_error_t2(µbe, be, strict_tol)
@@ -482,9 +477,16 @@ class ElastoPlastic_Check(unittest.TestCase):
                     "cumulated plastic flow εₚ")
                 err = rel_error_scalar(µep, ep, strict_tol)
 
-                µK4b = self.rve.get_globalised_internal_real_array(
-                    "debug-T4")
-                err = rel_error_t4(µK4c, K4c, strict_tol, do_assert=True)
+                #µK4b = self.rve.get_globalised_internal_real_array(
+                #    "debug-T4")
+                #err = rel_error_t4(µK4c, K4c, strict_tol, do_assert=True)
+                try:
+                    err = rel_error_t4(µK, K4b, -strict_tol, do_assert=True)
+                except AssertionError as err:
+                    raise AssertionError(
+                        "at iiter = {}, inc = {}, caught this: '{}'".format(
+                            iiter, inc, err))
+                sys.exit()
                 b          = -G(P)
                 µb = -µG(µP)
 

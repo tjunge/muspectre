@@ -36,6 +36,8 @@ from python_test_imports import µ
 import scipy.sparse.linalg as sp
 import itertools
 
+np.set_printoptions(linewidth=180)
+comparator_nb_cols=9
 # ----------------------------------- GRID ------------------------------------
 
 ndim   = 3   # number of dimensions
@@ -228,10 +230,10 @@ class LinearElastic_Check(unittest.TestCase):
             g_arr = gT4[:,:,:,:,i,j,k].reshape(ndim**2, ndim**2)
             self.assertEqual(Nz*Ny*i+Nz*j + k, counter)
             print("µSpectre:")
-            print(µ_arr[:, :4])
+            print(µ_arr[:, :comparator_nb_cols])
             print("Goose:")
-            print(g_arr[:, :4])
-            print((µ_arr-g_arr)[:, :4])
+            print(g_arr[:, :comparator_nb_cols])
+            print((µ_arr-g_arr)[:, :comparator_nb_cols])
             err = norm(µ_arr-g_arr)/norm(g_arr)
             print("error norm = {}".format(err))
             err_sum += err

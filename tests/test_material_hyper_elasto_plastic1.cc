@@ -283,7 +283,7 @@ namespace muSpectre {
       Stiffness_t K4b_ref{testGoodies::from_numpy(temp)};
 
       error = (K4b_ref - stiffness).norm()/K4b_ref.norm();
-      // TODO: BOOST_CHECK_LT(error, hi_tol);
+      BOOST_CHECK_LT(error, hi_tol);
       if (not (error < hi_tol)) {
         std::cout << "stiffness reference:\n" << K4b_ref << std::endl;
         std::cout << "stiffness computed:\n" << stiffness << std::endl;
@@ -342,7 +342,7 @@ namespace muSpectre {
       error = (K4b_ref - stiffness).norm()/K4b_ref.norm();
 
       error = (K4b_ref - stiffness).norm()/K4b_ref.norm();
-      // TODO: BOOST_CHECK_LT(error, hi_tol);
+      BOOST_CHECK_LT(error, hi_tol);
       if (not (error < hi_tol)) {
         std::cout << "stiffness reference:\n" << K4b_ref << std::endl;
         std::cout << "stiffness computed:\n" << stiffness << std::endl;
@@ -385,7 +385,7 @@ namespace muSpectre {
       }
 
       error = (K4c_ref - intermediate).norm()/K4c_ref.norm();
-      // TODO: BOOST_CHECK_LT(error, hi_tol);
+      BOOST_CHECK_LT(error, hi_tol);
       if (not (error < hi_tol)) {
         std::cout << "stiffness reference:\n" << K4c_ref << std::endl;
         std::cout << "stiffness computed:\n" << intermediate << std::endl;
