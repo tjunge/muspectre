@@ -201,7 +201,7 @@ namespace muSpectre {
     // elasto-plasticity.py) for the 3d case only
 
     // need higher tol because of printout precision of reference solutions
-    constexpr Real hi_tol{1e-8};
+    constexpr Real hi_tol{2e-7};
     constexpr Dim_t mdim{Fix::mdim}, sdim{Fix::sdim};
     constexpr bool has_precomputed_values{(mdim == sdim) && (mdim == threeD)};
     constexpr bool verbose{has_precomputed_values && false};
@@ -378,7 +378,7 @@ namespace muSpectre {
 
       Stiffness_t K4c_ref{testGoodies::from_numpy(temp)};
       error = (K4b_ref + zero_mediate - K4c_ref).norm()/zero_mediate.norm();
-      BOOST_CHECK_LT(error, hi_tol*100); //rel error on small difference between inexacly read doubles
+      BOOST_CHECK_LT(error, hi_tol); //rel error on small difference between inexacly read doubles
       if (not (error < hi_tol)) {
         std::cout << "decrement reference:\n" << K4c_ref - K4b_ref << std::endl;
         std::cout << "zero_mediate computed:\n" << zero_mediate << std::endl;
@@ -412,7 +412,7 @@ namespace muSpectre {
         (F, stress, stiffness);
 
       error = (K4_ref - stiffnessP).norm()/K4_ref.norm();
-      // TODO: BOOST_CHECK_LT(error, hi_tol);
+      BOOST_CHECK_LT(error, hi_tol);
       if (not (error < hi_tol)) {
         std::cout << "stiffness reference:\n" << K4_ref << std::endl;
         std::cout << "stiffness computed:\n" << stiffnessP << std::endl;

@@ -100,7 +100,7 @@ namespace muSpectre {
               }
             }
           }
-          T4_t Ka{C};//+increment};
+          T4_t Ka{C+increment};
 
           T4_t Kb{T4_t::Zero()};
           for (int i{0}; i < Dim; ++i) {
@@ -117,7 +117,7 @@ namespace muSpectre {
             }
           }
           Mat_t P = tau * F_inv.transpose();
-          return std::make_tuple(std::move(P), std::move(Ka));//b));
+          return std::make_tuple(std::move(P), std::move(Kb));
         }
       };
 
