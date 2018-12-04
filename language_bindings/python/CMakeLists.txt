@@ -63,8 +63,6 @@ if (${USE_PFFT})
   add_definitions(-DWITH_PFFT)
 endif(${USE_PFFT})
 
-find_package(PythonLibsNew ${MUSPECTRE_PYTHON_MAJOR_VERSION} MODULE REQUIRED)
-
 
 pybind11_add_module(pyMuSpectreLib ${PY_BINDING_SRCS})
 target_link_libraries(pyMuSpectreLib PRIVATE muSpectre)

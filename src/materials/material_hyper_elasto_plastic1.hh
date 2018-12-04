@@ -90,7 +90,9 @@ namespace muSpectre {
 
 
   /**
-   * material implementation for hyper-elastoplastic constitutive law
+   * material implementation for hyper-elastoplastic constitutive law. Note for
+   * developpers: this law is tested against a reference python implementation
+   * in `py_comparison_test_material_hyper_elasto_plastic1.py`
    */
   template <Dim_t DimS, Dim_t DimM=DimS>
   class MaterialHyperElastoPlastic1: public
@@ -124,6 +126,9 @@ namespace muSpectre {
     using StrainStRef_t = typename traits::LStrainMap_t::reference;
     //! type in which the previous plastic flow is referenced
     using FlowStRef_t = typename traits::LScalarMap_t::reference;
+
+    //! Local FieldCollection type for field storage
+    using LColl_t = LocalFieldCollection<DimS>;
 
     //! Default constructor
     MaterialHyperElastoPlastic1() = delete;
@@ -182,6 +187,22 @@ namespace muSpectre {
       return this->internal_variables;};
 
 
+    //! getter for internal variable field εₚ
+    StateField<ScalarField<LColl_t, Real>> & get_plast_flow_field() {
+      return this->plast_flow_field;
+    }
+
+    //! getter for previous gradient field Fᵗ
+    StateField<TensorField<LColl_t, Real, secondOrder, DimM>> &
+    get_F_prev_field() {
+      return this->F_prev_field;
+    }
+
+    //! getterfor elastic left Cauchy-Green deformation tensor bₑᵗ
+    StateField<TensorField<LColl_t, Real, secondOrder, DimM>> &
+    get_be_prev_field() {
+      return this->be_prev_field;
+    }
   protected:
 
     /**
@@ -192,8 +213,6 @@ namespace muSpectre {
                                        StrainStRef_t& F_prev,
                                        StrainStRef_t& be_prev,
                                        FlowStRef_t& plast_flow);
-    //! Local FieldCollection type for field storage
-    using LColl_t = LocalFieldCollection<DimS>;
     //! storage for cumulated plastic flow εₚ
     StateField<ScalarField<LColl_t, Real>> & plast_flow_field;
 

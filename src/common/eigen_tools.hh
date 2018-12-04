@@ -352,7 +352,8 @@ namespace muSpectre {
    */
 
   template <class Derived>
-  inline decltype(auto) spectral_decomposition(const Eigen::MatrixBase<Derived> & mat) {
+  inline decltype(auto)
+  spectral_decomposition(const Eigen::MatrixBase<Derived> & mat) {
     static_assert(Derived::SizeAtCompileTime != Eigen::Dynamic,
                   "works only for static matrices");
     static_assert(Derived::RowsAtCompileTime == Derived::ColsAtCompileTime,

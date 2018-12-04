@@ -34,7 +34,7 @@
 namespace muSpectre {
 
 
-  //----------------------------------------------------------------------------//
+  //--------------------------------------------------------------------------//
   template <Dim_t DimS, Dim_t DimM>
   MaterialHyperElastoPlastic1<DimS, DimM>::
   MaterialHyperElastoPlastic1(std::string name, Real young, Real poisson,
@@ -79,7 +79,7 @@ namespace muSpectre {
       Eigen::Matrix<Real, DimM, DimM>::Identity();
     this->save_history_variables();
   }
-  //----------------------------------------------------------------------------//
+  //--------------------------------------------------------------------------//
   template <Dim_t DimS, Dim_t DimM>
   auto
   MaterialHyperElastoPlastic1<DimS, DimM>::
@@ -98,7 +98,8 @@ namespace muSpectre {
     Mat_t be_star{f*be_prev.old()*f.transpose()};
     const Decomp_t<DimM> spectral_decomp{spectral_decomposition(be_star)};
     Mat_t ln_be_star{logm_alt(spectral_decomp)};
-    Mat_t tau_star{.5*Hooke::evaluate_stress(this->lambda, this->mu, ln_be_star)};
+    Mat_t tau_star{
+      .5*Hooke::evaluate_stress(this->lambda, this->mu, ln_be_star)};
     // deviatoric part of Kirchhoff stress
     Mat_t tau_d_star{tau_star - tau_star.trace()/DimM*tau_star.Identity()};
     Real tau_eq_star{std::sqrt(3*.5*(tau_d_star.array()*
@@ -108,7 +109,8 @@ namespace muSpectre {
     Real division_safe_tau_eq_star{tau_eq_star + Real(tau_eq_star==0.)};
     Mat_t N_star{3*.5*tau_d_star/division_safe_tau_eq_star};
     // this is eq (27), and the std::min enforces the Kuhn-Tucker relation (16)
-    Real phi_star{std::max(tau_eq_star - this->tau_y0 - this->H * eps_p.old(), 0.)};
+    Real phi_star{
+      std::max(tau_eq_star - this->tau_y0 - this->H * eps_p.old(), 0.)};
 
     // return mapping
     Real Del_gamma{phi_star/(this->H + 3 * this->mu)};
@@ -130,7 +132,7 @@ namespace muSpectre {
        spectral_decomp);
   }
 
-  //----------------------------------------------------------------------------//
+  //--------------------------------------------------------------------------//
   template <Dim_t DimS, Dim_t DimM>
   auto
   MaterialHyperElastoPlastic1<DimS, DimM>::
@@ -145,7 +147,7 @@ namespace muSpectre {
     return tau;
   }
 
-  //----------------------------------------------------------------------------//
+  //--------------------------------------------------------------------------//
   template <Dim_t DimS, Dim_t DimM>
   auto
   MaterialHyperElastoPlastic1<DimS, DimM>::
@@ -213,9 +215,8 @@ namespace muSpectre {
     // trial elastic left Cauchy–Green deformation tensor
     Mat_t be_star{f*be_prev.old()*f.transpose()};
 
-    //T4_t ISymm{Matrices::Isymm<DimM>()};
-    //T4_t dbe4s{2* Matrices::dot<DimM>(ISymm, be_star)};//;compute_dbe4s()};
-    T4_t dbe_dF{Matrices::outer_under(I, be_star) + Matrices::outer_over(be_star, I)};
+    T4_t dbe_dF{Matrices::outer_under(I, be_star) +
+        Matrices::outer_over(be_star, I)};
 
 
     //T4_t dtau_dbe{mat_tangent * dlnbe_dbe * dbe4s};

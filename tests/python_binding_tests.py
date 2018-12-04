@@ -39,7 +39,8 @@ from python_material_linear_elastic3_test import MaterialLinearElastic3_Check
 from python_material_linear_elastic4_test import MaterialLinearElastic4_Check
 from python_field_tests import FieldCollection_Check
 
-from python_material_crystal_plasticity_finite1 import MaterialCrystalPlasticityFinite1_Check
+from python_material_crystal_plasticity_finite1 import \
+    MaterialCrystalPlasticityFinite1_Check
 
 from python_exact_reference_elastic_test import LinearElastic_Check
 
@@ -58,7 +59,8 @@ class CellCheck(unittest.TestCase):
             sys = µ.Cell(resolution,
                          lengths,
                          formulation)
-            mat = µ.material.MaterialLinearElastic1_2d.make(sys, "material", 210e9, .33)
+            mat = µ.material.MaterialLinearElastic1_2d.make(sys, "material",
+                                                            210e9, .33)
 
         except Exception as err:
             print(err)
