@@ -54,6 +54,89 @@ from  material_hyper_elasto_plastic1 import PK1_fun_3d
 # ----------------------------------- GRID ------------------------------------
 from python_exact_reference_elastic_test import ndim, N, Nx, Ny, Nz
 shape = [Nx, Ny, Nz]
+
+standalone_dyad22 = lambda A2,B2: np.einsum('ij  ,kl  ->ijkl',A2,B2)
+standalone_dyad11 = lambda A1,B1: np.einsum('i   ,j   ->ij  ',A1,B1)
+standalone_dot22  = lambda A2,B2: np.einsum('ij  ,jk  ->ik  ',A2,B2)
+standalone_dot24  = lambda A2,B4: np.einsum('ij  ,jkmn->ikmn',A2,B4)
+standalone_dot42  = lambda A4,B2: np.einsum('ijkl,lm  ->ijkm',A4,B2)
+standalone_inv2 = np.linalg.inv
+standalone_ddot22 = lambda A2,B2: np.einsum('ij  ,ji  ->    ',A2,B2)
+standalone_ddot42 = lambda A4,B2: np.einsum('ijkl,lk  ->ij  ',A4,B2)
+standalone_ddot44 = lambda A4,B4: np.einsum('ijkl,lkmn->ijmn',A4,B4)
+
+def constitutive_standalone(K, mu, H, tauy0, F,F_t,be_t,ep_t, dim):
+        I  = np.eye(dim)
+        II = standalone_dyad22(I,I)
+        I4 = np.einsum('il,jk',I,I)
+        I4rt = np.einsum('ik,jl',I,I)
+        I4s  = (I4+I4rt)/2.
+
+        def ln2(A2):
+            vals,vecs = np.linalg.eig(A2)
+            return sum(
+                [np.log(vals[i])*standalone_dyad11(vecs[:,i],vecs[:,i]) for i in range(dim)])
+
+        def exp2(A2):
+            vals,vecs = np.linalg.eig(A2)
+            return sum(
+                [np.exp(vals[i])*standalone_dyad11(vecs[:,i],vecs[:,i]) for i in range(dim)])
+
+        # function to compute linearization of the logarithmic Finger tensor
+        def dln2_d2(A2):
+            vals,vecs = np.linalg.eig(A2)
+            K4        = np.zeros([dim, dim, dim, dim])
+            for m, n in itertools.product(range(dim),repeat=2):
+
+                if vals[n]==vals[m]:
+                    gc = (1.0/vals[m])
+                else:
+                    gc  = (np.log(vals[n])-np.log(vals[m]))/(vals[n]-vals[m])
+                K4 += gc*standalone_dyad22(standalone_dyad11(vecs[:,m],vecs[:,n]),standalone_dyad11(vecs[:,m],vecs[:,n]))
+            return K4
+
+        # elastic stiffness tensor
+        C4e      = K*II+2.*mu*(I4s-1./3.*II)
+
+        # trial state
+        Fdelta   = standalone_dot22(F,standalone_inv2(F_t))
+        be_s     = standalone_dot22(Fdelta,standalone_dot22(be_t,Fdelta.T))
+        lnbe_s   = ln2(be_s)
+        tau_s    = standalone_ddot42(C4e,lnbe_s)/2.
+        taum_s   = standalone_ddot22(tau_s,I)/3.
+        taud_s   = tau_s-taum_s*I
+        taueq_s  = np.sqrt(3./2.*standalone_ddot22(taud_s,taud_s))
+        div = np.where(taueq_s < 1e-12, np.ones_like(taueq_s), taueq_s)
+        N_s      = 3./2.*taud_s/div
+        phi_s    = taueq_s-(tauy0+H*ep_t)
+        phi_s    = 1./2.*(phi_s+np.abs(phi_s))
+
+        # return map
+        dgamma   = phi_s/(H+3.*mu)
+        ep       = ep_t  +   dgamma
+        tau      = tau_s -2.*dgamma*N_s*mu
+        lnbe     = lnbe_s-2.*dgamma*N_s
+        be       = exp2(lnbe)
+        P        = standalone_dot22(tau,standalone_inv2(F).T)
+
+        # consistent tangent operator
+        a0       = dgamma*mu/taueq_s
+        a1       = mu/(H+3.*mu)
+        C4ep     = (((K-2./3.*mu)/2.+a0*mu)*II+(1.-3.*a0)*mu*
+                    I4s+2.*mu*(a0-a1)*standalone_dyad22(N_s,N_s))
+        dlnbe4_s = dln2_d2(be_s)
+        dbe4_s   = 2.*standalone_dot42(I4s,be_s)
+        #K4a       = ((C4e/2.)*(phi_s<=0.).astype(np.float)+
+        #             C4ep*(phi_s>0.).astype(np.float))
+        K4a       = np.where(phi_s<=0, C4e/2., C4ep)
+        K4b       = standalone_ddot44(K4a,standalone_ddot44(dlnbe4_s,dbe4_s))
+        K4c       = standalone_dot42(-I4rt,tau)+K4b
+        K4        = standalone_dot42(standalone_dot24(standalone_inv2(F),K4c),standalone_inv2(F).T)
+
+        return P,tau,K4,be,ep, dlnbe4_s, dbe4_s, K4a, K4b, K4c
+
+
+
 # ----------------------------- TENSOR OPERATIONS -----------------------------
 
 # tensor operations / products: np.einsum enables index notation, avoiding loops
@@ -68,16 +151,6 @@ dot24  = lambda A2,B4: np.einsum('ijxyz  ,jkmnxyz->ikmnxyz',A2,B4)
 dot42  = lambda A4,B2: np.einsum('ijklxyz,lmxyz  ->ijkmxyz',A4,B2)
 dyad22 = lambda A2,B2: np.einsum('ijxyz  ,klxyz  ->ijklxyz',A2,B2)
 dyad11 = lambda A1,B1: np.einsum('ixyz   ,jxyz   ->ijxyz  ',A1,B1)
-
-standalone_dyad22 = lambda A2,B2: np.einsum('ij  ,kl  ->ijkl',A2,B2)
-standalone_dyad11 = lambda A1,B1: np.einsum('i   ,j   ->ij  ',A1,B1)
-standalone_dot22  = lambda A2,B2: np.einsum('ij  ,jk  ->ik  ',A2,B2)
-standalone_dot24  = lambda A2,B4: np.einsum('ij  ,jkmn->ikmn',A2,B4)
-standalone_dot42  = lambda A4,B2: np.einsum('ijkl,lm  ->ijkm',A4,B2)
-standalone_inv2 = np.linalg.inv
-standalone_ddot22 = lambda A2,B2: np.einsum('ij  ,ji  ->    ',A2,B2)
-standalone_ddot42 = lambda A4,B2: np.einsum('ijkl,lk  ->ij  ',A4,B2)
-standalone_ddot44 = lambda A4,B4: np.einsum('ijkl,lkmn->ijmn',A4,B4)
 
 
 # eigenvalue decomposition of 2nd-order tensor: return in convention i,j,x,y,z
@@ -169,75 +242,6 @@ K_dF   = lambda dFm: trans2(ddot42(K4,trans2(dFm.reshape(3,3,Nx,Ny,Nz))))
 G_K_dF = lambda dFm: G(K_dF(dFm))
 
 # --------------------------- CONSTITUTIVE RESPONSE ---------------------------
-def constitutive_standalone(K, mu, tauy0, H, F,F_t,be_t,ep_t, dim):
-        I  = np.eye(dim)
-        II = standalone_dyad22(I,I)
-        I4 = np.einsum('il,jk',I,I)
-        I4rt = np.einsum('ik,jl',I,I)
-        I4s  = (I4+I4rt)/2.
-
-        def ln2(A2):
-            vals,vecs = np.linalg.eig(A2)
-            return sum(
-                [np.log(vals[i])*standalone_dyad11(vecs[:,i],vecs[:,i]) for i in range(dim)])
-
-        def exp2(A2):
-            vals,vecs = np.linalg.eig(A2)
-            return sum(
-                [np.exp(vals[i])*standalone_dyad11(vecs[:,i],vecs[:,i]) for i in range(dim)])
-
-        # function to compute linearization of the logarithmic Finger tensor
-        def dln2_d2(A2):
-            vals,vecs = np.linalg.eig(A2)
-            K4        = np.zeros([dim, dim, dim, dim])
-            for m, n in itertools.product(range(dim),repeat=2):
-
-                if vals[n]==vals[m]:
-                    gc = (1.0/vals[m])
-                else:
-                    gc  = (np.log(vals[n])-np.log(vals[m]))/(vals[n]-vals[m])
-                K4 += gc*standalone_dyad22(standalone_dyad11(vecs[:,m],vecs[:,n]),standalone_dyad11(vecs[:,m],vecs[:,n]))
-            return K4
-
-        # elastic stiffness tensor
-        C4e      = K*II+2.*mu*(I4s-1./3.*II)
-
-        # trial state
-        Fdelta   = standalone_dot22(F,standalone_inv2(F_t))
-        be_s     = standalone_dot22(Fdelta,standalone_dot22(be_t,Fdelta.T))
-        lnbe_s   = ln2(be_s)
-        tau_s    = standalone_ddot42(C4e,lnbe_s)/2.
-        taum_s   = standalone_ddot22(tau_s,I)/3.
-        taud_s   = tau_s-taum_s*I
-        taueq_s  = np.sqrt(3./2.*standalone_ddot22(taud_s,taud_s))
-        div = np.where(taueq_s < 1e-12, np.ones_like(taueq_s), taueq_s)
-        N_s      = 3./2.*taud_s/div
-        phi_s    = taueq_s-(tauy0+H*ep_t)
-        phi_s    = 1./2.*(phi_s+np.abs(phi_s))
-
-        # return map
-        dgamma   = phi_s/(H+3.*mu)
-        ep       = ep_t  +   dgamma
-        tau      = tau_s -2.*dgamma*N_s*mu
-        lnbe     = lnbe_s-2.*dgamma*N_s
-        be       = exp2(lnbe)
-        P        = standalone_dot22(tau,standalone_inv2(F).T)
-
-        # consistent tangent operator
-        a0       = dgamma*mu/taueq_s
-        a1       = mu/(H+3.*mu)
-        C4ep     = (((K-2./3.*mu)/2.+a0*mu)*II+(1.-3.*a0)*mu*
-                    I4s+2.*mu*(a0-a1)*standalone_dyad22(N_s,N_s))
-        dlnbe4_s = dln2_d2(be_s)
-        dbe4_s   = 2.*standalone_dot42(I4s,be_s)
-        #K4a       = ((C4e/2.)*(phi_s<=0.).astype(np.float)+
-        #             C4ep*(phi_s>0.).astype(np.float))
-        K4a       = np.where(phi_s<=0, C4e/2., C4ep)
-        K4b       = standalone_ddot44(K4a,standalone_ddot44(dlnbe4_s,dbe4_s))
-        K4c       = standalone_dot42(-I4rt,tau)+K4b
-        K4        = standalone_dot42(standalone_dot24(standalone_inv2(F),K4c),standalone_inv2(F).T)
-
-        return P,tau,K4,be,ep, dlnbe4_s, dbe4_s, K4a, K4b, K4c
 
 # constitutive response to a certain loading and history
 # NB: completely uncoupled from the FFT-solver, but implemented as a regular
@@ -572,14 +576,14 @@ class ElastoPlastic_Check(unittest.TestCase):
                         print("{}_g =\n{}".format(name, g_v))
                         print("{}_µ =\n{}".format(name, µ_v))
                         print("{}_err = {}".format(name, np.linalg.norm(g_v-µ_v)))
-                        return g_v
+                        return g_v, µ_v
                     def t0_disp(name, µ, g, i,j,k, index):
                         g_v = g[i,j,k].copy()
                         µ_v = µ[:,index]
                         print("{}_g =\n{}".format(name, g_v))
                         print("{}_µ =\n{}".format(name, µ_v))
                         print("{}_err = {}".format(name, abs(g_v-µ_v)))
-                        return g_v
+                        return g_v, µ_v
 
                     for pixel, error in errors.items():
                         for index, (ir,jr,kr) in enumerate(self.rve):
@@ -590,15 +594,18 @@ class ElastoPlastic_Check(unittest.TestCase):
                             i,j,k = pixel
                             print("error for pixel {} ({}) = {}".format(
                                 pixel, index, error))
-                            F_n = t2_disp("F", µF, F, i, j, k, index)
-                            be_n = t2_disp("be", µbe, be, i, j, k, index)
-                            F_t_n =t2_disp("F_t", µF_t, F_t, i,j,k,index)
+                            t2_disp("F", µF, F, i, j, k, index)
+                            t2_disp("be", µbe, be, i, j, k, index)
+                            F_t_n, dummy = t2_disp("F_t", µF_t, F_t, i,j,k,index)
                             print("ep.shape = {}".format(µep.shape))
-                            ep_n = t0_disp("ep", µep, ep, i, j, k, index)
+                            t0_disp("ep", µep, ep, i, j, k, index)
                             K_g_v = K4[:,:,:,:,i,j,k].reshape(9,9)
                             K_µ_v = µK[:, index].reshape(
                                 3,3,3,3).transpose(
                                     1,0,3,2).reshape(9,9)
+                            F_n = F[:,:,i,j,k]
+                            be_n = be_t[:,:,i,j,k]
+                            ep_n = ep_t[i,j,k]
                             response = constitutive_standalone(Kmat[pixel],
                                                                mu[pixel],
                                                                H[pixel],
@@ -618,7 +625,16 @@ class ElastoPlastic_Check(unittest.TestCase):
                             print()
                             print("P_µn =\n{}".format(P_µn))
                             print("P_gn =\n{}".format(P_gn))
-                            t2_disp("P", µP, P, i, j, k, index)
+                            P_comp_gn, P_comp_µn = t2_disp(
+                                "P_comp", µP, P, i, j, k, index)
+                            print("|P_µn - P_comp_µn| = {}".format(
+                                np.linalg.norm(P_µn-P_comp_µn)))
+                            print("|P_gn - P_comp_gn| = {}".format(
+                                np.linalg.norm(P_gn-P_comp_gn)))
+                            print("|P_gn - P_µn| = {}".format(
+                                np.linalg.norm(P_gn-P_µn)))
+                            print("|P_comp_gn - P_comp_µn| = {}".format(
+                                np.linalg.norm(P_comp_gn-P_comp_µn)))
                             break
 
                     raise AssertionError(
