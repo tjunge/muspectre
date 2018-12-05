@@ -210,8 +210,14 @@ namespace muSpectre {
     get_be_prev_field() {
       return this->be_prev_field;
     }
-  protected:
 
+    /**
+     * needed to accomodate the static-sized member variable C, see
+     * http://eigen.tuxfamily.org/dox-devel/group__TopicStructHavingEigenMembers.html
+     */
+    EIGEN_MAKE_ALIGNED_OPERATOR_NEW;
+
+  protected:
     /**
      * worker function computing stresses and internal variables
      */

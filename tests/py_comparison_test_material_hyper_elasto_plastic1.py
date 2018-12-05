@@ -122,25 +122,32 @@ class MatTest(unittest.TestCase):
         return P,tau,K4,be,ep, dlnbe4_s, dbe4_s, K4a, K4b, K4c
 
     def setUp(self):
-        self.dim=2
+        pass
+    def prep(self, dimension):
+        self.dim=dimension
         self.K=2.+ np.random.rand()
         self.mu=2.+ np.random.rand()
         self.H=.1 + np.random.rand()/100
         self.tauy0=4. + np.random.rand()/10
-        self.F_prev=np.eye(2) + (np.random.random((self.dim, self.dim))-.5)/10
+        self.F_prev=np.eye(self.dim) + (np.random.random((self.dim, self.dim))-.5)/10
         self.F = self.F_prev +  (np.random.random((self.dim, self.dim))-.5)/10
         self.be_prev=.5*(self.F_prev + self.F_prev.T)
         self.eps_prev=.5+ np.random.rand()/10
         self.tol = 1e-13
         self.verbose=True
 
-    def test_equivalence(self):
-        τ_µ, C_µ_s = test_fun_2d(self.K, self.mu, self.H, self.tauy0,
-                                   self.F_prev, self.F_prev, self.be_prev,
-                                   self.eps_prev)
-        # because of symmetries, the following reshape should be sufficient
+    def test_equivalence_τ_C(self):
+        for dim in (2, 3):
+            self.runner_equivalence_τ_C(dim)
+
+    def runner_equivalence_τ_C(self, dimension):
+        self.prep(dimension)
+        fun = kirchhoff_fun_2d if self.dim == 2 else kirchhoff_fun_3d
+        τ_µ, C_µ_s = fun(self.K, self.mu, self.H, self.tauy0,
+                         self.F_prev, self.F_prev, self.be_prev,
+                         self.eps_prev)
         shape = (self.dim, self.dim, self.dim, self.dim)
-        C_µ = C_µ_s.reshape(shape).transpose((0,1,3,2))
+        C_µ = C_µ_s.reshape(shape).transpose((1,0,3,2))
 
         response_p = self.constitutive(self.F_prev, self.F_prev, self.be_prev,
                                        self.eps_prev, self.dim)
@@ -161,6 +168,42 @@ class MatTest(unittest.TestCase):
             print("C_µ:\n{}".format(C_µ.reshape(flat_shape)))
             print("C_p:\n{}".format(C_p.reshape(flat_shape)))
         self.assertLess(C_error,
+                        self.tol)
+
+    def test_equivalence_P_K(self):
+        for dim in (2, 3):
+            self.runner_equivalence_P_K(dim)
+
+    def runner_equivalence_P_K(self, dimension):
+        self.prep(dimension)
+        fun = PK1_fun_2d if self.dim == 2 else PK1_fun_3d
+        P_µ, K_µ_s = fun(self.K, self.mu, self.H, self.tauy0,
+                         self.F_prev, self.F_prev, self.be_prev,
+                         self.eps_prev)
+        shape = (self.dim, self.dim, self.dim, self.dim)
+        K_µ = K_µ_s.reshape(shape).transpose((1,0,2,3))
+
+        response_p = self.constitutive(self.F_prev, self.F_prev, self.be_prev,
+                                       self.eps_prev, self.dim)
+        P_p, K_p = response_p[0], response_p[2]
+
+        P_error = np.linalg.norm(P_µ- P_p)/np.linalg.norm(P_µ)
+        if not P_error < self.tol:
+            print("Error(P) = {}".format(P_error))
+            print("P_µ:\n{}".format(P_µ))
+            print("P_p:\n{}".format(P_p))
+        self.assertLess(P_error,
+                        self.tol)
+
+        K_error = np.linalg.norm(K_µ- K_p)/np.linalg.norm(K_µ)
+        if not K_error < self.tol:
+            print("Error(K) = {}".format(K_error))
+            flat_shape = (self.dim**2, self.dim**2)
+            print("K_µ:\n{}".format(K_µ.reshape(flat_shape)))
+            print("K_p:\n{}".format(K_p.reshape(flat_shape)))
+            print("diff:\n{}".format(K_p.reshape(flat_shape)-
+                                     K_µ.reshape(flat_shape)))
+        self.assertLess(K_error,
                         self.tol)
 
 

@@ -73,10 +73,6 @@ namespace muSpectre {
           using T4_t = T4Mat<Real, Dim>;
           using Mat_t = Eigen::Matrix<Real, Dim, Dim>;
           Mat_t F_inv{F.inverse()};
-          Mat_t F_copy{F};
-          Mat_t tau_copy{tau};
-          T4_t C_copy{C};
-
           //T4_t K{T4_t::Zero()};
           // for (int i{0}; i < Dim; ++i) {
           //   for (int j{0}; j < Dim; ++j) {
@@ -109,7 +105,8 @@ namespace muSpectre {
                 for (int l{0}; l < Dim; ++l) {
                   for (int a{0}; a < Dim; ++a) {
                     for (int b{0}; b < Dim; ++b) {
-                      get(Kb, i,j,k,l) += F_inv(i,a)*get(Ka,a,j, k, b)*F_inv(l,b);
+                      get(Kb, i,j,l,k) +=
+                        F_inv(i,a)*get(Ka,a,j, k, b)*F_inv(l,b);
                     }
                   }
                 }

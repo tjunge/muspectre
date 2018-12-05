@@ -205,7 +205,7 @@ class LinearElastic_Check(unittest.TestCase):
             print(g_arr)
             print(µ_arr-g_arr)
             err = norm(µ_arr-g_arr)
-            print("error norm = {}".format(err))
+            print("error norm for pixel {} = {}".format((i, j, k), err))
             err_sum += err
             err_max = max(err_max, err)
             pass
@@ -219,9 +219,14 @@ class LinearElastic_Check(unittest.TestCase):
         """
         err_sum = 0.
         err_max = 0.
+        errs = dict()
         turnaround = np.arange(ndim**2).reshape(ndim,ndim).T.reshape(-1)
+
+        def zero_repr(arr):
+            arrcopy = arr.copy()
+            arrcopy[abs(arr)<1e-13] = 0.
+            return arrcopy
         for counter, (i, j, k) in enumerate(self.rve):
-            print((i,j,k))
             µ_arr_tmp = µT4[:, counter].reshape(ndim**2, ndim**2).T
             µ_arr = np.empty((ndim**2, ndim**2))
             for a,b in itertools.product(range(ndim**2), repeat=2):
@@ -229,20 +234,23 @@ class LinearElastic_Check(unittest.TestCase):
                 µ_arr[a,b] = µ_arr_tmp[a, turnaround[b]]
             g_arr = gT4[:,:,:,:,i,j,k].reshape(ndim**2, ndim**2)
             self.assertEqual(Nz*Ny*i+Nz*j + k, counter)
+
             print("µSpectre:")
-            print(µ_arr[:, :comparator_nb_cols])
+            print(zero_repr(µ_arr[:, :comparator_nb_cols]))
             print("Goose:")
-            print(g_arr[:, :comparator_nb_cols])
-            print((µ_arr-g_arr)[:, :comparator_nb_cols])
+            print(zero_repr(g_arr[:, :comparator_nb_cols]))
+            print("Diff")
+            print(zero_repr((µ_arr-g_arr)[:, :comparator_nb_cols]))
             err = norm(µ_arr-g_arr)/norm(g_arr)
-            print("error norm = {}".format(err))
+            print("error norm for pixel {} = {}".format((i, j, k), err))
             err_sum += err
+            errs[(i,j,k)] = err
             err_max = max(err_max, err)
             print("count {:>2}: err_norm = {:.5f}, err_sum = {:.5f}".format(
                 counter, err, err_sum))
             pass
         print("∑(err) = {}, max(err) = {}".format (err_sum, err_max))
-        return err_sum
+        return err_sum, errs
 
     def setUp(self):
         #---------------------------- µSpectre init -----------------------------------
