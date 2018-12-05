@@ -33,6 +33,7 @@ Boston, MA 02111-1307, USA.
 from  material_hyper_elasto_plastic1 import *
 import itertools
 import numpy as np
+np.set_printoptions(linewidth=180)
 
 import unittest
 
@@ -136,6 +137,73 @@ class MatTest(unittest.TestCase):
         self.tol = 1e-13
         self.verbose=True
 
+    def test_specific_case(self):
+        self.dim = 3
+        self.K = 0.833
+        self.mu = 0.386
+        self.tauy0 = .003
+        self.H = 0.004
+        self.F_prev = np.eye(self.dim)
+        self.F = np.array([[ 1.00357938,  0.0012795,   0.        ],
+                           [-0.00126862,  0.99643366,  0.        ],
+                           [ 0.,          0.,          0.99999974]])
+        self.be_prev = np.eye(self.dim)
+        self.eps_prev = 0.0
+        self.tol = 1e-13
+        self.verbose = True
+
+        τ_µ, C_µ_s = kirchhoff_fun_3d(self.K, self.mu, self.H, self.tauy0,
+                                      self.F, self.F_prev, self.be_prev,
+                                      self.eps_prev)
+        shape = (self.dim, self.dim, self.dim, self.dim)
+        C_µ = C_µ_s.reshape(shape).transpose((0,1,3,2))
+
+        P_µ, K_µ_s = PK1_fun_3d(self.K, self.mu, self.H, self.tauy0,
+                                self.F, self.F_prev, self.be_prev,
+                                self.eps_prev)
+        K_µ = K_µ_s.reshape(shape).transpose((0,1,3,2))
+
+        response_p = self.constitutive(self.F, self.F_prev, self.be_prev,
+                                       self.eps_prev, self.dim)
+        τ_p, C_p = response_p[1], response_p[8]
+        P_p, K_p = response_p[0], response_p[2]
+
+        τ_error = np.linalg.norm(τ_µ- τ_p)/np.linalg.norm(τ_µ)
+        if not τ_error < self.tol:
+            print("Error(τ) = {}".format(τ_error))
+            print("τ_µ:\n{}".format(τ_µ))
+            print("τ_p:\n{}".format(τ_p))
+        self.assertLess(τ_error,
+                        self.tol)
+
+        C_error = np.linalg.norm(C_µ- C_p)/np.linalg.norm(C_µ)
+        if not C_error < self.tol:
+            print("Error(C) = {}".format(C_error))
+            flat_shape = (self.dim**2, self.dim**2)
+            print("C_µ:\n{}".format(C_µ.reshape(flat_shape)))
+            print("C_p:\n{}".format(C_p.reshape(flat_shape)))
+        self.assertLess(C_error,
+                        self.tol)
+
+        P_error = np.linalg.norm(P_µ- P_p)/np.linalg.norm(P_µ)
+        if not P_error < self.tol:
+            print("Error(P) = {}".format(P_error))
+            print("P_µ:\n{}".format(P_µ))
+            print("P_p:\n{}".format(P_p))
+        self.assertLess(P_error,
+                        self.tol)
+
+        K_error = np.linalg.norm(K_µ- K_p)/np.linalg.norm(K_µ)
+        if not K_error < self.tol:
+            print("Error(K) = {}".format(K_error))
+            flat_shape = (self.dim**2, self.dim**2)
+            print("K_µ:\n{}".format(K_µ.reshape(flat_shape)))
+            print("K_p:\n{}".format(K_p.reshape(flat_shape)))
+            print("diff:\n{}".format(K_p.reshape(flat_shape)-
+                                     K_µ.reshape(flat_shape)))
+        self.assertLess(K_error,
+                        self.tol)
+
     def test_equivalence_τ_C(self):
         for dim in (2, 3):
             self.runner_equivalence_τ_C(dim)
@@ -144,12 +212,12 @@ class MatTest(unittest.TestCase):
         self.prep(dimension)
         fun = kirchhoff_fun_2d if self.dim == 2 else kirchhoff_fun_3d
         τ_µ, C_µ_s = fun(self.K, self.mu, self.H, self.tauy0,
-                         self.F_prev, self.F_prev, self.be_prev,
+                         self.F, self.F_prev, self.be_prev,
                          self.eps_prev)
         shape = (self.dim, self.dim, self.dim, self.dim)
-        C_µ = C_µ_s.reshape(shape).transpose((1,0,3,2))
+        C_µ = C_µ_s.reshape(shape).transpose((0,1,3,2))
 
-        response_p = self.constitutive(self.F_prev, self.F_prev, self.be_prev,
+        response_p = self.constitutive(self.F, self.F_prev, self.be_prev,
                                        self.eps_prev, self.dim)
         τ_p, C_p = response_p[1], response_p[8]
 
@@ -178,12 +246,12 @@ class MatTest(unittest.TestCase):
         self.prep(dimension)
         fun = PK1_fun_2d if self.dim == 2 else PK1_fun_3d
         P_µ, K_µ_s = fun(self.K, self.mu, self.H, self.tauy0,
-                         self.F_prev, self.F_prev, self.be_prev,
+                         self.F, self.F_prev, self.be_prev,
                          self.eps_prev)
         shape = (self.dim, self.dim, self.dim, self.dim)
-        K_µ = K_µ_s.reshape(shape).transpose((1,0,2,3))
+        K_µ = K_µ_s.reshape(shape).transpose((0,1,3,2))
 
-        response_p = self.constitutive(self.F_prev, self.F_prev, self.be_prev,
+        response_p = self.constitutive(self.F, self.F_prev, self.be_prev,
                                        self.eps_prev, self.dim)
         P_p, K_p = response_p[0], response_p[2]
 

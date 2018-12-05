@@ -394,7 +394,7 @@ class ElastoPlastic_Check(unittest.TestCase):
         return
 
     def test_solve(self):
-        strict_tol = 1e-12
+        strict_tol = 1e-11
         cg_tol = 1e-11
         after_cg_tol = 1e-10
         newton_tol = 1e-5
@@ -599,8 +599,8 @@ class ElastoPlastic_Check(unittest.TestCase):
                             F_t_n, dummy = t2_disp("F_t", µF_t, F_t, i,j,k,index)
                             print("ep.shape = {}".format(µep.shape))
                             t0_disp("ep", µep, ep, i, j, k, index)
-                            K_g_v = K4[:,:,:,:,i,j,k].reshape(9,9)
-                            K_µ_v = µK[:, index].reshape(
+                            K_comp_g = K4[:,:,:,:,i,j,k].reshape(9,9)
+                            K_comp_µ = µK[:, index].reshape(
                                 3,3,3,3).transpose(
                                     1,0,3,2).reshape(9,9)
                             F_n = F[:,:,i,j,k]
@@ -619,10 +619,7 @@ class ElastoPlastic_Check(unittest.TestCase):
                                                     H[pixel],
                                                     tauy0[pixel], F_n,
                                                     F_t_n, be_n, ep_n)
-                            print("K_g =\n{}".format(K_g_v))
-                            print("K_µ =\n{}".format(K_µ_v))
-                            print("K_µn=\n{}".format(K_µn))
-                            print()
+                            K_µn = K_µn.reshape(3,3,3,3).transpose(1,0,3,2).reshape(9,9)
                             print("P_µn =\n{}".format(P_µn))
                             print("P_gn =\n{}".format(P_gn))
                             P_comp_gn, P_comp_µn = t2_disp(
@@ -635,6 +632,22 @@ class ElastoPlastic_Check(unittest.TestCase):
                                 np.linalg.norm(P_gn-P_µn)))
                             print("|P_comp_gn - P_comp_µn| = {}".format(
                                 np.linalg.norm(P_comp_gn-P_comp_µn)))
+                            print()
+                            K_gn.shape = 9, 9
+                            print("K_µn.shape = {}".format(K_µn.shape))
+                            print("K_gn.shape = {}".format(K_gn.shape))
+                            print("K_comp_g =\n{}".format(K_comp_g))
+                            print("K_comp_µ =\n{}".format(K_comp_µ))
+                            print("K_µn=\n{}".format(K_µn))
+                            print("K_gn=\n{}".format(K_gn))
+                            print("|K_µn - K_comp_µ| = {}".format(
+                                np.linalg.norm(K_µn-K_comp_µ)))
+                            print("|K_gn - K_comp_g| = {}".format(
+                                np.linalg.norm(K_gn-K_comp_g)))
+                            print("|K_gn - K_µn| = {}".format(
+                                np.linalg.norm(K_gn-K_µn)))
+                            print("|K_comp_g - K_comp_µ| = {}".format(
+                                np.linalg.norm(K_comp_g-K_comp_µ)))
                             break
 
                     raise AssertionError(

@@ -30,8 +30,6 @@
 #include "materials/material_hyper_elasto_plastic1.hh"
 #include "materials/materials_toolbox.hh"
 
-#include "materials/stress_transformations_Kirchhoff.hh"
-
 #include <pybind11/pybind11.h>
 #include <pybind11/eigen.h>
 

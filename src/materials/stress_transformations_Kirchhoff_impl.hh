@@ -105,7 +105,7 @@ namespace muSpectre {
                 for (int l{0}; l < Dim; ++l) {
                   for (int a{0}; a < Dim; ++a) {
                     for (int b{0}; b < Dim; ++b) {
-                      get(Kb, i,j,l,k) +=
+                      get(Kb, j,i,k,l) +=
                         F_inv(i,a)*get(Ka,a,j, k, b)*F_inv(l,b);
                     }
                   }
