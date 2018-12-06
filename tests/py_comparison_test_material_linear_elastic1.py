@@ -79,11 +79,11 @@ class MatTest(unittest.TestCase):
         self.tol = 1e-13
         self.verbose=True
 
-    def test_equivalence_τ_C(self):
+    def test_equivalence_S_C(self):
         for dim in (2, 3):
-            self.runner_equivalence_τ_C(dim)
+            self.runner_equivalence_S_C(dim)
 
-    def runner_equivalence_τ_C(self, dimension):
+    def runner_equivalence_S_C(self, dimension):
         self.prep(dimension)
         fun = PK2_fun_2d if self.dim == 2 else PK2_fun_3d
         S_µ, C_µ_s = fun(self.Young, self.Poisson, self.F)
