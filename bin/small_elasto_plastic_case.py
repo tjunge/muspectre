@@ -43,38 +43,45 @@ sys.path.append(os.path.join(os.getcwd(), "language_bindings/python"))
 import muSpectre as µ
 
 
-resolution = [51, 51]
+resolution = [3, 3]
 center = np.array([r//2 for r in resolution])
 incl = resolution[0]//5
 
 lengths = [7., 5.]
 formulation = µ.Formulation.finite_strain
 
+K = .833
+mu= .386
+H = .004
+tauy0 = .006
+Young = 9*K*mu/(3*K + mu)
+Poisson = (3*K-2*mu)/(2*(3*K+mu))
 rve = µ.Cell(resolution, lengths, formulation)
 hard = µ.material.MaterialHyperElastoPlastic1_2d.make(
-    rve, "hard", 10e9, .33, 1e6, h=.01)
+    rve, "hard", Young, Poisson, 2*tauy0, h=2*H)
 soft = µ.material.MaterialHyperElastoPlastic1_2d.make(
-    rve, "soft",  70e9, .33, 1e6, h=.01)
+    rve, "soft", Young, Poisson,   tauy0, h=  H)
 
 
 for i, pixel in enumerate(rve):
-    if np.linalg.norm(center - np.array(pixel),2)<incl:
-    #if (abs(center - np.array(pixel)).max()<incl or
-    #    np.linalg.norm(center/2 - np.array(pixel))<incl):
+    #if np.linalg.norm(center - np.array(pixel),2)<incl:
+    i,j= pixel
+    if (i,j) == (1,1):
         hard.add_pixel(pixel)
     else:
         soft.add_pixel(pixel)
 
-tol = 1e-4
-cg_tol = 1e-3
+tol = 1e-5
+cg_tol = 1e-5
+equil_tol = 1e-5
 
 Del0 = np.array([[.0, .0],
-                 [0,  1e-2]])
+                 [0,  3e-2]])
 if formulation == µ.Formulation.small_strain:
     Del0 = .5*(Del0 + Del0.T)
 maxiter = 401
 verbose = 2
 
 solver = µ.solvers.SolverCG(rve, cg_tol, maxiter, verbose=True)
-r = µ.solvers.newton_cg(rve, Del0, solver, tol, verbose)
+r = µ.solvers.newton_cg(rve, Del0, solver, tol, equil_tol, verbose)
 print("nb of {} iterations: {}".format(solver.name(), r.nb_fev))
