@@ -238,3 +238,4 @@ if(${MAKE_BENCHMARKS})
     target_link_libraries(${benchmark_name} ${BOOST_LIBRARIES} muSpectre)
   endforeach(benchmark ${benchmark})
 endif(${MAKE_BENCHMARKS})
+
