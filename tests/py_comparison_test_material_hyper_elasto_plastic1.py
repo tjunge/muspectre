@@ -204,7 +204,7 @@ class MatTest(unittest.TestCase):
         self.assertLess(K_error,
                         self.tol)
 
-    def test_equivalence_τ_C(self):
+    def test_equivalence_tau_C(self):
         for dim in (2, 3):
             self.runner_equivalence_τ_C(dim)
 
