@@ -371,7 +371,7 @@ class LinearElastic_Check(unittest.TestCase):
 
             err = g_counter.get()-µ_counter.get()
             if err != 0:
-                print("n_iter(g) = {}, n_iter(µ) = {}".format(g_counter.get(),
+                print("n_iter(g) = {}, n_iter(mu) = {}".format(g_counter.get(),
                                                               µ_counter.get()))
                 pass
 
@@ -425,7 +425,7 @@ class LinearElastic_Check(unittest.TestCase):
             self.assertTrue((err < after_cg_tol) or (diff_norm < after_cg_tol))
             # print residual to the screen
             print('Goose:    %10.15e'%(np.linalg.norm(dFm)/Fn))
-            print('µSpectre: %10.15e'%(np.linalg.norm(µdFm)/µFn))
+            print('muSpectre: %10.15e'%(np.linalg.norm(µdFm)/µFn))
             if np.linalg.norm(dFm)/Fn<newton_tol and iiter>0: break # check convergence
             iiter += 1
 

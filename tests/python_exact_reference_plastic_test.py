@@ -664,9 +664,9 @@ class ElastoPlastic_Check(unittest.TestCase):
 
                 # check for convergence, print convergence info to screen
                 #print('{0:10.2e}'.format(np.linalg.norm(dFm)/Fn))
-                print('Goose:   rel_residual {:10.15e}, |rhs|: {:10.15e}'.format(
+                print('Goose:    rel_residual {:10.15e}, |rhs|: {:10.15e}'.format(
                     np.linalg.norm(dFm)/Fn, linalg.norm(b)))
-                print('µSpectre:rel_residual {:10.15e}, |rhs|: {:10.15e}'.format(
+                print('muSpectre:rel_residual {:10.15e}, |rhs|: {:10.15e}'.format(
                     np.linalg.norm(µdFm)/µFn, linalg.norm(µb)))
                 if np.linalg.norm(dFm)/Fn<1.e-5 and iiter>0: break
 
