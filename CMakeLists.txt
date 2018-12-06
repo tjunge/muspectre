@@ -34,6 +34,7 @@
 # Program grant you additional permission to convey the resulting work.
 # =============================================================================
 
+
 cmake_minimum_required(VERSION 3.0.0)
 
 project(µSpectre)
