@@ -129,9 +129,6 @@ class MatTest(unittest.TestCase):
             print("Error(P) = {}".format(P_error))
             print("P_µ:\n{}".format(P_µ))
             print("P_p:\n{}".format(P_p))
-        self.assertLess(P_error,
-                        self.tol)
-
         K_error = np.linalg.norm(K_µ- K_p)/np.linalg.norm(K_µ)
         if not K_error < self.tol:
             print("Error(K) = {}".format(K_error))
@@ -140,6 +137,9 @@ class MatTest(unittest.TestCase):
             print("K_p:\n{}".format(K_p.reshape(flat_shape)))
             print("diff:\n{}".format(K_p.reshape(flat_shape)-
                                      K_µ.reshape(flat_shape)))
+        self.assertLess(P_error,
+                        self.tol)
+
         self.assertLess(K_error,
                         self.tol)
 

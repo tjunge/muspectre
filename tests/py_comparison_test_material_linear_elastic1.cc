@@ -94,7 +94,7 @@ namespace muSpectre {
     auto && P{std::get<0>(PK_tup)};
     auto && K{std::get<1>(PK_tup)};
 
-    return py::make_tuple(Eigen::MatrixXd{P}, Eigen::MatrixXd{K});
+    return py::make_tuple(std::move(P), std::move(K));
   };
 
   PYBIND11_MODULE(material_linear_elastic1, mod) {
