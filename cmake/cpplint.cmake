@@ -83,7 +83,8 @@ function(cpplint_add_subdirectory DIR FLAGS)
     file(GLOB_RECURSE LIST_OF_FILES ${FILES_TO_CHECK})
 
     # create valid target name for this check
-    string(REGEX REPLACE "/" "." TEST_NAME ${DIR})
+    get_filename_component(DNAME ${DIR} NAME)
+    string(REGEX REPLACE "/" "." TEST_NAME ${DNAME})
     set(TARGET_NAME ${CPPLINT_TARGET}.${TEST_NAME})
 
     # perform cpplint check
